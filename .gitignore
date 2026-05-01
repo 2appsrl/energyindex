@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+
+# Spike samples policy: salviamo SOLO sample validi e anonimizzati come fixtures per i test futuri.
+# Sample raw freschi vengono ignorati per non gonfiare il repo.
+spikes/samples/raw/
