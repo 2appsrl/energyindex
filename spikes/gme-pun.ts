@@ -21,13 +21,18 @@
  *  - parseGmePun(rawContent: string): parser puro testabile sul fixture committato.
  */
 import { saveSample, todayIsoDate, reportPath } from "./lib/save-sample.js";
+import {
+  GME_BASE,
+  GME_USER_AGENT,
+  bootstrapGmeDnnSession,
+  gmeApiGet,
+  type GmeDnnSession,
+} from "./lib/gme-dnn.js";
 import { z } from "zod";
 
-const USER_AGENT =
-  "EnergyIndex-Spike/0.1 (research; contact: commerciale@deagroup.biz)";
-
-const BASE = "https://www.mercatoelettrico.org";
+const BASE = GME_BASE;
 const PAGE_PATH = "/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN";
+const PAGE_URL = BASE + PAGE_PATH;
 
 /** I 6 codici zona fisici richiesti dal piano. */
 const PHYSICAL_ZONES = ["NORD", "CNOR", "CSUD", "SUD", "SICI", "SARD"] as const;
@@ -114,83 +119,10 @@ export function parseGmePun(rawContent: string): ParseResult {
 // ---------------------------------------------------------------------------
 // HTTP helpers (solo per main())
 // ---------------------------------------------------------------------------
-
-interface DnnSession {
-  cookieHeader: string;
-  rvt: string;
-  moduleId: string;
-  tabId: string;
-}
-
-/**
- * Scarica la pagina contenitore PUN e ne estrae cookie ASP.NET +
- * RequestVerificationToken + ModuleId + TabId, necessari per chiamare la Web API.
- */
-async function bootstrapSession(): Promise<{
-  session: DnnSession;
-  pageStatus: number;
-  pageBytes: number;
-}> {
-  const res = await fetch(BASE + PAGE_PATH, {
-    headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-    redirect: "follow",
-  });
-  const html = await res.text();
-  const setCookies = res.headers.getSetCookie?.() ?? [];
-  const cookieHeader = setCookies
-    .map((c) => c.split(";", 1)[0])
-    .filter(Boolean)
-    .join("; ");
-
-  const rvtMatch = html.match(
-    /name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"/,
-  );
-  const moduleIdMatch = html.match(/"ModuleId":(\d+)/);
-  const tabIdMatch = html.match(/"TabId":(\d+)/);
-
-  if (!rvtMatch || !moduleIdMatch || !tabIdMatch) {
-    throw new Error(
-      `[bootstrapSession] estrazione token DNN fallita ` +
-        `(rvt=${!!rvtMatch} moduleId=${!!moduleIdMatch} tabId=${!!tabIdMatch}). ` +
-        `Forse la pagina ha cambiato struttura.`,
-    );
-  }
-
-  return {
-    session: {
-      cookieHeader,
-      rvt: rvtMatch[1],
-      moduleId: moduleIdMatch[1],
-      tabId: tabIdMatch[1],
-    },
-    pageStatus: res.status,
-    pageBytes: html.length,
-  };
-}
-
-/** Wrapper su fetch verso Web API DNN con headers anti-forgery. */
-async function callDnnApi(
-  session: DnnSession,
-  path: string,
-  query: Record<string, string>,
-): Promise<{ status: number; body: string }> {
-  const url = new URL(BASE + path);
-  for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
-
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      Accept: "application/json, text/plain, */*",
-      Cookie: session.cookieHeader,
-      RequestVerificationToken: session.rvt,
-      ModuleId: session.moduleId,
-      TabId: session.tabId,
-      userid: "-1",
-      Referer: BASE + PAGE_PATH,
-    },
-  });
-  return { status: res.status, body: await res.text() };
-}
+//
+// Il bootstrap della sessione DNN (cookie + token + TabId/ModuleId) e il
+// wrapper di chiamata API sono fattorizzati in `./lib/gme-dnn.ts` perché
+// servono identici anche allo spike PSV (gas).
 
 function isoToCompact(iso: string): string {
   return iso.replace(/-/g, "");
@@ -213,22 +145,21 @@ async function main(): Promise<void> {
   const reportLines: string[] = [];
   reportLines.push(`# Spike GME PUN — ${isoDate}`);
   reportLines.push("");
-  reportLines.push(`- User-Agent: \`${USER_AGENT}\``);
-  reportLines.push(`- Pagina contenitore: \`${BASE}${PAGE_PATH}\``);
+  reportLines.push(`- User-Agent: \`${GME_USER_AGENT}\``);
+  reportLines.push(`- Pagina contenitore: \`${PAGE_URL}\``);
   reportLines.push(
     `- Endpoint dati: \`${BASE}/DesktopModules/GmeEsitiPrezziME/API/item/GetMEPrezzi\``,
   );
   reportLines.push("");
 
-  // 1) Bootstrap DNN session
-  let session: DnnSession;
+  // 1) Bootstrap DNN session (helper condiviso con lo spike PSV)
+  let session: GmeDnnSession;
   let pageStatus = 0;
   let pageBytes = 0;
   try {
-    const r = await bootstrapSession();
-    session = r.session;
-    pageStatus = r.pageStatus;
-    pageBytes = r.pageBytes;
+    session = await bootstrapGmeDnnSession(PAGE_URL);
+    pageStatus = session.pageStatus;
+    pageBytes = session.pageBytes;
     reportLines.push(`## 1. Pagina contenitore`);
     reportLines.push("");
     reportLines.push(`- HTTP status: \`${pageStatus}\``);
@@ -261,7 +192,7 @@ async function main(): Promise<void> {
     // Se invocato con Tipologia=PUN su una zona qualsiasi il backend ignora la zona e
     // restituisce sempre il PUN nazionale (verificato 2026-05-01).
     const tipologia = zona === "PUN" ? "PUN" : "PrezziZonali";
-    const { status, body } = await callDnnApi(
+    const { status, body } = await gmeApiGet(
       session,
       "/DesktopModules/GmeEsitiPrezziME/API/item/GetMEPrezzi",
       {
