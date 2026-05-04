@@ -228,7 +228,7 @@ energy-index/
 
 ## 11. Open items (non bloccanti per partire)
 
-1. **Dominio**: candidati `energyindex.it` / `.eu` / `.com`. Da verificare disponibilità.
+1. **Dominio** ✅ risolto (2026-05-04): registrati su register.it `energyindex.it` (canonical primario, ccTLD per SEO Italia) + `energyindex.pro` (TLD neutro, 301 → `.it` in v1). Decisione su come usare `.pro` per i contenuti internazionali rinviata a v2 multilingua.
 2. **Logo / brand identity**: wordmark testuale al lancio, logo dopo.
 3. **Privacy / cookie**: Plausible/Umami evita cookie banner, ma serve privacy policy + termini d'uso.
 4. **Note legali sui dati**:
@@ -248,5 +248,6 @@ energy-index/
 | Lingue | Italiano in v1, codice i18n-ready per v2 EN/DE/FR |
 | Tema | Dark default + toggle chiaro |
 | Brand indice proprietario | "Energy Index · Fisse/Variabili Luce/Gas" |
+| Domini | `energyindex.it` (canonical) + `energyindex.pro` (301 → .it) |
 | Fonti | GME (PUN/PSV), ENTSO-E (paesi EU), ARERA Portale Offerte |
 | Costi attesi 6 mesi | 0€ (tier gratuiti) |
