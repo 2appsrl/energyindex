@@ -1,0 +1,32 @@
+{
+  "name": "energyindex",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "spike:gme-pun": "tsx spikes/gme-pun.ts",
+    "spike:gme-psv": "tsx spikes/gme-psv.ts",
+    "spike:entsoe": "tsx spikes/entsoe-dayahead.ts",
+    "spike:arera": "tsx spikes/arera-offers.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "fast-xml-parser": "^4.5.6",
+    "zod": "^3.25.76"
+  }
+}
