@@ -221,7 +221,7 @@ energy-index/
 
 | Fase | Tempi | Output |
 |---|---|---|
-| **Fase 0 — Spike** | Settimana 1 | 3 script standalone che scaricano 1 giornata da GME / ENTSO-E / ARERA con successo. Decisione go/plan-B per fonte. |
+| **Fase 0 — Spike** ✅ completata | 2026-05-01 → 2026-05-04 | 4 script standalone (GME PUN, GME PSV, ENTSO-E, ARERA) che hanno scaricato dati reali con successo. Decisioni go/plan-B documentate in `docs/plans/2026-05-01-spike-report.md`. |
 | **Fase 1 — MVP Italia** | Settimane 2-5 | Sito online: homepage + ticker + mappa Italia + 4 card Energy Index + pagine `/indice/pun`, `/indice/psv`, `/zona/[6]`, glossario, metodologia, about. ETL GME + ARERA + Energy Index attivi. |
 | **Fase 2 — Europa** | Settimane 6-8 | Mappa Europa + pagine `/paese/[de\|fr\|es\|...]`. ETL ENTSO-E. SEO ottimizzato (sitemap, structured data, OG dinamiche). |
 | **Fase 3 — Espansione** | Mese 3+ | Traduzioni EN (poi DE/FR). Mondo "leggero" via Eurostat/IEA. Decisioni guidate da dati di traffico reali. |

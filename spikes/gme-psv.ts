@@ -31,9 +31,12 @@
  *
  * NOTA: Da 15-ott-2025 GME ha attivato un canale API ufficiale separato
  *  (https://api.mercatoelettrico.org/) che richiede registrazione + credenziali
- *  e supporta MGP-GAS / PBZ-PSV. Vedi report dello spike. Questo spike usa
- *  il canale DNN pubblico perché non richiede registrazione, ma l'API ufficiale
- *  resta la strada giusta per la produzione.
+ *  e supporta MGP-GAS / PBZ-PSV. La licenza standard di quel canale è però
+ *  "uso informativo privato", non compatibile con la pubblicazione su un sito
+ *  pubblico come Energy Index. Per la produzione del progetto resta quindi
+ *  Plan A questo canale DNN pubblico (helper validato in Fase 0); l'API
+ *  ufficiale è Plan B SOLO se ottenuta una licenza commerciale separata da GME.
+ *  Vedi `docs/plans/2026-05-01-spike-report.md` sez. 1 e 3.2 per il razionale.
  */
 import { saveSample, todayIsoDate, reportPath } from "./lib/save-sample.js";
 import {
@@ -350,7 +353,7 @@ async function main(): Promise<void> {
     `- **Nessun parametro Zona/Tipologia**: a differenza dell'endpoint elettrico, l'API gas espone solo \`DataSessione\` e \`Mercato\` (MGP/MI/MT). Il PSV è implicito (è l'unico hub italiano).`,
   );
   reportLines.push(
-    `- **API ufficiale GME**: dal 15 ottobre 2025 esiste un canale API ufficiale separato a \`https://api.mercatoelettrico.org/\` con manuale tecnico in \`/Portals/0/Documents/en-US/20251015Manuale_tecnico_API_En.pdf\`. Supporta MGP-GAS e PBZ-PSV (oltre a tutti i mercati elettrici), richiede registrazione (form a \`https://api.mercatoelettrico.org/users/RegistrationForm/RegistrationRequest\`) e restituisce i dati come .zip con .json base64-encoded. Disponibilità storica solo dal 1 ottobre 2025 in poi. Per la produzione del progetto Energy Index questa è la strada giusta — il canale DNN qui usato resta valido come fallback / dev sandbox.`,
+    `- **API ufficiale GME**: dal 15 ottobre 2025 esiste un canale API ufficiale separato a \`https://api.mercatoelettrico.org/\` con manuale tecnico in \`/Portals/0/Documents/en-US/20251015Manuale_tecnico_API_En.pdf\`. Supporta MGP-GAS e PBZ-PSV (oltre a tutti i mercati elettrici), richiede registrazione (form a \`https://api.mercatoelettrico.org/users/RegistrationForm/RegistrationRequest\`) e restituisce i dati come .zip con .json base64-encoded. Disponibilità storica solo dal 1 ottobre 2025 in poi. **Licenza standard "uso informativo privato": NON utilizzabile per pubblicazione su un sito pubblico come Energy Index** senza licenza commerciale separata negoziata con GME. Plan A in produzione resta quindi questo canale DNN; l'API ufficiale è Plan B condizionato alla licenza commerciale.`,
   );
   reportLines.push(
     `- Festivi: la sessione MGP-GAS gira anche di sabato/domenica (l'asta gas è 7/7 a differenza del PUN). Quindi non ci si aspettano "buchi" sui weekend nei punti estratti.`,

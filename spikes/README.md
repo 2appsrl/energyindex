@@ -1,6 +1,6 @@
 # Spikes — Fase 0 fonti dati
 
-Questa cartella contiene script standalone investigativi per verificare l'accessibilità delle 3 fonti dati pubbliche del progetto Energy Index.
+Questa cartella contiene script standalone investigativi per verificare l'accessibilità delle 4 fonti dati pubbliche del progetto Energy Index (GME PUN, GME PSV, ENTSO-E day-ahead, ARERA Portale Offerte).
 
 NON è codice di produzione. Serve solo a:
 1. Confermare che le fonti sono accessibili senza autenticazione (o con quale autenticazione).

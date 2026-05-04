@@ -552,7 +552,7 @@ async function main(): Promise<void> {
     `- L'asta day-ahead chiude alle 12:00 CET; i prezzi del giorno seguente sono pubblicati subito dopo. Se interroghiamo "oggi UTC -> domani UTC" prima della pubblicazione possiamo ricevere \`Acknowledgement_MarketDocument\` (no data). Lo spike fa fallback automatico a "ieri UTC -> oggi UTC".`,
   );
   reportLines.push(
-    `- Giornate DST: la risposta puo` + ` contenere 23 o 25 \`Point\` invece di 24 (Europe/Rome cambia a fine marzo / fine ottobre). La nostra struttura preserva la \`position\` cosi` + ` come fornita dall'API.`,
+    `- Numero di \`Point\` per giorno: 3 sorgenti di varianza si combinano. (1) Risoluzione: dal 2025 ENTSO-E pubblica day-ahead a **PT15M** (96 punti/giorno) anziché PT60M (24). (2) curveType **A03** (variable-sized blocks): ENTSO-E omette punti consecutivi con prezzo identico — il \`position\` resta canonico, ma la lunghezza dell'array è ≤ del nominale. (3) DST: 23 o 25 ore reali invece di 24 (Europe/Rome cambia a fine marzo / fine ottobre). Lo spike preserva la \`position\` così come fornita dall'API; in Fase 1 l'ETL deve espandere A03 in serie densa di 96 quarter-hour intervals (o 92/100 nei giorni DST) prima dello storage.`,
   );
   reportLines.push(
     `- Rate limit: limiti per-secondo non documentati con precisione + cap mensile per token. Mettiamo 1s di pausa fra zone e retry singolo su 429.`,
