@@ -1,11 +1,11 @@
-# Energy Index — Spike Report Fase 0 (PRELIMINARY)
+# Energy Index — Spike Report Fase 0 (FINAL)
 
-**Status**: PRELIMINARY — ENTSO-E spike pending user-side API token (1-3 working days).
+**Status**: FINAL — tutte e 4 le fonti verificate (PUN, PSV, ENTSO-E, ARERA). Pendono solo code review, merge a `main` + tag, e approvazione utente per partire con la Fase 1.
 **Data inizio Fase 0**: 2026-05-01
-**Data ultimo aggiornamento**: 2026-05-01
+**Data ultimo aggiornamento**: 2026-05-04
 **Branch**: `feature/fase-0-spike`
 
-> Questo è un documento di decisione che chiude la Fase 0 (verifica fonti dati) e abilita la Fase 1 (MVP). Quando ENTSO-E sarà verificato, questo file sarà aggiornato in place e lo status diventerà FINAL. Non sostituire — aggiornare.
+> Questo è un documento di decisione che chiude la Fase 0 (verifica fonti dati) e abilita la Fase 1 (MVP). La versione PRELIMINARY (2026-05-01) è stata aggiornata in place al ricevimento del token ENTSO-E e dopo la verifica della clausola di licenza GME — vedi sezione 10 per il diff con la versione preliminare.
 
 ---
 
@@ -13,12 +13,12 @@
 
 | Fonte | Status spike | Decisione | Plan A (production) | Plan B (fallback) |
 |---|---|---|---|---|
-| GME PUN | ✅ verified | GO | API ufficiale `api.mercatoelettrico.org` (live 15/10/2025) | Scraping DNN Web API `GmeEsitiPrezziME` (path attuale spike) |
-| GME PSV | ✅ verified | GO | API ufficiale `api.mercatoelettrico.org` (stesso canale) | Scraping DNN Web API `GmeEsitiMGAS` |
-| ENTSO-E | ⏸️ pending | TBD | Da verificare al ricevimento del token (1-3 gg lavorativi ENTSO-E) | — |
-| ARERA Offerte | ✅ verified | GO | Bulk CSV PLACET pubblico (regime open data ex L. 190/2012) | XML Mercato Libero come estensione v2 |
+| GME PUN | ✅ verified | GO | **DNN scraping** (sito pubblico `mercatoelettrico.org`, helper `spikes/lib/gme-dnn.ts` validato in Fase 0) | API ufficiale `api.mercatoelettrico.org` **solo se ottenuta licenza commerciale separata da GME** (la licenza standard "uso informativo privato" non è compatibile con la pubblicazione su sito gratuito) |
+| GME PSV | ✅ verified | GO | **DNN scraping** (stesso sito pubblico, stesso helper condiviso) | API ufficiale `api.mercatoelettrico.org` **solo con licenza commerciale GME** (idem PUN) |
+| ENTSO-E | ✅ verified | GO | Restful API ufficiale `https://web-api.tp.entsoe.eu/api` con `securityToken` (UUID rilasciato dietro registrazione gratuita) — testato su DE_LU/FR/IT_NORTH | Niente fallback necessario; in caso di token revocato / rate-limit prolungato, `assets.unit` con prezzi paesi EU passa in stato "stale" senza fonti alternative omogenee |
+| ARERA Offerte | ✅ verified | GO | Bulk CSV PLACET pubblico (regime open data ex L. 190/2012 + D.Lgs. 33/2013) | XML Mercato Libero come estensione v2 |
 
-**Verdetto complessivo (preliminare)**: 3/4 fonti verificate e accessibili senza vincoli bloccanti. Il rischio "principale del progetto" (ARERA) è risolto in positivo: bulk pubblico esiste, è di prima qualità, niente scraping HTML fragile. ENTSO-E non sblocca la Fase 1 Italia (non serve per PUN/PSV/ARERA), ma è blocco hard per la Fase 2 Europa.
+**Verdetto complessivo (FINAL)**: 4/4 fonti verificate e accessibili. Il rischio "principale del progetto" (ARERA) è risolto in positivo: bulk pubblico esiste, è di prima qualità, niente scraping HTML fragile. ENTSO-E è verified GO: token funzionante, parser stabile su 3/3 zone testate (DE_LU/FR/IT_NORTH), resolution PT15M (96 punti/giorno). **Cambio strategico vs preliminare per GME**: la licenza standard dell'API ufficiale è "uso informativo privato" — incompatibile col caso d'uso Energy Index (sito informativo pubblico gratuito con monetizzazione indiretta via energiapro.biz). Plan A è quindi il canale DNN (scraping del sito pubblico) e l'API ufficiale resta una possibilità solo previa licenza commerciale separata da negoziare con GME. La pubblicazione "Fonte: GME" sul sito Energy Index andrebbe comunque confermata via mail/PEC a GME prima del launch pubblico — non bloccante per dev/staging interno.
 
 ---
 
@@ -50,7 +50,7 @@ Cosa è cambiato rispetto al piano `docs/plans/2026-05-01-fase-0-spike-fonti-dat
 - **Sample size**: 24 ore × (1 PUN nazionale + 6 zone) = **168 punti per giorno**. Verificato sullo spike: 7/7 chiamate HTTP 200, 24 righe ciascuna.
 - **Range valori osservati** (sessione 2026-05-01): 0.00–149.35 €/MWh, mediana 122.03 €/MWh. Festa del lavoro, zone perfettamente convergenti — fixture committata invece su 2026-04-30 (giorno feriale, divergenza Nord vs Sud reale).
 - **Robustezza prevista**: alta. Endpoint stabile, schema rigorosamente tipato con `zod`, parser puro testabile.
-- **API ufficiale alternativa**: `https://api.mercatoelettrico.org/`, attiva dal 15/10/2025. Manuale: https://www.mercatoelettrico.org/Portals/0/Documents/en-US/20251015Manuale_tecnico_API_En.pdf. **Plan A** in produzione, **soltanto** per range di date >= 2025-10-01.
+- **API ufficiale alternativa (con caveat di licenza)**: `https://api.mercatoelettrico.org/`, attiva dal 15/10/2025. Manuale: https://www.mercatoelettrico.org/Portals/0/Documents/en-US/20251015Manuale_tecnico_API_En.pdf. La pagina di registrazione (`https://api.mercatoelettrico.org/users/RegistrationForm/RegistrationRequest`, verificata 2026-05-04) è teoricamente aperta a *"singolo Utente sia esso una persona fisica, persona giuridica o altro ente"* a titolo gratuito, MA la licenza concessa è esplicitamente **"uso informativo privato"**. Tale clausola non copre la ripubblicazione dei dati su un sito informativo pubblico commerciale come Energy Index (anche se gratuito per l'utente finale, è veicolo SEO/brand verso energiapro.biz). **Conclusione**: l'API ufficiale è praticabile come Plan A solo previa **licenza commerciale separata da negoziare con GME** (mail/PEC a GME). Senza licenza commerciale, Plan A resta il canale DNN. Verifica formale con GME consigliata anche per il canale DNN (Condizioni d'uso del sito), non bloccante per dev/staging interno ma sì per launch pubblico.
 - **Fixture**: `spikes/samples/fixtures/gme-pun-fixture.json` — sessione 2026-04-30 con divergenza zonale visibile (NORD/CNOR ~107.79 €/MWh vs CSUD/SUD/SICI/SARD ~101.81 €/MWh). 168 righe totali.
 - **Test**: 4 test in `tests/parsers/gme-pun.test.ts`, tutti pass:
   1. parsa 24 valori PUN orari da sample reale
@@ -74,7 +74,7 @@ Cosa è cambiato rispetto al piano `docs/plans/2026-05-01-fase-0-spike-fonti-dat
 - **Sample size**: 1 valore per giorno. Spike ha scaricato 7 sessioni consecutive (2026-04-25 → 2026-05-01) e ricostruito 6 punti consegna (2026-04-26 → 2026-05-01).
 - **Range valori osservati** (settimana 2026-04-26 → 2026-05-01): 44.6816–46.3727 €/MWh, mediana 45.6803 €/MWh. In linea con TTF + spread Italia.
 - **Robustezza prevista**: alta. Endpoint single-day richiede fan-out (1 call per sessione) ma è prevedibile e idempotente. Parser tollera sessioni vuote (`rows=0` osservato il 2026-05-01 al momento del fetch — Festa del lavoro, prezzo per consegna 2026-05-02 non ancora pubblicato).
-- **API ufficiale alternativa**: stesso canale `api.mercatoelettrico.org` del PUN (manuale 2025-10-15). Supporta `MGP-GAS / PBZ-PSV`.
+- **API ufficiale alternativa (con caveat di licenza — idem PUN)**: stesso canale `api.mercatoelettrico.org` del PUN (manuale 2025-10-15). Supporta `MGP-GAS / PBZ-PSV`. Vale la stessa restrizione di licenza descritta per il PUN: la registrazione standard rilascia una licenza "uso informativo privato" non compatibile con la ripubblicazione su sito Energy Index. L'utilizzo dell'API ufficiale richiede **licenza commerciale separata GME**, da richiedere via mail/PEC. Verifica formale con GME consigliata anche per il canale DNN (Condizioni d'uso del sito), non bloccante per dev/staging interno ma sì per launch pubblico.
 - **Fixture**: `spikes/samples/fixtures/gme-psv-fixture.json` — 7 sessioni (2026-04-25 → 2026-05-01) con dedup by-data-consegna, 6 punti estratti.
 - **Test**: 3 test in `tests/parsers/gme-psv.test.ts`, tutti pass:
   1. parsa valori PSV daily da sample reale
@@ -85,23 +85,40 @@ Cosa è cambiato rispetto al piano `docs/plans/2026-05-01-fase-0-spike-fonti-dat
   - Le righe del payload sono *prodotti*, non giorni. Una sessione T tipicamente espone `MGP-(T+1)` valorizzato + `MGP-(T+2)`, `MGP-(T+3)` con `prezzoRiferimento=null` + `WD-YYYY-WW` (intraday) + nei venerdì `WE-YYYY-WW` (weekend).
   - **Re-published prices**: il parser oggi gestisce solo `MGP-(T+1)` puro. Eventuali rettifiche post-asta in sessioni successive richiederanno logica più ampia in Fase 1.
 
-### 3.3 ENTSO-E day-ahead — ⏸️ pending
+### 3.3 ENTSO-E day-ahead — ✅ verified
 
-- **Status**: utente registrato 2026-05-01 sulla Transparency Platform (https://transparency.entsoe.eu/). In attesa del **Restful API security token** via email — la procedura ENTSO-E richiede approvazione manuale che può richiedere **1-3 giorni lavorativi**.
-- **Atteso**: token JWT/UUID arrivi via email e venga messo in `.env` come `ENTSOE_API_TOKEN` (già nel `.env.example` come slot riservato).
-- **Domain codes già documentati** (vedere `docs/plans/2026-05-01-fase-0-spike-fonti-dati.md`, Task 3 Step 1, e file pianificato `spikes/lib/entsoe-domains.ts`):
-  - `IT_NORTH=10Y1001A1001A73I`, `IT_CNORTH=10Y1001A1001A70O`, `IT_CSOUTH=10Y1001A1001A71M`, `IT_SOUTH=10Y1001A1001A788`, `IT_SICILY=10Y1001A1001A75E`, `IT_SARDINIA=10Y1001A1001A74G`
-  - `DE_LU=10Y1001A1001A82H`, `FR=10YFR-RTE------C`, `ES=10YES-REE------0`, `AT=10YAT-APG------L`, `NL=10YNL----------L`, `BE=10YBE----------2`, `CH=10YCH-SWISSGRIDZ`
-- **Endpoint atteso**: `https://web-api.tp.entsoe.eu/api?securityToken=...&documentType=A44&in_Domain=...&out_Domain=...&periodStart=YYYYMMDDHHmm&periodEnd=YYYYMMDDHHmm`. Risposta XML (`Publication_MarketDocument > TimeSeries > Period > Point[]`).
-- **Da verificare al ricevimento token**:
-  - [ ] Test reale di chiamata API con token (HTTP 200 vs 401/403/429)
-  - [ ] Parsing XML day-ahead per IT (almeno 1 zona), DE_LU, FR
-  - [ ] Stima rate limit / vincoli operativi
-  - [ ] Eventuale clausola di attribuzione nei ToS ENTSO-E (anche se design doc già la prevede)
-  - [ ] Comportamento DST (24/25/23 punti)
-  - [ ] Disponibilità del prezzo "tomorrow" alle ~14:00 ora italiana (assunto del design)
-- **Niente fixture/test ancora** — saranno aggiunti quando il token arriva. Il modulo `spikes/entsoe-dayahead.ts`, `spikes/lib/entsoe-domains.ts`, `tests/parsers/entsoe.test.ts` e fixture `spikes/samples/fixtures/entsoe-de-fixture.xml` rimangono da creare nel Task 3.
-- **Impatto sul progetto**: blocco esclusivamente per Fase 2 (Europa). Fase 1 (Italia: PUN/PSV/ARERA) può partire in parallelo all'attesa del token.
+- **URL/canale verificato**:
+  - Endpoint: `https://web-api.tp.entsoe.eu/api`
+  - Pattern: `?documentType=A44&in_Domain={EIC}&out_Domain={EIC}&periodStart=YYYYMMDDHHmm&periodEnd=YYYYMMDDHHmm&securityToken={UUID}`
+  - Documentazione ufficiale: https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
+  - Lista EIC bidding zones: `spikes/lib/entsoe-domains.ts`. Verificate 3/3 nello spike: `DE_LU=10Y1001A1001A82H`, `FR=10YFR-RTE------C`, `IT_NORTH=10Y1001A1001A73I`. Restanti zone documentate (IT_CNORTH/CSOUTH/SOUTH/SICILY/SARDINIA + ES/AT/NL/BE/CH) attese funzionanti col medesimo schema.
+- **Formato**: XML — `Publication_MarketDocument` → 1..N `TimeSeries` (auction primaria + eventuali secondarie con `classificationSequence` differente) → `Period` (con `start/end` in UTC e `resolution` ISO 8601) → `Point[]` (`position` 1-based + `price.amount`). `currency=EUR`, `unit=MWH`. Parser puro testabile in `spikes/entsoe-dayahead.ts` (`parseEntsoeDayAhead`).
+- **Frequenza pubblicazione**: ~12:00 CET (chiusura asta day-ahead europea); prezzi del giorno seguente disponibili subito dopo. Cron Energy Index previsto 14:00 Europe/Rome.
+- **Authentication**: `securityToken` UUID (non JWT) come **query param**, NON header. Rilasciato via email entro 1-3 giorni lavorativi dietro registrazione gratuita su https://transparency.entsoe.eu/. Memorizzato in `.env` come `ENTSOE_API_TOKEN` (NON committato; `.env.example` espone solo lo slot).
+- **Sample size** (sessione 2026-05-04 UTC, day-ahead per il 2026-05-04):
+  - DE_LU: 95 Point (29 KB XML, parser OK)
+  - FR: 96 Point (15 KB XML, parser OK)
+  - IT_NORTH: 88 Point (14 KB XML, parser OK)
+  - **Resolution PT15M** ovunque (giornata standard = 96 quarter-hour intervals; le zone con count <96 hanno applicato compressione `curveType=A03` con sparse points e propagazione implicita).
+- **Range valori osservati** (sessione 2026-05-04 UTC):
+  - DE_LU: −124.62 / mediana 107.57 / 250.07 €/MWh (range espressivo, include picchi negativi da eccesso rinnovabili e picchi alti pomeridiani)
+  - FR: 60.95 / 110.94 / 163.83 €/MWh
+  - IT_NORTH: 89.00 / 136.03 / 199.51 €/MWh (delta IT-DE coerente con la storia: Italia tipicamente più cara, niente prezzi negativi).
+- **Robustezza prevista**: alta. Endpoint ENTSO-E è stato pubblicato sotto regolamento (UE) 543/2013 (Transparency Regulation), l'infrastruttura è gestita da ENTSO-E come servizio pubblico → schema stabile, breaking change rari (la migrazione PT60M → PT15M 2025-2026 è l'unica osservata).
+- **Fixture**: `spikes/samples/fixtures/entsoe-de-fixture.xml` — 29 KB, snapshot reale DE_LU del 2026-05-04 UTC, senza token né altri elementi sensibili (solo prezzi pubblici di mercato). Provenance dettagliata in `spikes/samples/fixtures/entsoe-fixture-NOTES.md`.
+- **Test**: 3 test in `tests/parsers/entsoe.test.ts`, tutti pass:
+  1. parsa il day-ahead da sample DE_LU reale (count compreso fra 23 e 100 per coprire PT60M/PT15M/DST/curveType A03; range prezzi −200..2000 €/MWh)
+  2. preserva l'ordinamento per `position` ascendente (richiesto dai consumatori downstream)
+  3. espone `currency=EUR`, `unit~/MWH/i`, `domain=10Y1001A1001A82H` per DE_LU, e `resolution` ISO 8601 valida (`PT15M`/`PT30M`/`PT60M`)
+- **Quirk noti**:
+  - **Multi-TimeSeries**: una risposta può contenere asta primaria + secondaria (DE_LU 2026-05-04 ne ha 2). Selezione canonica via `auction.type=A01` o `classificationSequence` minore — da gestire in Fase 1 ETL.
+  - **curveType A03 (sparse points con propagazione)**: l'API può restituire meno di 96 point se i prezzi consecutivi sono uguali (compressione XML); l'ETL Fase 1 deve **espandere la serie sparsa in 96 quarter-hour intervals densi** prima di scrivere su `price_observations`. Lo spike osserva 95 e 88 punti per DE_LU/IT_NORTH.
+  - **Tomorrow non sempre disponibile**: se interroghiamo "oggi UTC → domani UTC" prima delle ~12:00 CET riceviamo 200 con `Acknowledgement_MarketDocument` (no data) o TimeSeries vuoto. Lo spike fa fallback automatico a "ieri UTC → oggi UTC".
+  - **Format temporale obbligatoriamente UTC**: `periodStart/periodEnd` in `YYYYMMDDHHmm` UTC, NON ora locale italiana / CET — usare CET porta a 200 con TimeSeries vuoto o dati shiftati.
+- **Caveat**:
+  - **Rate limit**: limiti per-secondo non documentati con precisione + **cap mensile per token** (esiste, soglia esatta non pubblicata). Spike adotta 1 s di pausa fra zone e retry singolo su 429. In Fase 1 batch gigante (15-20 zone × backfill mesi) richiede politeness conservativa.
+  - **DST**: la risposta può contenere meno o più punti a fine marzo / fine ottobre (Europe/Rome). Il parser preserva `position` così come fornita dall'API; la conversione `position → timestamp UTC` va fatta a valle usando `Period.start` + `resolution`.
+  - **Attribuzione obbligatoria**: i Terms of Use ENTSO-E richiedono di citare *"Source: ENTSO-E Transparency Platform"* e di linkare https://transparency.entsoe.eu/. Da inserire nel footer e in eventuali export — open under EU Regulation 543/2013, riutilizzo libero anche commerciale a condizione dell'attribuzione.
 
 ### 3.4 ARERA Portale Offerte — ✅ verified
 
@@ -189,9 +206,9 @@ Lista esplicita di cose da modificare in `docs/plans/2026-05-01-energy-index-des
 
 Sulla base degli spike, in Fase 1 (MVP Italia):
 
-1. **etl-gme-pun**: usare API ufficiale `api.mercatoelettrico.org` (registrazione utente). Backfill storico oltre 2025-10-01 → canale DNN come fallback documentato. Endpoint single-day non richiesto: l'API ufficiale supporta range. Tipologia=PUN per nazionale + Tipologia=PrezziZonali per le 6 zone.
-2. **etl-gme-psv**: stesso canale ufficiale. Endpoint single-day per call con loop su date (analogo allo spike DNN).
-3. **etl-entsoe-dayahead**: TBD, si chiude quando arriva il token. Path già documentato dal piano originale.
+1. **etl-gme-pun**: **DNN scraping** del sito pubblico (helper `spikes/lib/gme-dnn.ts` già validato in Fase 0) come Plan A. Endpoint dati `https://www.mercatoelettrico.org/DesktopModules/GmeEsitiPrezziME/API/item/GetMEPrezzi` con bootstrap cookie ASP.NET + RequestVerificationToken + TabId/ModuleId. Tipologia=PUN per nazionale + Tipologia=PrezziZonali per le 6 zone. **Plan B**: API ufficiale `api.mercatoelettrico.org` solo previa licenza commerciale separata da GME (la licenza standard è "uso informativo privato", non utilizzabile per Energy Index). In ogni caso, verifica formale con GME via mail/PEC prima del launch pubblico anche per il canale DNN.
+2. **etl-gme-psv**: stesso pattern del PUN, helper DNN condiviso. Endpoint single-day `https://www.mercatoelettrico.org/DesktopModules/GmeEsitiMGAS/API/item/GetGasEsitiMGAS?DataSessione={YYYYMMDD}&Mercato=MGP` con loop sulle date. Plan B: idem PUN (API ufficiale solo con licenza commerciale).
+3. **etl-entsoe-dayahead**: Restful API `https://web-api.tp.entsoe.eu/api` con `securityToken` (rilasciato 2026-05-04). Path validato in Fase 0 su DE_LU/FR/IT_NORTH. ETL deve gestire: PT15M (96 punti/giorno per zona), curveType A03 con espansione sparse → dense, multi-TimeSeries (selezione asta primaria), fallback "ieri" se "domani" non ancora pubblicato. Rate limit prudenziale 1 s/zona. Attribuzione "Source: ENTSO-E Transparency Platform" obbligatoria nel footer.
 4. **etl-arera-offers**: bulk CSV PLACET (E + G) come Plan A. ML XML come Plan B/v2 (da affrontare in Fase 2 se serve copertura completa mercato libero).
 5. **compute-energy-index**: 4 aggregati come da preview sezione 4, fonte = bulk PLACET. Aggiungere computazione p25/p75 e spread vs reference. Gestire la card "Variabili" con etichetta esplicita "spread su PUN/PSV".
 6. **Cron** (Europe/Rome):
@@ -206,11 +223,11 @@ Sulla base degli spike, in Fase 1 (MVP Italia):
 
 ## 8. Open items che restano
 
-- **Token ENTSO-E** (utente, 1-3 gg lavorativi). Bloccante solo per Fase 2.
-- **T&C legali GME per uso commerciale** (utente / legale). Bloccante per launch pubblico.
+- **T&C/licenza GME** — verifica via mail/PEC a GME se la pubblicazione su sito informativo gratuito (con attribuzione "Fonte: GME — Gestore dei Mercati Energetici") è consentita anche col canale DNN. La licenza standard "uso informativo privato" dell'API ufficiale **NON copre** il caso d'uso Energy Index (sito pubblico veicolo SEO/brand verso energiapro.biz). Bloccante per launch pubblico, non per dev/staging interno.
 - **Decisione finale dominio** (utente). `energyindex.it / .eu / .com` da verificare disponibilità.
 - **API key Resend o equivalente per email alert** (utente, gratuita). Per gli alert di ETL fallito 2 giorni di fila.
-- **Verifica robots.txt / rate limit policy** sui canali GME ufficiale e su ARERA al primo scale-up — non bloccante in spike (volumi minimi), va monitorato in produzione.
+- **Verifica robots.txt / rate limit policy** sui canali GME (DNN) e su ARERA al primo scale-up — non bloccante in spike (volumi minimi), va monitorato in produzione.
+- **ENTSO-E rate limit/cap mensile** — soglia esatta non pubblicata; va monitorata in Fase 2 quando giriamo ETL su 15-20 paesi quotidianamente + eventuali backfill storici.
 
 ---
 
@@ -220,14 +237,24 @@ Stato corrente:
 - [x] Scaffold (Task 0) — `package.json`, `tsconfig.json`, `.env.example`, `spikes/README.md` ([commit 307cbb7](#))
 - [x] GME PUN (Task 1) — spike + parser + 4 test pass + fixture committata ([commit 56f8179](#))
 - [x] GME PSV (Task 2) — spike + parser + 3 test pass + fixture committata ([commit 21e788e](#))
-- [ ] ENTSO-E (Task 3) — **in attesa token**
+- [x] ENTSO-E (Task 3) — spike + parser + 3 test pass + fixture DE_LU committata ([commit 360402b](#))
 - [x] ARERA (Task 4) — spike + parser + 13 test pass + 3 fixture committate ([commit af84197](#))
-- [x] Spike report (Task 5) — questo documento (**preliminare**)
+- [x] Spike report (Task 5) — questo documento (FINAL)
 
-Definition of Done si attiva con:
-- [ ] Token ENTSO-E ricevuto
-- [ ] Task 3 eseguito e verificato (3 paesi: DE_LU, FR, IT_NORTH minimo)
-- [ ] Sezione 3.3 di questo report aggiornata con dati reali (URL, sample size, range, fixture, test count, caveat)
-- [ ] Status del report cambiato da PRELIMINARY → FINAL (sezione 1 e header)
-- [ ] Tag git `fase-0-complete` creato
+Restano da chiudere prima di passare alla Fase 1:
+- [ ] Final code review (review ai 4 spike + report)
+- [ ] Merge a `main` + tag git `fase-0-complete`
 - [ ] Approvazione esplicita dell'utente per passare alla Fase 1
+
+---
+
+## 10. Riepilogo nuove scoperte vs versione preliminare
+
+Cosa è cambiato fra la versione PRELIMINARY (2026-05-01) e questa versione FINAL (2026-05-04):
+
+- **ENTSO-E ora verified GO**: token ricevuto e funzionante; 3/3 zone testate (DE_LU, FR, IT_NORTH) con HTTP 200, parser stabile, 3 test passing in `tests/parsers/entsoe.test.ts`.
+- **ENTSO-E migrato a PT15M (96 punti/giorno)** anziché PT60M (24 punti) come assunto in fase di pianificazione iniziale: la migrazione del day-ahead europeo da granularità oraria a quartoraria (in corso 2025-2026) è già attiva sulle zone testate. Il parser e i test sono stati progettati per tollerare entrambi i regimi + DST.
+- **ENTSO-E curveType A03 (sparse points)**: la risposta XML può comprimere prezzi consecutivi uguali in meno di 96 punti (DE_LU 95, IT_NORTH 88 nello spike 2026-05-04). L'ETL Fase 1 deve **espandere la serie sparsa in 96 quarter-hour intervals densi** prima dello storage. Caveat operativo aggiunto in sez. 3.3.
+- **ENTSO-E multi-TimeSeries**: una stessa risposta può contenere asta primaria + secondaria — selezione canonica via `auction.type=A01` o `classificationSequence` minore.
+- **GME license flip — IMPORTANTE**: la verifica della pagina di registrazione `https://api.mercatoelettrico.org/users/RegistrationForm/RegistrationRequest` ha confermato che la licenza standard rilasciata è **"uso informativo privato"**. Tale clausola NON è compatibile con il caso d'uso Energy Index (sito informativo pubblico veicolo verso energiapro.biz). Conseguenza: l'API ufficiale `api.mercatoelettrico.org` **non è utilizzabile** sotto licenza standard; richiede una licenza commerciale separata negoziata via mail/PEC con GME. **DNN scraping del sito pubblico diventa quindi Plan A** in Fase 1, con l'API ufficiale come Plan B condizionato.
+- **Ranges osservati ENTSO-E (2026-05-04 UTC)**: DE_LU −124.62..250.07 €/MWh (mediana 107.57); FR 60.95..163.83 €/MWh (mediana 110.94); IT_NORTH 89.00..199.51 €/MWh (mediana 136.03). Delta IT-DE coerente con la storia: Italia tipicamente più cara, niente prezzi negativi in IT_NORTH.

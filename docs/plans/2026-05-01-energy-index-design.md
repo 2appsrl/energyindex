@@ -2,6 +2,7 @@
 
 **Data**: 2026-05-01
 **Stato**: Approvato in brainstorming. Pronto per Fase 0 (spike fonti dati).
+**Aggiornato 2026-05-04** in seguito alle scoperte della Fase 0 (vedi `docs/plans/2026-05-01-spike-report.md`).
 **Owner**: DEA Group (commerciale@deagroup.biz)
 
 ---
@@ -31,12 +32,19 @@ Il sito **non è un comparatore**: è un osservatorio prezzi. La conversione com
 
 Niente feed a pagamento. Niente dati intraday tick-by-tick (non esistono per questi mercati pubblicamente).
 
+**Note operative sulla disponibilità**:
+- **PSV**: il mercato gas opera 7/7, niente buchi su weekend e festivi.
+- **PUN**: l'asta MGP non gira sui festivi (es. 1° maggio, 25 dicembre) → niente prezzo per consegna del giorno dopo a quei giorni. Riflesso nella UI come stato "sessione non disponibile" senza allarme.
+- **ENTSO-E day-ahead**: dal 2025 la granularità ufficiale è **PT15M** (96 punti/giorno per zona) anziché PT60M (24 punti). DST e curveType=A03 (sparse points) richiedono espansione in serie densa nell'ETL.
+
 ## 4. Scope
 
 ### v1 (MVP) — Europa
 - **Italia ricca**: PUN nazionale + 6 zone MGP (Nord, Centro-Nord, Centro-Sud, Sud, Sicilia, Sardegna), PSV gas, 4 indici Energy Index aggregati.
 - **Paesi EU "leggeri"**: day-ahead price ENTSO-E per ~15-20 paesi europei principali.
 - **Mappa** Italia (zone) + Europa (paesi).
+
+**Nota PUN (post-2025)**: dal 1° gennaio 2025 il PUN è stato ridefinito come **PUN Index GME** — media ponderata sui volumi di mercato, NON più la media aritmetica zonale precedente. Da menzionare nelle pagine `/it/indice/pun` e `/it/metodologia` per accuratezza didattica.
 
 ### v2 — Espansione internazionale
 - Resto del mondo "leggero" via Eurostat / IEA / Global Petrol Prices.
@@ -90,6 +98,8 @@ geography_id, source (gme | entsoe | arera | computed),
 methodology_url
 ```
 
+> **Nota su `assets.unit` per offerte variabili ARERA**: il valore memorizzato è uno **spread (alpha) sul prezzo di riferimento PUN/PSV**, NON un prezzo assoluto. La UI deve combinare alpha + reference per produrre un €/kWh comparabile ai prezzi fissi. Opzione raccomandata: aggiungere un campo `pricing_kind ∈ {absolute, spread_on_reference}` negli `assets` per disambiguare il calcolo a valle (UI, API pubblica, materialized views).
+
 **`price_observations`** — time series, una riga per (asset_id, observed_at)
 ```
 id, asset_id, observed_at (timestamptz, momento del prezzo),
@@ -132,10 +142,10 @@ Tutte idempotenti via UPSERT su chiavi naturali. Tutte scrivono in `etl_runs`.
 
 | Function | Cron (Europe/Rome) | Sorgente | Output |
 |---|---|---|---|
-| `etl-gme-pun` | Daily 13:00 | GME esiti MGP | 24h × (1 PUN nazionale + 6 zone) → `price_observations` |
-| `etl-gme-psv` | Daily 17:00 | GME gas | 1 PSV daily → `price_observations` |
-| `etl-entsoe-dayahead` | Daily 14:00 | ENTSO-E API | day-ahead 15-20 paesi EU → `price_observations` |
-| `etl-arera-offers` | Weekly Mon 03:00 | ARERA Portale Offerte | diff offerte mercato libero → `arera_offers` |
+| `etl-gme-pun` | Daily 13:00 | **DNN scraping del sito pubblico GME** (helper condiviso `spikes/lib/gme-dnn.ts` validato in Fase 0). API ufficiale `api.mercatoelettrico.org` come Plan B SOLO con licenza commerciale GME separata (la licenza standard è "uso informativo privato" — non utilizzabile per pubblicazione pubblica). | 24h × (1 PUN nazionale + 6 zone) → `price_observations` |
+| `etl-gme-psv` | Daily 17:00 | **DNN scraping del sito pubblico GME** (stesso helper condiviso). API ufficiale `api.mercatoelettrico.org` come Plan B SOLO con licenza commerciale GME separata (idem PUN). | 1 PSV daily → `price_observations` |
+| `etl-entsoe-dayahead` | Daily 14:00 | ENTSO-E Restful API (`https://web-api.tp.entsoe.eu/api`, documentType A44, securityToken UUID). **Resolution PT15M** (96 punti/giorno per zona, non 24). **curveType A03** può fornire sparse points con propagazione implicita: l'ETL deve espanderli in 96 quarter-hour intervals densi prima dello storage. **Multi-TimeSeries** possibili (asta primaria + secondaria): selezione canonica via `auction.type=A01` o `classificationSequence` minore. **Attribuzione** obbligatoria: "Source: ENTSO-E Transparency Platform" + link `https://transparency.entsoe.eu/` nel footer. | day-ahead 15-20 paesi EU → `price_observations` |
+| `etl-arera-offers` | Weekly Mon 06:00 UTC | **bulk CSV PLACET pubblico** sul Portale Offerte ARERA (`/portaleOfferte/resources/opendata/csv/{kind}/{YYYY}_{M}/PO_*_YYYYMMDD.csv`), regime open data legalmente dichiarato (L. 190/2012 + D.Lgs. 33/2013), niente scraping HTML necessario. | diff offerte mercato libero → `arera_offers` |
 | `compute-energy-index` | Daily 04:00 | `arera_offers` attive | 4 righe → `energy_index_aggregates` |
 | `refresh-views` | Dopo ogni ETL | — | refresh `mv_latest_price_per_asset` |
 
@@ -144,10 +154,7 @@ Tutte idempotenti via UPSERT su chiavi naturali. Tutte scrivono in `etl_runs`.
 - Alert via email se ETL fallisce 2 giorni di fila (no spam al primo errore).
 - Staleness visibile in UI: badge "aggiornato Nh fa", giallo se >24h, rosso se >72h.
 
-**Spike obbligatori** (rischio principale del progetto, da risolvere in Fase 0):
-1. **GME**: confermare URL/formato file MGP scaricabili senza autenticazione.
-2. **ENTSO-E**: registrazione, security token, prima chiamata API riuscita.
-3. **ARERA Portale Offerte**: verificare se export massivo offerte è davvero pubblicamente accessibile o se richiede credenziali. Plan B: scraping HTML legale ma fragile.
+**Spike fonti dati**: *La Fase 0 (vedi `docs/plans/2026-05-01-spike-report.md`) ha già verificato tutte le 4 fonti — vedi quel documento per gli endpoint validati e i caveat operativi.*
 
 ## 8. Architettura tecnica
 
@@ -224,7 +231,10 @@ energy-index/
 1. **Dominio**: candidati `energyindex.it` / `.eu` / `.com`. Da verificare disponibilità.
 2. **Logo / brand identity**: wordmark testuale al lancio, logo dopo.
 3. **Privacy / cookie**: Plausible/Umami evita cookie banner, ma serve privacy policy + termini d'uso.
-4. **Note legali sui dati**: disclaimer "fonte: GME/ARERA/ENTSO-E, riprodotti per uso informativo" su ogni pagina. Verificare ToS ENTSO-E (clausola di attribuzione).
+4. **Note legali sui dati**:
+   - **GME**: disclaimer *"Fonte: GME — Gestore dei Mercati Energetici"*. Verifica formale con GME se la ripubblicazione su sito informativo gratuito è consentita anche per il canale DNN — la licenza standard dell'API ufficiale (*"uso informativo privato"*) NON è compatibile con il nostro caso d'uso, da affrontare prima del launch pubblico.
+   - **ARERA**: disclaimer *"Fonte: Portale Offerte — Acquirente Unico S.p.A. — ARERA"* obbligatorio sulla card Energy Index e nel footer. Regime open data legalmente dichiarato (L. 190/2012 + D.Lgs. 33/2013) — riutilizzo libero anche per servizi commerciali derivati.
+   - **ENTSO-E**: disclaimer *"Source: ENTSO-E Transparency Platform"* con link a https://transparency.entsoe.eu/, obbligatorio nel footer e in eventuali export. Open under EU Regulation 543/2013.
 
 ## 12. Decisioni-chiave (riepilogo)
 
