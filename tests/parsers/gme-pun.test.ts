@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFile } from "node:fs/promises";
-import { parseGmePun } from "../../spikes/gme-pun.js";
+import { parseGmePun } from "../../supabase/functions/_shared/parsers/gme-pun.js";
 
 const FIXTURE = "spikes/samples/fixtures/gme-pun-fixture.json";
 
