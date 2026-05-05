@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions/_shared/db.ts",
+    "supabase/functions/_shared/etl-runner.ts",
+    "supabase/functions/etl-*",
+    "supabase/functions/refresh-views"
+  ]
 }
