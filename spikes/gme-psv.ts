@@ -45,7 +45,7 @@ import {
   bootstrapGmeDnnSession,
   gmeApiGet,
   type GmeDnnSession,
-} from "./lib/gme-dnn.js";
+} from "../supabase/functions/_shared/gme-dnn.js";
 import { z } from "zod";
 
 const BASE = GME_BASE;

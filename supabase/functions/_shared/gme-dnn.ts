@@ -17,6 +17,10 @@
  * pagina contenitore qualunque, fa lo scraping, e ritorna la sessione
  * spendibile su qualunque endpoint DNN dello stesso sito.
  *
+ * Runtime-agnostic: usa solo `fetch` (Node 20+ e Deno entrambi nativi).
+ * Promosso da `spikes/lib/gme-dnn.ts` in Slice 1 Task 5 — riusato dall'Edge
+ * Function di ingestion (Deno) e dagli spike di sviluppo (Node + tsx).
+ *
  * @see spikes/gme-pun.ts
  * @see spikes/gme-psv.ts
  */

@@ -1,0 +1,33 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_TELEMETRY_DISABLED = "1"
+  NODE_VERSION = "20"
+
+# Plugin Next.js 16: gestisce App Router, ISR, Server Components, middleware, routing dinamico.
+# Senza questo Netlify trattava .next come folder statico -> 404 su tutte le route.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect dominio .pro -> .it (Plan A canonical SEO)
+# Si attivano solo quando i custom domain sono configurati (Task 13 DNS step).
+# Sui preview deploy non hanno effetto perche` il dominio host e` deploy-preview-N--energyindex.netlify.app.
+[[redirects]]
+  from = "https://energyindex.pro/*"
+  to = "https://energyindex.it/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.energyindex.pro/*"
+  to = "https://energyindex.it/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.energyindex.it/*"
+  to = "https://energyindex.it/:splat"
+  status = 301
+  force = true

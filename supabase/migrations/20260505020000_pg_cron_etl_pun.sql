@@ -1,0 +1,65 @@
+-- ============================================================
+-- ETL pg_cron schedule for etl-gme-pun
+-- ============================================================
+--
+-- This migration is INTENTIONALLY DOCUMENTATION-ONLY (no DDL).
+--
+-- The actual cron.schedule call embeds the SUPABASE_SERVICE_ROLE_KEY which
+-- must NOT be committed to version control. The schedule was applied
+-- one-time via Supabase MCP / SQL Editor by an administrator with
+-- service_role privileges.
+--
+-- ## Active schedule (informational)
+--
+-- jobname:  etl-gme-pun-daily
+-- schedule: '0 12 * * *' (UTC) = 14:00 CEST (summer) / 13:00 CET (winter)
+--           Always >30min after MGP auction close at 12:30 Europe/Rome.
+-- target:   https://epbluenhmdwgmgcewrsf.supabase.co/functions/v1/etl-gme-pun
+-- auth:     Bearer <SUPABASE_SERVICE_ROLE_KEY> (in .env.local, gitignored)
+--
+-- Why UTC and not Europe/Rome: the parameter `cron.timezone` cannot be
+-- changed on Supabase managed Postgres (rejects ALTER DATABASE ... SET
+-- cron.timezone with SQLSTATE 55P02). All schedules must be UTC. The
+-- 1h DST drift twice a year is acceptable: ETL stays >30min after auction
+-- close in both regimes.
+--
+-- ## How to re-apply (if cron entry is lost or need to restore)
+--
+-- Run from Supabase Dashboard SQL Editor (logged in as project owner):
+--
+--   SELECT cron.schedule(
+--     'etl-gme-pun-daily',
+--     '0 12 * * *',
+--     $$
+--     SELECT net.http_post(
+--       url := 'https://epbluenhmdwgmgcewrsf.supabase.co/functions/v1/etl-gme-pun',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer YOUR_SERVICE_ROLE_KEY_HERE'
+--       ),
+--       timeout_milliseconds := 60000
+--     ) as request_id;
+--     $$
+--   );
+--
+-- ## How to verify
+--
+--   SELECT jobid, schedule, jobname, active FROM cron.job
+--   WHERE jobname = 'etl-gme-pun-daily';
+--
+--   SELECT id, source, status, started_at, rows_ingested
+--   FROM etl_runs WHERE source='gme-pun'
+--   ORDER BY id DESC LIMIT 5;
+--
+-- ## How to unschedule
+--
+--   SELECT cron.unschedule('etl-gme-pun-daily');
+--
+-- ## End-to-end wiring proof (2026-05-05)
+--
+-- Manual run id=1 (Task 7) + 4 cron-triggered runs (id=2..5) via a
+-- temporary every-minute test cron all returned status=ok with
+-- rows_ingested=168. Test cron then unscheduled. Daily schedule remains.
+
+-- No-op statement so the migration applies cleanly:
+SELECT 1 AS pg_cron_etl_pun_documented;

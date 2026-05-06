@@ -16,9 +16,10 @@
  *    qh=indice quarto d'ora (4 per ogni ora — i prezzi orari sono comunque restituiti).
  *  - PUN è dal 1° gennaio 2025 il "PUN Index GME" (media ponderata) ma è esposto come Zona=PUN.
  *
- * Output del modulo:
- *  - main(): script entrypoint, salva sample+report.
- *  - parseGmePun(rawContent: string): parser puro testabile sul fixture committato.
+ * Slice 1 / Task 5: il parser puro `parseGmePun` è stato promosso a single source
+ * in `supabase/functions/_shared/parsers/gme-pun.ts` (riusato sia da Vitest che
+ * dall'Edge Function di ingestion). Qui resta solo lo script: bootstrap DNN +
+ * fetch + save sample + report.
  */
 import { saveSample, todayIsoDate, reportPath } from "./lib/save-sample.js";
 import {
@@ -27,102 +28,27 @@ import {
   bootstrapGmeDnnSession,
   gmeApiGet,
   type GmeDnnSession,
-} from "./lib/gme-dnn.js";
-import { z } from "zod";
+} from "../supabase/functions/_shared/gme-dnn.js";
+import {
+  parseGmePun,
+  PHYSICAL_ZONES,
+  GmeRowSchema,
+  type GmeRow,
+  type ParseResult,
+} from "../supabase/functions/_shared/parsers/gme-pun.js";
 
 const BASE = GME_BASE;
 const PAGE_PATH = "/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN";
 const PAGE_URL = BASE + PAGE_PATH;
-
-/** I 6 codici zona fisici richiesti dal piano. */
-const PHYSICAL_ZONES = ["NORD", "CNOR", "CSUD", "SUD", "SICI", "SARD"] as const;
-type PhysicalZone = (typeof PHYSICAL_ZONES)[number];
-
-// ---------------------------------------------------------------------------
-// Schemas (zod)
-// ---------------------------------------------------------------------------
-
-/**
- * Riga raw del backend GME: numeri arrivano già come number JSON (non stringhe).
- * Resta uno schema esplicito per rilevare regressioni.
- */
-const GmeRowSchema = z.object({
-  df: z.number().int(), // data flusso YYYYMMDD
-  h: z.number().int().min(1).max(25), // 1..24 (25 il giorno DST in autunno)
-  p: z.number(), // prezzo €/MWh
-  qh: z.number().int().optional(),
-});
-type GmeRow = z.infer<typeof GmeRowSchema>;
-
-/** Forma del file combinato che salviamo come fixture. */
-const CombinedSampleSchema = z.object({
-  source: z.literal("gme-mgp-pun"),
-  url_base: z.string(),
-  fetched_at: z.string(),
-  data_date: z.string(), // YYYY-MM-DD
-  pun: z.array(GmeRowSchema),
-  zones: z.record(z.string(), z.array(GmeRowSchema)),
-});
-type CombinedSample = z.infer<typeof CombinedSampleSchema>;
-
-/** Output del parser: forma normalizzata definita dal piano. */
-const HourlyPointSchema = z.object({
-  hour: z.number().int().min(1).max(25),
-  value: z.number(),
-});
-const ParseResultSchema = z.object({
-  pun_national: z.array(HourlyPointSchema),
-  zonal: z.object({
-    NORD: z.array(HourlyPointSchema),
-    CNOR: z.array(HourlyPointSchema),
-    CSUD: z.array(HourlyPointSchema),
-    SUD: z.array(HourlyPointSchema),
-    SICI: z.array(HourlyPointSchema),
-    SARD: z.array(HourlyPointSchema),
-  }),
-});
-export type ParseResult = z.infer<typeof ParseResultSchema>;
-
-// ---------------------------------------------------------------------------
-// Pure parser (testabile su fixture)
-// ---------------------------------------------------------------------------
-
-/**
- * Parsa il sample combinato JSON salvato dallo spike.
- * Ritorna 24 punti PUN nazionali + 24 punti × 6 zone fisiche.
- */
-export function parseGmePun(rawContent: string): ParseResult {
-  const json = JSON.parse(rawContent) as unknown;
-  const sample = CombinedSampleSchema.parse(json);
-
-  const toPoints = (rows: GmeRow[]) =>
-    rows
-      .slice()
-      .sort((a, b) => a.h - b.h)
-      .map((r) => ({ hour: r.h, value: r.p }));
-
-  const pun_national = toPoints(sample.pun);
-
-  const zonal = {} as ParseResult["zonal"];
-  for (const code of PHYSICAL_ZONES) {
-    const rows = sample.zones[code];
-    if (!rows) {
-      throw new Error(`[parseGmePun] zona ${code} mancante nel sample`);
-    }
-    (zonal as Record<PhysicalZone, { hour: number; value: number }[]>)[code] =
-      toPoints(rows);
-  }
-
-  return ParseResultSchema.parse({ pun_national, zonal });
-}
 
 // ---------------------------------------------------------------------------
 // HTTP helpers (solo per main())
 // ---------------------------------------------------------------------------
 //
 // Il bootstrap della sessione DNN (cookie + token + TabId/ModuleId) e il
-// wrapper di chiamata API sono fattorizzati in `./lib/gme-dnn.ts` perché
-// servono identici anche allo spike PSV (gas).
+// wrapper di chiamata API sono fattorizzati in `supabase/functions/_shared/gme-dnn.ts`
+// perché servono identici anche allo spike PSV (gas) e all'Edge Function di
+// ingestion (Task 7).
 
 function isoToCompact(iso: string): string {
   return iso.replace(/-/g, "");
@@ -239,8 +165,8 @@ async function main(): Promise<void> {
 
   // 3) Salva sample combinato + raw HTML pagina (per debug futuro).
   const dataDateIso = `${dataDateCompact.slice(0, 4)}-${dataDateCompact.slice(4, 6)}-${dataDateCompact.slice(6, 8)}`;
-  const combined: CombinedSample = {
-    source: "gme-mgp-pun",
+  const combined = {
+    source: "gme-mgp-pun" as const,
     url_base: BASE,
     fetched_at: new Date().toISOString(),
     data_date: dataDateIso,
