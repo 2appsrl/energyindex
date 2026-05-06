@@ -11,23 +11,28 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Redirect dominio .pro -> .it (Plan A canonical SEO)
-# Si attivano solo quando i custom domain sono configurati (Task 13 DNS step).
-# Sui preview deploy non hanno effetto perche` il dominio host e` deploy-preview-N--energyindex.netlify.app.
-[[redirects]]
-  from = "https://energyindex.pro/*"
-  to = "https://energyindex.it/:splat"
-  status = 301
-  force = true
+# Redirect host-based: il dominio canonical e` energyindex.it.
+# .pro e www.* fanno 301 al canonical via condizione sul Host header.
+# `force = true` + Host condition fa scattare il redirect PRIMA del middleware Next.js
+# (i redirect Netlify host-conditional hanno priorita` sul plugin Next.js).
 
 [[redirects]]
-  from = "https://www.energyindex.pro/*"
+  from = "/*"
   to = "https://energyindex.it/:splat"
   status = 301
   force = true
+  conditions = {Host = ["energyindex.pro"]}
 
 [[redirects]]
-  from = "https://www.energyindex.it/*"
+  from = "/*"
   to = "https://energyindex.it/:splat"
   status = 301
   force = true
+  conditions = {Host = ["www.energyindex.pro"]}
+
+[[redirects]]
+  from = "/*"
+  to = "https://energyindex.it/:splat"
+  status = 301
+  force = true
+  conditions = {Host = ["www.energyindex.it"]}
