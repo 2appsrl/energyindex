@@ -6,12 +6,7 @@ export function SiteFooter() {
           Fonte: GME — Gestore dei Mercati Energetici. Dati riprodotti per uso
           informativo.
         </p>
-        <p>
-          © 2026 Energy Index — un progetto di DEA Group.{" "}
-          <a href="https://energiapro.biz" className="ml-2 underline">
-            Vai a energiapro.biz
-          </a>
-        </p>
+        <p>© 2026 Energy Index</p>
       </div>
     </footer>
   );
