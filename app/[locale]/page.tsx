@@ -14,7 +14,7 @@ export default function HomeIt() {
       <Link
         href="/it/indice/pun"
         aria-label="Apri l'analisi prezzi dell'energia elettrica"
-        className="group relative block overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="group relative block cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         <div
           aria-hidden="true"
@@ -37,8 +37,8 @@ export default function HomeIt() {
               Prezzo Unico Nazionale (PUN) day-ahead, aggiornato dal GME.
             </p>
           </div>
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-            Apri analisi
+          <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-primary/30">
+            Vedi il grafico
             <ArrowRight
               className="h-5 w-5 transition-transform group-hover:translate-x-1"
               aria-hidden="true"
