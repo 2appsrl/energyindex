@@ -53,8 +53,9 @@ export async function FaqSection({ slug }: { slug: string }) {
     return null;
   }
 
-  // Markdown rendering: split on `## ` headings into Q&A blocks
-  const sections = content.split(/^## /m).filter(Boolean);
+  // Markdown rendering: split on `## ` headings into Q&A blocks.
+  // Filter out the leading whitespace-only chunk (if any) before the first heading.
+  const sections = content.split(/^## /m).filter((s) => s.trim());
   if (sections.length === 0) return null;
 
   const items = sections.map((s) => {
