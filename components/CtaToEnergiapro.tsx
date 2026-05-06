@@ -1,11 +1,14 @@
-import { ArrowRight, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 export function CtaToEnergiapro({ campaign }: { campaign: string }) {
   const url = `https://energiapro.biz/?utm_source=energy-index&utm_medium=cta&utm_campaign=${encodeURIComponent(campaign)}`;
   return (
-    <section
-      aria-label="Confronta offerte"
-      className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10"
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener"
+      aria-label="Vai al comparatore EnergiaPro"
+      className="group relative block cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       {/* Decorative background blob */}
       <div
@@ -26,24 +29,19 @@ export function CtaToEnergiapro({ campaign }: { campaign: string }) {
             Trova la tariffa migliore per te
           </h3>
           <p className="text-base text-muted-foreground max-w-md">
-            Confronta tutte le offerte luce e gas del mercato libero in pochi
+            Confronta le offerte luce e gas del mercato libero in pochi
             secondi. Gratis e senza impegno.
+          </p>
+          <p className="pt-1 text-xs text-muted-foreground/80">
+            Powered by{" "}
+            <span className="font-semibold text-primary">EnergiaPro</span>
           </p>
         </div>
 
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener"
-          className="group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-7 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-        >
+        <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-primary/40">
           Vai al comparatore
-          <ArrowRight
-            className="h-5 w-5 transition-transform group-hover:translate-x-1"
-            aria-hidden="true"
-          />
-        </a>
+        </span>
       </div>
-    </section>
+    </a>
   );
 }
