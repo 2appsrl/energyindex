@@ -16,4 +16,4 @@ In presenza di congestioni di rete, le zone (Nord, Centro-Nord, Centro-Sud, Sud,
 
 ## Posso passare a una tariffa basata sul PUN?
 
-Sì. Le offerte "variabili" indicizzate al PUN aggiungono uno spread fisso al prezzo PUN. Su [energiapro.biz](https://energiapro.biz) puoi confrontare tutte le offerte luce sul mercato libero.
+Sì. Le offerte "variabili" indicizzate al PUN aggiungono uno spread fisso al prezzo PUN dell'ora. In alternativa puoi scegliere tariffe a "prezzo fisso", che bloccano il costo dell'energia per 12 o 24 mesi a prescindere dall'andamento del mercato.
