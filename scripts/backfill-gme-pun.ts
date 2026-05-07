@@ -8,7 +8,10 @@
  * Eseguibile localmente: `npm run backfill:gme-pun`
  * Richiede in .env.local: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
-import "dotenv/config";
+import dotenv from "dotenv";
+// dotenv/config di default carica .env. Qui carichiamo .env.local (convenzione Next.js).
+dotenv.config({ path: ".env.local" });
+dotenv.config(); // fallback su .env
 import { createClient } from "@supabase/supabase-js";
 import {
   bootstrapGmeDnnSession,
