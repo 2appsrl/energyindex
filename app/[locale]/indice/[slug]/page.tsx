@@ -4,11 +4,13 @@ import { LatestValueCard } from "@/components/LatestValueCard";
 import { PriceChart } from "@/components/chart/PriceChart";
 import { FaqSection } from "@/components/FaqSection";
 import { CtaToEnergiapro } from "@/components/CtaToEnergiapro";
+import { TimeframeSelector } from "@/components/chart/TimeframeSelector";
+import { resolveTimeframe } from "@/lib/timeframes";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
 
-const SUPPORTED_SLUGS = ["pun"] as const; // PSV will be added in Slice 2
+const SUPPORTED_SLUGS = ["pun"] as const;
 
 const SLUG_DESCRIPTIONS: Record<string, string> = {
   pun: "Prezzo Unico Nazionale del mercato elettrico italiano. Asta MGP del giorno prima, esiti pubblicati intorno alle 12:30.",
@@ -16,17 +18,21 @@ const SLUG_DESCRIPTIONS: Record<string, string> = {
 
 export default async function IndicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ tf?: string }>;
 }) {
   const { slug } = await params;
+  const { tf: tfParam } = await searchParams;
+  const tf = resolveTimeframe(tfParam);
+
   if (!SUPPORTED_SLUGS.includes(slug as (typeof SUPPORTED_SLUGS)[number])) {
     notFound();
   }
 
   const supabase = await createServerClient();
 
-  // Asset metadata (display_name_it, unit, etc.) — read from MV (1 row, light query)
   const { data: assetMeta } = await supabase
     .from("mv_latest_price_per_asset")
     .select("asset_id, asset_slug, display_name_it, unit, commodity, pricing_kind")
@@ -45,32 +51,25 @@ export default async function IndicePage({
     );
   }
 
-  // The MV exposes the LATEST observed_at, which on energy markets is the
-  // last hour of TOMORROW's day-ahead (already published today at ~12:30 CEST).
-  // For the "current price" big number we want the price valid right NOW —
-  // i.e., the most recent observation whose observed_at <= now.
-  // For the chart we show the past 168h up to now (no future hours).
+  // Latest price for big number card: separate query for the last 2 hourly
+  // observations <= NOW(). Aggregated bucket queries are not appropriate here
+  // (e.g. monthly average is not "current price").
   const nowIso = new Date().toISOString();
-  const oneWeekAgo = new Date(
-    Date.now() - 7 * 24 * 60 * 60 * 1000,
-  ).toISOString();
-
-  const { data: history } = await supabase
+  const { data: latestRows } = await supabase
     .from("price_observations")
     .select("observed_at, value")
     .eq("asset_id", assetMeta.asset_id)
-    .gte("observed_at", oneWeekAgo)
     .lte("observed_at", nowIso)
-    .order("observed_at", { ascending: true });
+    .order("observed_at", { ascending: false })
+    .limit(2);
 
-  const points = (history ?? []).map((p) => ({
-    observed_at: String(p.observed_at),
-    value: Number(p.value),
-  }));
-
-  // "Latest" = most recent point in the past-168h window (i.e., the price
-  // for the hour we are currently in, or the most recent past hour).
-  const latestPoint = points.length > 0 ? points[points.length - 1] : null;
+  const latestPoint = latestRows?.[0]
+    ? {
+        observed_at: String(latestRows[0].observed_at),
+        value: Number(latestRows[0].value),
+      }
+    : null;
+  const prevValue = latestRows?.[1] ? Number(latestRows[1].value) : undefined;
 
   if (!latestPoint) {
     return (
@@ -83,8 +82,18 @@ export default async function IndicePage({
     );
   }
 
-  const prevValue =
-    points.length >= 2 ? points[points.length - 2].value : undefined;
+  // Bucketed series for the chart, via RPC
+  const { data: series } = await supabase.rpc("get_pun_series", {
+    p_asset_id: assetMeta.asset_id,
+    p_interval: tf.intervalSql,
+    p_bucket: tf.bucket,
+  });
+  const points = (series ?? []).map(
+    (p: { observed_at: string; value: number | string }) => ({
+      observed_at: String(p.observed_at),
+      value: Number(p.value),
+    }),
+  );
 
   const description = SLUG_DESCRIPTIONS[slug] ?? "";
 
@@ -106,7 +115,10 @@ export default async function IndicePage({
       />
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Andamento ultime 168 ore</h2>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-xl font-semibold">{tf.chartTitle}</h2>
+          <TimeframeSelector active={tf.id} basePath={`/it/indice/${slug}`} />
+        </div>
         <PriceChart points={points} unit={assetMeta.unit} />
       </section>
 
