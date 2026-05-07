@@ -74,6 +74,26 @@ async function fetchSeries(
   return arr.map((r) => GmeRowSchema.parse(r));
 }
 
+async function fetchSeriesWithRetry(
+  session: GmeDnnSession,
+  zona: "PUN" | Zone,
+  dataCompact: string,
+): Promise<GmeRow[]> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await fetchSeries(session, zona, dataCompact);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 2) {
+        const backoffMs = 500 * Math.pow(2, attempt);
+        await sleep(backoffMs);
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 async function main() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -84,7 +104,9 @@ async function main() {
   }
   const db = createClient(url, key, { auth: { persistSession: false } });
 
-  const session = await bootstrapGmeDnnSession(PAGE_URL);
+  const SESSION_REFRESH_MS = 15 * 60 * 1000; // 15 min
+  let session = await bootstrapGmeDnnSession(PAGE_URL);
+  let sessionStartTime = Date.now();
   console.log("DNN session ok", { tabId: session.tabId });
 
   const slugMap: Record<Zone | "NATIONAL", string> = {
@@ -120,7 +142,16 @@ async function main() {
 
   while (date <= end) {
     try {
-      const punRows = await fetchSeries(session, "PUN", compactDate(date));
+      if (Date.now() - sessionStartTime > SESSION_REFRESH_MS) {
+        session = await bootstrapGmeDnnSession(PAGE_URL);
+        sessionStartTime = Date.now();
+        console.log(`[${date}] DNN session refreshed`);
+      }
+      const punRows = await fetchSeriesWithRetry(
+        session,
+        "PUN",
+        compactDate(date),
+      );
       await sleep(SLEEP_MS);
       if (punRows.length === 0) {
         emptyDays++;
@@ -129,7 +160,11 @@ async function main() {
       }
       const zoneRows: Record<string, GmeRow[]> = {};
       for (const z of ZONES) {
-        zoneRows[z] = await fetchSeries(session, z, compactDate(date));
+        zoneRows[z] = await fetchSeriesWithRetry(
+          session,
+          z,
+          compactDate(date),
+        );
         await sleep(SLEEP_MS);
       }
       const combined = {
@@ -205,6 +240,10 @@ async function main() {
     errorDays,
     elapsedSec,
   });
+
+  // Refresh MV
+  const { error: refreshErr } = await db.rpc("refresh_mv_latest_price_per_asset");
+  if (refreshErr) console.warn("refresh MV warning:", refreshErr.message);
 }
 
 main().catch((e) => {
