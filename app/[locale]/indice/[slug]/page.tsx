@@ -119,7 +119,7 @@ export default async function IndicePage({
           <h2 className="text-xl font-semibold">{tf.chartTitle}</h2>
           <TimeframeSelector active={tf.id} basePath={`/it/indice/${slug}`} />
         </div>
-        <PriceChart points={points} unit={assetMeta.unit} />
+        <PriceChart key={tf.id} points={points} unit={assetMeta.unit} />
       </section>
 
       <FaqSection slug={slug} />
