@@ -32,10 +32,16 @@ const API_PATH = "/DesktopModules/GmeEsitiPrezziME/API/item/GetMEPrezzi";
 const ZONES = PHYSICAL_ZONES;
 type Zone = (typeof ZONES)[number];
 
-// 5 anni fino a ieri.
-const START_DATE = "2021-05-07";
-const SLEEP_MS = 150;
+// 5 anni fino a ieri. Override via env: BACKFILL_START / BACKFILL_END.
+const START_DATE = process.env.BACKFILL_START ?? "2021-05-07";
+const END_DATE_OVERRIDE = process.env.BACKFILL_END ?? null;
+// Sleep aumentato a 500ms (era 150ms) — GME ci ha rate-limitato dopo ~10 min.
+const SLEEP_MS = Number(process.env.BACKFILL_SLEEP_MS ?? 500);
 const PROGRESS_EVERY_DAYS = 30;
+// Re-bootstrap DNN session dopo N errori consecutivi.
+const REBOOTSTRAP_AFTER_ERRORS = 3;
+// Pausa lunga dopo re-bootstrap per dare tempo al GME di "dimenticarci".
+const REBOOTSTRAP_PAUSE_MS = 30 * 1000;
 
 function compactDate(iso: string) {
   return iso.replace(/-/g, "");
@@ -136,22 +142,38 @@ async function main() {
     assets.map((a) => [a.slug as string, a.id as number]),
   );
 
-  const end = addDaysIso(todayIso(), -1);
+  const end = END_DATE_OVERRIDE ?? addDaysIso(todayIso(), -1);
   let date = START_DATE;
   let totalRows = 0;
   let totalDays = 0;
   let emptyDays = 0;
   let errorDays = 0;
+  let consecutiveErrors = 0;
   const t0 = Date.now();
 
-  console.log("backfill start", { from: START_DATE, to: end });
+  console.log("backfill start", {
+    from: START_DATE,
+    to: end,
+    sleepMs: SLEEP_MS,
+  });
 
   while (date <= end) {
     try {
-      if (Date.now() - sessionStartTime > SESSION_REFRESH_MS) {
+      // Reactive re-bootstrap: troppi errori consecutivi = sessione probabilmente
+      // morta o IP bloccato. Aspetta REBOOTSTRAP_PAUSE_MS e ricrea sessione.
+      if (consecutiveErrors >= REBOOTSTRAP_AFTER_ERRORS) {
+        console.warn(
+          `[${date}] ${consecutiveErrors} errori consecutivi: pausa ${REBOOTSTRAP_PAUSE_MS}ms + re-bootstrap DNN`,
+        );
+        await sleep(REBOOTSTRAP_PAUSE_MS);
         session = await bootstrapGmeDnnSession(PAGE_URL);
         sessionStartTime = Date.now();
-        console.log(`[${date}] DNN session refreshed`);
+        consecutiveErrors = 0;
+        console.log(`[${date}] DNN session re-bootstrapped`);
+      } else if (Date.now() - sessionStartTime > SESSION_REFRESH_MS) {
+        session = await bootstrapGmeDnnSession(PAGE_URL);
+        sessionStartTime = Date.now();
+        console.log(`[${date}] DNN session refreshed (15min)`);
       }
       const punRows = await fetchSeriesWithRetry(
         session,
@@ -224,6 +246,7 @@ async function main() {
 
       totalRows += rows.length;
       totalDays++;
+      consecutiveErrors = 0; // reset su giorno OK
 
       if (totalDays % PROGRESS_EVERY_DAYS === 0) {
         const elapsed = ((Date.now() - t0) / 1000).toFixed(0);
@@ -233,6 +256,7 @@ async function main() {
       }
     } catch (err) {
       errorDays++;
+      consecutiveErrors++;
       console.error(`[${date}] errore: ${(err as Error).message}`);
     }
     date = addDaysIso(date, 1);
