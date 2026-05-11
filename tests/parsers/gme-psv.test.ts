@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFile } from "node:fs/promises";
-import { parseGmePsv } from "../../spikes/gme-psv.js";
+import { parseGmePsv } from "../../supabase/functions/_shared/parsers/gme-psv.js";
 
 const FIXTURE = "spikes/samples/fixtures/gme-psv-fixture.json";
 

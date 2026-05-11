@@ -46,118 +46,35 @@ import {
   gmeApiGet,
   type GmeDnnSession,
 } from "../supabase/functions/_shared/gme-dnn.js";
-import { z } from "zod";
+
+// Single source of truth: parser promosso a supabase/functions/_shared/parsers/gme-psv.ts.
+// Lo spike resta runnable e reimporta tutto da lì; le re-export sotto preservano
+// l'API pubblica storica del modulo (chiunque importi dallo spike continua a funzionare).
+import {
+  parseGmePsv,
+  CombinedSampleSchema,
+  DailyPointSchema,
+  ParseResultSchema,
+  GmeMgasRowSchema,
+  type ParseResult,
+  type CombinedSample,
+  type GmeMgasRow,
+} from "../supabase/functions/_shared/parsers/gme-psv.js";
+export {
+  parseGmePsv,
+  CombinedSampleSchema,
+  DailyPointSchema,
+  ParseResultSchema,
+  GmeMgasRowSchema,
+  type ParseResult,
+  type CombinedSample,
+  type GmeMgasRow,
+};
 
 const BASE = GME_BASE;
 const PAGE_PATH = "/it-it/Home/Esiti/Gas/MGP/Esiti";
 const PAGE_URL = BASE + PAGE_PATH;
 const API_PATH = "/DesktopModules/GmeEsitiMGAS/API/item/GetGasEsitiMGAS";
-
-// ---------------------------------------------------------------------------
-// Schemas (zod)
-// ---------------------------------------------------------------------------
-
-/**
- * Una riga raw del backend MGP-GAS. Tutti i campi numerici di prezzo possono
- * essere null su prodotti che non hanno avuto scambi nella sessione richiesta
- * (es. WD-YYYY-WW nei giorni feriali, MGP-(T+2) prima che la sessione si apra).
- */
-const GmeMgasRowSchema = z.object({
-  data: z.number().int(), // sessione di trading YYYYMMDD
-  prodotto: z.string(), // "MGP-YYYY-MM-DD" | "WD-YYYY-WW" | "WE-YYYY-WW"
-  firstPrice: z.number().nullable(),
-  lastPrice: z.number().nullable(),
-  prezzoMinimo: z.number().nullable(),
-  prezzoMassimo: z.number().nullable(),
-  prezzoRiferimento: z.number().nullable(),
-  prezzoControllo: z.number().nullable(),
-  prezzoAcquisto: z.number().nullable(),
-  prezzoVendita: z.number().nullable(),
-  volumiMW: z.number().nullable(),
-  volumiMWh: z.number().nullable(),
-  volumiOTCMW: z.number().nullable(),
-  volumiOTCMWh: z.number().nullable(),
-  posizioniAperte: z.number().nullable(),
-});
-type GmeMgasRow = z.infer<typeof GmeMgasRowSchema>;
-
-/** Forma del file combinato che salviamo come fixture. */
-const CombinedSampleSchema = z.object({
-  source: z.literal("gme-mgp-gas-psv"),
-  url_base: z.string(),
-  fetched_at: z.string(),
-  sessions: z.array(
-    z.object({
-      session_date: z.string(), // YYYY-MM-DD (giorno di trading)
-      http_status: z.number().int(),
-      rows: z.array(GmeMgasRowSchema),
-    }),
-  ),
-});
-type CombinedSample = z.infer<typeof CombinedSampleSchema>;
-
-/** Output del parser: 1 punto per ciascun giorno di consegna. */
-const DailyPointSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // data di consegna ISO
-  value: z.number(), // €/MWh
-});
-const ParseResultSchema = z.object({
-  points: z.array(DailyPointSchema),
-});
-export type ParseResult = z.infer<typeof ParseResultSchema>;
-
-// ---------------------------------------------------------------------------
-// Pure parser (testabile su fixture)
-// ---------------------------------------------------------------------------
-
-/** Estrae la data di consegna ISO da un nome prodotto MGP-YYYY-MM-DD. */
-function deliveryDateFromProdotto(prodotto: string): string | null {
-  const m = prodotto.match(/^MGP-(\d{4}-\d{2}-\d{2})$/);
-  return m ? m[1] : null;
-}
-
-/**
- * Parsa il sample combinato JSON.
- *
- * Per ciascuna sessione di trading T raccoglie il prezzoRiferimento del
- * prodotto MGP-(T+1) — il prezzo day-ahead per la consegna del giorno dopo.
- * Righe con prezzoRiferimento null o prodotti non-MGP (WD/WE) vengono ignorate.
- *
- * Risultato: array `points` ordinato per data crescente, deduplicato per data.
- */
-export function parseGmePsv(rawContent: string): ParseResult {
-  const json = JSON.parse(rawContent) as unknown;
-  const sample = CombinedSampleSchema.parse(json);
-
-  // Dedup: in caso un giorno di consegna comparisse in più sessioni
-  // (es. fix-up post-asta), tieni la sessione più recente.
-  const byDeliveryDate = new Map<string, { value: number; sessionDate: string }>();
-
-  for (const session of sample.sessions) {
-    // Calcola la data di consegna T+1 della sessione T.
-    const expectedNextDay = addDaysIso(session.session_date, 1);
-
-    for (const row of session.rows) {
-      const delivery = deliveryDateFromProdotto(row.prodotto);
-      if (delivery !== expectedNextDay) continue;
-      if (row.prezzoRiferimento === null) continue;
-
-      const existing = byDeliveryDate.get(delivery);
-      if (!existing || existing.sessionDate < session.session_date) {
-        byDeliveryDate.set(delivery, {
-          value: row.prezzoRiferimento,
-          sessionDate: session.session_date,
-        });
-      }
-    }
-  }
-
-  const points = Array.from(byDeliveryDate.entries())
-    .map(([date, v]) => ({ date, value: v.value }))
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-
-  return ParseResultSchema.parse({ points });
-}
 
 // ---------------------------------------------------------------------------
 // HTTP / date helpers (solo per main())
