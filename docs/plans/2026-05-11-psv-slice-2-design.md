@@ -85,16 +85,38 @@ Edge function `supabase/functions/etl-gme-psv/index.ts`, schema simile a `etl-gm
 
 pg_cron schedule: ogni giorno alle **18:00 Europe/Rome** (dopo chiusura sessione gas ~17:00).
 
-## 8. Home page card
+## 8. Home page — card grafiche live
 
-Layout aggiornato a `grid gap-6 sm:grid-cols-2`. Due card affiancate:
+Le due card sulla home diventano **mini-vetrine prezzo live**, minimal text:
 
-| Card | Icona | Slug |
-|---|---|---|
-| Analisi prezzi Energia Elettrica | Zap (lucide) | `pun` |
-| Analisi prezzi Gas | Flame (lucide) | `psv` |
+```
+┌────────────────────────────────────────┐
+│  ⚡                              ▼ 5.8% │
+│                                         │
+│   Energia Elettrica                     │
+│                                         │
+│   146,42 €/MWh                          │
+└────────────────────────────────────────┘
+```
 
-Sottotitolo PSV: "Punto di Scambio Virtuale (PSV), riferimento gas day-ahead dal GME".
+Specifiche:
+- Card alta (~h-72 desktop, ~h-56 mobile), gradient primary
+- Icona grossa top-left in cerchio primary: Zap (luce) / Flame (gas), ~48px
+- Delta % live top-right: verde se ≥0, rosso se <0
+- Titolo 2-3 parole (text-3xl/4xl): "Energia Elettrica" / "Gas"
+- Prezzo XXL (text-4xl/5xl tabular-nums) sotto titolo
+- **Niente descrizione**, niente CTA esplicito — tutta la card è cliccabile (hover lift)
+- Layout: `grid gap-6 sm:grid-cols-2`
+- "Powered by EnergiaPro" rimosso dalla card home; resta sulla CTA dentro le pagine indice
+
+Server-side data fetch nella home: query unica su `mv_latest_price_per_asset` con `.in("asset_slug", ["pun", "psv"])`. Per il delta serve anche la rilevazione precedente — query secondaria su `price_observations` con `limit(1)` per ciascun asset, oppure tenere il delta nella MV come campo precomputato (out of scope: usiamo 2 query mirate, una per asset, in `Promise.all`).
+
+Stato "dati in arrivo" per PSV finché backfill non ha popolato: se l'asset PSV esiste ma `latest_price` è null, mostriamo card vuota grigia "Dati in arrivo" invece del prezzo.
+
+| Card | Icona | Slug | Stato iniziale |
+|---|---|---|---|
+| Energia Elettrica | Zap | `pun` | popolata (Slice 1.5) |
+| Gas | Flame | `psv` | "Dati in arrivo" finché ETL non gira la prima volta |
 
 ## 9. FAQ PSV
 
