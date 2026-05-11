@@ -210,8 +210,11 @@ async function main() {
     elapsedSec,
   });
 
-  // Refresh MV (best-effort, warning-only on error per pattern PUN backfill).
-  const { error: refreshErr } = await db.rpc("refresh_mv_latest_price_per_asset");
+  // Refresh MV (best-effort, warning-only on error).
+  // NB: nome RPC effettivo in DB e' refresh_latest_price_view (vedi
+  // supabase/functions/_shared/db.ts). Lo script PUN aveva un typo che e'
+  // stato corretto qui.
+  const { error: refreshErr } = await db.rpc("refresh_latest_price_view");
   if (refreshErr) console.warn("refresh MV warning:", refreshErr.message);
 }
 
