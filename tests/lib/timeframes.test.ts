@@ -37,4 +37,29 @@ describe("resolveTimeframe", () => {
       "5Y", "1Y", "6M", "3M", "1M", "1S", "1G",
     ]);
   });
+
+  it("hourly source: 5Y month, 1Y/6M/3M/1M day, 1S/1G raw", () => {
+    expect(resolveTimeframe("5Y", "hourly").bucket).toBe("month");
+    expect(resolveTimeframe("1Y", "hourly").bucket).toBe("day");
+    expect(resolveTimeframe("6M", "hourly").bucket).toBe("day");
+    expect(resolveTimeframe("3M", "hourly").bucket).toBe("day");
+    expect(resolveTimeframe("1M", "hourly").bucket).toBe("day");
+    expect(resolveTimeframe("1S", "hourly").bucket).toBe("raw");
+    expect(resolveTimeframe("1G", "hourly").bucket).toBe("raw");
+  });
+
+  it("daily source: 5Y month, 1Y week, 6M/3M/1M/1S/1G raw", () => {
+    expect(resolveTimeframe("5Y", "daily").bucket).toBe("month");
+    expect(resolveTimeframe("1Y", "daily").bucket).toBe("week");
+    expect(resolveTimeframe("6M", "daily").bucket).toBe("raw");
+    expect(resolveTimeframe("3M", "daily").bucket).toBe("raw");
+    expect(resolveTimeframe("1M", "daily").bucket).toBe("raw");
+    expect(resolveTimeframe("1S", "daily").bucket).toBe("raw");
+    expect(resolveTimeframe("1G", "daily").bucket).toBe("raw");
+  });
+
+  it("defaults to hourly when source param omitted (backward compat)", () => {
+    expect(resolveTimeframe("5Y").bucket).toBe("month");
+    expect(resolveTimeframe("1S").bucket).toBe("raw");
+  });
 });

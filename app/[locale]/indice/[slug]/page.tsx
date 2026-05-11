@@ -9,10 +9,16 @@ import { resolveTimeframe } from "@/lib/timeframes";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
-const SUPPORTED_SLUGS = ["pun"] as const;
+const SUPPORTED_SLUGS = ["pun", "psv"] as const;
 
 const SLUG_DESCRIPTIONS: Record<string, string> = {
   pun: "Prezzo Unico Nazionale del mercato elettrico italiano. Asta MGP del giorno prima, esiti pubblicati intorno alle 12:30.",
+  psv: "Punto di Scambio Virtuale, riferimento all'ingrosso del gas naturale italiano. Asta MGP-GAS, esiti pubblicati intorno alle 17:00.",
+};
+
+const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
+  pun: "hourly",
+  psv: "daily",
 };
 
 export default async function IndicePage({
@@ -24,11 +30,13 @@ export default async function IndicePage({
 }) {
   const { slug } = await params;
   const { tf: tfParam } = await searchParams;
-  const tf = resolveTimeframe(tfParam);
 
   if (!SUPPORTED_SLUGS.includes(slug as (typeof SUPPORTED_SLUGS)[number])) {
     notFound();
   }
+
+  const sourceGranularity = SOURCE_GRANULARITY_BY_SLUG[slug] ?? "hourly";
+  const tf = resolveTimeframe(tfParam, sourceGranularity);
 
   const supabase = await createServerClient();
 
@@ -82,7 +90,7 @@ export default async function IndicePage({
   }
 
   // Bucketed series for the chart, via RPC
-  const { data: series } = await supabase.rpc("get_pun_series", {
+  const { data: series } = await supabase.rpc("get_price_series", {
     p_asset_id: assetMeta.asset_id,
     p_interval: tf.intervalSql,
     p_bucket: tf.bucket,

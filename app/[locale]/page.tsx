@@ -1,51 +1,69 @@
-import Link from "next/link";
-import { ArrowRight, Zap } from "lucide-react";
+import { createServerClient } from "@/lib/supabase/server";
+import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 
-export default function HomeIt() {
+async function getLatestPair(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  slug: string,
+): Promise<{ value: number | null; prevValue: number | null; unit: string }> {
+  const { data: meta } = await supabase
+    .from("mv_latest_price_per_asset")
+    .select("asset_id, unit")
+    .eq("asset_slug", slug)
+    .maybeSingle();
+  if (!meta) return { value: null, prevValue: null, unit: "€/MWh" };
+
+  const nowIso = new Date().toISOString();
+  const { data: rows } = await supabase
+    .from("price_observations")
+    .select("value")
+    .eq("asset_id", meta.asset_id)
+    .lte("observed_at", nowIso)
+    .order("observed_at", { ascending: false })
+    .limit(2);
+
+  return {
+    value: rows?.[0] ? Number(rows[0].value) : null,
+    prevValue: rows?.[1] ? Number(rows[1].value) : null,
+    unit: (meta.unit as string) ?? "€/MWh",
+  };
+}
+
+export default async function HomeIt() {
+  const supabase = await createServerClient();
+  const [pun, psv] = await Promise.all([
+    getLatestPair(supabase, "pun"),
+    getLatestPair(supabase, "psv"),
+  ]);
+
   return (
-    <div className="container mx-auto py-16 px-4 space-y-10">
+    <div className="container mx-auto py-12 sm:py-16 px-4 space-y-8 sm:space-y-10">
       <header className="space-y-3">
-        <h1 className="text-4xl font-bold">Energy Index</h1>
-        <p className="text-muted-foreground text-lg">
+        <h1 className="text-4xl sm:text-5xl font-bold">Energy Index</h1>
+        <p className="text-muted-foreground text-base sm:text-lg">
           Osservatorio prezzi luce e gas in tempo reale.
         </p>
       </header>
 
-      <Link
-        href="/it/indice/pun"
-        aria-label="Apri l'analisi prezzi dell'energia elettrica"
-        className="group relative block cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-primary/15 blur-3xl"
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
+        <PriceShowcaseCard
+          href="/it/indice/pun"
+          icon="zap"
+          title="Energia Elettrica"
+          value={pun.value}
+          prevValue={pun.prevValue}
+          unit={pun.unit}
+          ariaLabel="Apri analisi prezzi energia elettrica"
         />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex-1 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Zap className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-                Energia elettrica
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Analisi prezzi Energia Elettrica
-            </h2>
-            <p className="text-base text-muted-foreground max-w-md">
-              Prezzo Unico Nazionale (PUN) day-ahead, aggiornato dal GME.
-            </p>
-          </div>
-          <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-primary/30">
-            Vedi il grafico
-            <ArrowRight
-              className="h-5 w-5 transition-transform group-hover:translate-x-1"
-              aria-hidden="true"
-            />
-          </span>
-        </div>
-      </Link>
+        <PriceShowcaseCard
+          href="/it/indice/psv"
+          icon="flame"
+          title="Gas"
+          value={psv.value}
+          prevValue={psv.prevValue}
+          unit={psv.unit}
+          ariaLabel="Apri analisi prezzi gas"
+        />
+      </div>
     </div>
   );
 }
