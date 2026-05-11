@@ -209,6 +209,10 @@ async function main() {
     errorDays,
     elapsedSec,
   });
+
+  // Refresh MV (best-effort, warning-only on error per pattern PUN backfill).
+  const { error: refreshErr } = await db.rpc("refresh_mv_latest_price_per_asset");
+  if (refreshErr) console.warn("refresh MV warning:", refreshErr.message);
 }
 
 main().catch((e) => {
