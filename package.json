@@ -14,7 +14,8 @@
     "spike:gme-psv": "tsx spikes/gme-psv.ts",
     "spike:entsoe": "tsx spikes/entsoe-dayahead.ts",
     "spike:arera": "tsx spikes/arera-offers.ts",
-    "backfill:gme-pun": "tsx scripts/backfill-gme-pun.ts"
+    "backfill:gme-pun": "tsx scripts/backfill-gme-pun.ts",
+    "backfill:gme-psv": "tsx scripts/backfill-gme-psv.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
