@@ -7,9 +7,8 @@ import { CtaToEnergiapro } from "@/components/CtaToEnergiapro";
 import { TimeframeSelector } from "@/components/chart/TimeframeSelector";
 import { resolveTimeframe } from "@/lib/timeframes";
 
-export const revalidate = 3600;
-export const dynamicParams = true;
-
+// La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
+// rendering on-demand e ISR (revalidate) non si applica.
 const SUPPORTED_SLUGS = ["pun"] as const;
 
 const SLUG_DESCRIPTIONS: Record<string, string> = {

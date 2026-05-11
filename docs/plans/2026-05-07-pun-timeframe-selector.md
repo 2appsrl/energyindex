@@ -384,7 +384,10 @@ CREATE OR REPLACE FUNCTION get_pun_series(
 RETURNS TABLE(observed_at TIMESTAMPTZ, value NUMERIC)
 LANGUAGE plpgsql
 STABLE
-SECURITY DEFINER
+-- NOTE: implementazione finale usa SECURITY INVOKER (non DEFINER):
+-- price_observations ha gia anon-read RLS, quindi DEFINER sarebbe
+-- privilege escalation inutile.
+SECURITY INVOKER
 SET search_path = public
 AS $$
 BEGIN
