@@ -1,32 +1,52 @@
 export type TimeframeId = "5Y" | "1Y" | "6M" | "3M" | "1M" | "1S" | "1G";
-export type BucketKind = "month" | "day" | "raw";
+export type BucketKind = "month" | "week" | "day" | "raw";
+export type SourceGranularity = "hourly" | "daily";
+
+interface TimeframeTemplate {
+  id: TimeframeId;
+  label: string;
+  intervalSql: string;
+  chartTitle: string;
+  buckets: Record<SourceGranularity, BucketKind>;
+}
 
 export interface Timeframe {
   id: TimeframeId;
   label: string;
-  /** Postgres `INTERVAL` literal (e.g. "5 years", "30 days") */
   intervalSql: string;
-  /** date_trunc unit, or "raw" to skip aggregation (return hourly observations) */
-  bucket: BucketKind;
-  /** Heading shown above the chart */
   chartTitle: string;
+  bucket: BucketKind;
 }
 
-export const TIMEFRAMES: readonly Timeframe[] = [
-  { id: "5Y", label: "5Y", intervalSql: "5 years",  bucket: "month", chartTitle: "Andamento ultimi 5 anni" },
-  { id: "1Y", label: "1Y", intervalSql: "1 year",   bucket: "day",   chartTitle: "Andamento ultimi 12 mesi" },
-  { id: "6M", label: "6M", intervalSql: "6 months", bucket: "day",   chartTitle: "Andamento ultimi 6 mesi" },
-  { id: "3M", label: "3M", intervalSql: "3 months", bucket: "day",   chartTitle: "Andamento ultimi 3 mesi" },
-  { id: "1M", label: "1M", intervalSql: "30 days",  bucket: "day",   chartTitle: "Andamento ultimi 30 giorni" },
-  { id: "1S", label: "1S", intervalSql: "7 days",   bucket: "raw",   chartTitle: "Andamento ultime 168 ore" },
-  { id: "1G", label: "1G", intervalSql: "1 day",    bucket: "raw",   chartTitle: "Andamento ultime 24 ore" },
+const TEMPLATES: readonly TimeframeTemplate[] = [
+  { id: "5Y", label: "5Y", intervalSql: "5 years",  chartTitle: "Andamento ultimi 5 anni",   buckets: { hourly: "month", daily: "month" } },
+  { id: "1Y", label: "1Y", intervalSql: "1 year",   chartTitle: "Andamento ultimi 12 mesi",  buckets: { hourly: "day",   daily: "week"  } },
+  { id: "6M", label: "6M", intervalSql: "6 months", chartTitle: "Andamento ultimi 6 mesi",   buckets: { hourly: "day",   daily: "raw"   } },
+  { id: "3M", label: "3M", intervalSql: "3 months", chartTitle: "Andamento ultimi 3 mesi",   buckets: { hourly: "day",   daily: "raw"   } },
+  { id: "1M", label: "1M", intervalSql: "30 days",  chartTitle: "Andamento ultimi 30 giorni",buckets: { hourly: "day",   daily: "raw"   } },
+  { id: "1S", label: "1S", intervalSql: "7 days",   chartTitle: "Andamento ultime 168 ore",  buckets: { hourly: "raw",   daily: "raw"   } },
+  { id: "1G", label: "1G", intervalSql: "1 day",    chartTitle: "Andamento ultime 24 ore",   buckets: { hourly: "raw",   daily: "raw"   } },
 ] as const;
 
-const ID_SET = new Set<string>(TIMEFRAMES.map((t) => t.id));
+/** Esposto pubblicamente per il rendering del selector (id + label sono sufficienti). */
+export const TIMEFRAMES: readonly Pick<Timeframe, "id" | "label">[] = TEMPLATES.map(
+  (t) => ({ id: t.id, label: t.label }),
+);
 
-export function resolveTimeframe(input: string | undefined): Timeframe {
-  if (input && ID_SET.has(input)) {
-    return TIMEFRAMES.find((t) => t.id === input)!;
-  }
-  return TIMEFRAMES[0]; // 5Y default
+const TEMPLATE_BY_ID = new Map<string, TimeframeTemplate>(
+  TEMPLATES.map((t) => [t.id, t]),
+);
+
+export function resolveTimeframe(
+  input: string | undefined,
+  source: SourceGranularity = "hourly",
+): Timeframe {
+  const template = (input ? TEMPLATE_BY_ID.get(input) : undefined) ?? TEMPLATES[0];
+  return {
+    id: template.id,
+    label: template.label,
+    intervalSql: template.intervalSql,
+    chartTitle: template.chartTitle,
+    bucket: template.buckets[source],
+  };
 }
