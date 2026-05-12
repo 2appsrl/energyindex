@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * Ritorna handle con stop() che fade-out 0.4s + cleanup oscillatori.
  * Richiede user gesture (browser blocca autoplay senza interazione).
  */
-function startMarketAmbient(): { stop: () => void } {
+function startMarketAmbient(): { stop: () => void; resume: () => void } {
   const AC =
     window.AudioContext ||
     (window as unknown as { webkitAudioContext: typeof AudioContext })
@@ -141,6 +141,11 @@ function startMarketAmbient(): { stop: () => void } {
         }
       }, 500);
     },
+    resume: () => {
+      // Browser blocca autoplay senza user gesture: il context parte
+      // "suspended" e ctx.resume() puo' fallire silently fino al primo click.
+      void ctx.resume();
+    },
   };
 }
 
@@ -230,24 +235,31 @@ export function MarketMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
   const [search, setSearch] = useState("");
-  const [audioOn, setAudioOn] = useState(false);
-  const audioHandleRef = useRef<{ stop: () => void } | null>(null);
+  // Audio default ON: il context parte "suspended" (browser block autoplay),
+  // si sblocca al primo click ovunque sulla pagina via listener globale.
+  const [audioOn, setAudioOn] = useState(true);
+  const audioHandleRef = useRef<{ stop: () => void; resume: () => void } | null>(null);
 
-  // Avvia / ferma ambient audio in base al toggle.
   useEffect(() => {
-    if (audioOn && !audioHandleRef.current) {
-      audioHandleRef.current = startMarketAmbient();
-    }
-    if (!audioOn && audioHandleRef.current) {
-      audioHandleRef.current.stop();
+    if (!audioOn) {
+      audioHandleRef.current?.stop();
       audioHandleRef.current = null;
+      return;
     }
-    // Cleanup on unmount
+
+    const handle = startMarketAmbient();
+    audioHandleRef.current = handle;
+
+    // Auto-resume al primo gesture (browser blocca autoplay senza click).
+    const tryResume = () => handle.resume();
+    document.addEventListener("pointerdown", tryResume, { once: true });
+    document.addEventListener("keydown", tryResume, { once: true });
+
     return () => {
-      if (audioHandleRef.current) {
-        audioHandleRef.current.stop();
-        audioHandleRef.current = null;
-      }
+      document.removeEventListener("pointerdown", tryResume);
+      document.removeEventListener("keydown", tryResume);
+      handle.stop();
+      audioHandleRef.current = null;
     };
   }, [audioOn]);
 
@@ -390,11 +402,7 @@ export function MarketMap({
                 type="button"
                 onClick={() => setAudioOn((v) => !v)}
                 aria-pressed={audioOn}
-                aria-label={
-                  audioOn
-                    ? "Disattiva audio market pulse"
-                    : "Attiva audio market pulse"
-                }
+                aria-label={audioOn ? "Disattiva audio" : "Attiva audio"}
                 className={`w-full font-mono text-xs uppercase tracking-wider rounded px-3 py-2 border transition-all flex items-center justify-center gap-2 ${
                   audioOn
                     ? "bg-emerald-400/10 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(20,217,122,0.4)]"
@@ -409,7 +417,7 @@ export function MarketMap({
                   }
                   aria-hidden="true"
                 />
-                {audioOn ? "Audio ON · Market Pulse" : "🎧 Attiva Market Pulse"}
+                {audioOn ? "Audio ON" : "Audio OFF"}
               </button>
             </div>
           </div>
