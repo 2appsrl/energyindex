@@ -170,7 +170,10 @@ Deno.serve(async () => {
     }
     ctx.log("upserted arera_offers", { rows: allRows.length });
 
-    // 4. Computa 4 aggregati per asOf
+    // 4. Computa 4 aggregati per asOf. Filtro tipo_cliente='domestico' per
+    // allineare la mediana al caso d'uso residenziale (business+condominio
+    // gonfierebbero la mediana con tariffe non comparabili).
+    const isDomestico = (o: PlacetOffer) => o.tipo_cliente === "domestico";
     const aggregates: Array<{
       slug: string;
       offers: PlacetOffer[];
@@ -178,22 +181,22 @@ Deno.serve(async () => {
     }> = [
       {
         slug: "mercato-libero-luce-fissa",
-        offers: offersE.filter((o) => o.tipo_offerta === "prezzo fisso"),
+        offers: offersE.filter((o) => o.tipo_offerta === "prezzo fisso" && isDomestico(o)),
         unit: "€/kWh",
       },
       {
         slug: "mercato-libero-luce-variabile",
-        offers: offersE.filter((o) => o.tipo_offerta === "prezzo variabile"),
+        offers: offersE.filter((o) => o.tipo_offerta === "prezzo variabile" && isDomestico(o)),
         unit: "€/kWh",
       },
       {
         slug: "mercato-libero-gas-fissa",
-        offers: offersG.filter((o) => o.tipo_offerta === "prezzo fisso"),
+        offers: offersG.filter((o) => o.tipo_offerta === "prezzo fisso" && isDomestico(o)),
         unit: "€/Smc",
       },
       {
         slug: "mercato-libero-gas-variabile",
-        offers: offersG.filter((o) => o.tipo_offerta === "prezzo variabile"),
+        offers: offersG.filter((o) => o.tipo_offerta === "prezzo variabile" && isDomestico(o)),
         unit: "€/Smc",
       },
     ];
