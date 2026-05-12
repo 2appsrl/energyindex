@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PUN_ZONES, type ZoneCode } from "@/lib/pun-zones";
+import { type ZoneCode } from "@/lib/pun-zones";
 import { cn } from "@/lib/utils";
 
 // Path SVG stilizzati (viewBox 200x280). Non precisi geograficamente:
@@ -78,7 +78,7 @@ export function ZoneMapItalia({
                     textAnchor="middle"
                     dominantBaseline="middle"
                     className={cn(
-                      "pointer-events-none text-[10px] font-semibold tabular-nums select-none",
+                      "pointer-events-none text-[10px] font-semibold select-none",
                       isActive ? "fill-primary-foreground" : "fill-muted-foreground",
                     )}
                   >
