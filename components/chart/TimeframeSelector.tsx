@@ -22,7 +22,7 @@ export function TimeframeSelector({
             href={`${basePath}?tf=${t.id}`}
             scroll={false}
             className={cn(
-              "shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold tabular-nums transition-colors",
+              "shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               isActive
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
