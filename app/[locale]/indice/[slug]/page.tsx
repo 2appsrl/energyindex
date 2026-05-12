@@ -160,9 +160,22 @@ export default async function IndicePage({
         );
       })()}
 
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-xl font-semibold">{tf.chartTitle}</h2>
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">{tf.chartTitle}</h2>
+            <p className="text-xs text-muted-foreground">
+              {(() => {
+                const bucketLabels: Record<typeof tf.bucket, string> = {
+                  raw: "Ogni punto = prezzo orario rilevato dal GME.",
+                  day: "Ogni punto = media giornaliera. Le ore con prezzi bassi (es. surplus solare di metà giorno) sono mediate con le ore alte serali.",
+                  week: "Ogni punto = media settimanale.",
+                  month: "Ogni punto = media mensile. La card in alto mostra invece il prezzo dell'ora corrente — può divergere molto dalla media del mese.",
+                };
+                return bucketLabels[tf.bucket];
+              })()}
+            </p>
+          </div>
           <TimeframeSelector active={tf.id} basePath={`/it/indice/${slug}`} />
         </div>
         <PriceChart key={tf.id} points={points} unit={assetMeta.unit} />
