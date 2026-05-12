@@ -3,113 +3,138 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Genera un drone ambient cyberpunk procedurale via Web Audio API.
- * Niente asset esterno: 2 oscillator drone + noise filtrato + chimes random
- * in scala pentatonica. Tutto sintetizzato in-browser.
+ * "Market pulse" — ambient procedurale via Web Audio API per la pagina
+ * Market Map. Niente asset esterno, tutto sintetizzato in-browser.
  *
- * Ritorna un handle con `stop()` che fade-out + cleanup oscillatori.
+ * Struttura sonora:
+ * - Pad armonico in Do minore (C2 + E♭3 + G3) attraverso lowpass con LFO 0.05 Hz
+ *   → atmosfera contemplativa, "respiro" lento
+ * - Heartbeat kick ogni 750 ms (sub-bass 80→30 Hz envelope) → "il mercato e' vivo"
+ * - Data ticks square wave 4-6 kHz random → "transazioni in corso"
+ * - Ping pentatonici random ogni 5-15 s → "deal confermato"
+ *
+ * Ritorna handle con stop() che fade-out 0.4s + cleanup oscillatori.
  * Richiede user gesture (browser blocca autoplay senza interazione).
  */
-function startMatrixAmbient(): { stop: () => void } {
+function startMarketAmbient(): { stop: () => void } {
   const AC =
     window.AudioContext ||
     (window as unknown as { webkitAudioContext: typeof AudioContext })
       .webkitAudioContext;
   const ctx = new AC();
-  // Su iOS Safari il context parte "suspended" — sblocca esplicitamente.
   void ctx.resume();
 
   const master = ctx.createGain();
   master.gain.value = 0;
   master.connect(ctx.destination);
-  // Fade-in 1.5s
-  master.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 1.5);
+  master.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 1.5);
 
-  // Drone 1: sawtooth a 55 Hz attraverso lowpass con LFO (respiro)
-  const d1 = ctx.createOscillator();
-  d1.type = "sawtooth";
-  d1.frequency.value = 55;
-  const d1g = ctx.createGain();
-  d1g.gain.value = 0.1;
-  const droneFilter = ctx.createBiquadFilter();
-  droneFilter.type = "lowpass";
-  droneFilter.frequency.value = 500;
-  droneFilter.Q.value = 4;
-  d1.connect(d1g).connect(droneFilter).connect(master);
-  d1.start();
+  // -- Pad armonico Do minore: C2 / E♭3 / G3 --
+  const padFilter = ctx.createBiquadFilter();
+  padFilter.type = "lowpass";
+  padFilter.frequency.value = 800;
+  padFilter.Q.value = 5;
+  padFilter.connect(master);
 
-  // LFO sul filtro per modulare il timbro lentamente
-  const lfo = ctx.createOscillator();
-  lfo.frequency.value = 0.08;
-  const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 350;
-  lfo.connect(lfoGain).connect(droneFilter.frequency);
-  lfo.start();
+  const padOscs: OscillatorNode[] = [];
+  const padFreqs = [65.41, 155.56, 196.0];
+  for (const freq of padFreqs) {
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.value = 0.04;
+    osc.connect(g).connect(padFilter);
+    osc.start();
+    padOscs.push(osc);
+  }
 
-  // Drone 2: sine quinta sopra (82.5 Hz)
-  const d2 = ctx.createOscillator();
-  d2.type = "sine";
-  d2.frequency.value = 82.5;
-  const d2g = ctx.createGain();
-  d2g.gain.value = 0.05;
-  d2.connect(d2g).connect(master);
-  d2.start();
+  // LFO sweep filtro (apre/chiude lentamente)
+  const sweep = ctx.createOscillator();
+  sweep.frequency.value = 0.05;
+  const sweepGain = ctx.createGain();
+  sweepGain.gain.value = 450;
+  sweep.connect(sweepGain).connect(padFilter.frequency);
+  sweep.start();
 
-  // White noise filtrato bandpass — texture "pioggia digitale"
-  const bufSize = 2 * ctx.sampleRate;
-  const noiseBuffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
-  const noise = ctx.createBufferSource();
-  noise.buffer = noiseBuffer;
-  noise.loop = true;
-  const noiseFilter = ctx.createBiquadFilter();
-  noiseFilter.type = "bandpass";
-  noiseFilter.frequency.value = 1200;
-  noiseFilter.Q.value = 0.6;
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.value = 0.05;
-  noise.connect(noiseFilter).connect(noiseGain).connect(master);
-  noise.start();
+  // -- Heartbeat kick @ ~80 bpm (750 ms) --
+  const playKick = () => {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    const t0 = ctx.currentTime;
+    osc.frequency.setValueAtTime(80, t0);
+    osc.frequency.exponentialRampToValueAtTime(30, t0 + 0.15);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.16, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+    osc.connect(g).connect(master);
+    osc.start(t0);
+    osc.stop(t0 + 0.3);
+  };
+  const kickTimer = setInterval(playKick, 750);
 
-  // Chimes random in scala pentatonica E minor: occasionali, sparse
-  let chimeTimer: ReturnType<typeof setTimeout> | null = null;
-  const NOTES = [329.6, 392, 440, 523.2, 587.3, 659.2, 783.9];
-  const scheduleChime = () => {
-    chimeTimer = setTimeout(
+  // -- Data ticks square 4-6 kHz random --
+  let tickTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleTick = () => {
+    tickTimer = setTimeout(
       () => {
         const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.value = NOTES[Math.floor(Math.random() * NOTES.length)];
+        osc.type = "square";
+        osc.frequency.value = 4000 + Math.random() * 2000;
         const g = ctx.createGain();
         const t0 = ctx.currentTime;
         g.gain.setValueAtTime(0, t0);
-        g.gain.linearRampToValueAtTime(0.08, t0 + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.8);
+        g.gain.linearRampToValueAtTime(0.012, t0 + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
         osc.connect(g).connect(master);
         osc.start(t0);
-        osc.stop(t0 + 2);
-        scheduleChime();
+        osc.stop(t0 + 0.05);
+        scheduleTick();
       },
-      4000 + Math.random() * 8000,
+      300 + Math.random() * 1700,
     );
   };
-  scheduleChime();
+  scheduleTick();
+
+  // -- Ping pentatonici Do minore: confirm deal --
+  let pingTimer: ReturnType<typeof setTimeout> | null = null;
+  const PING_NOTES = [261.6, 311.1, 349.2, 392, 466.2, 523.2];
+  const schedulePing = () => {
+    pingTimer = setTimeout(
+      () => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value =
+          PING_NOTES[Math.floor(Math.random() * PING_NOTES.length)];
+        const g = ctx.createGain();
+        const t0 = ctx.currentTime;
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(0.05, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+        osc.connect(g).connect(master);
+        osc.start(t0);
+        osc.stop(t0 + 1.3);
+        schedulePing();
+      },
+      5000 + Math.random() * 10000,
+    );
+  };
+  schedulePing();
 
   return {
     stop: () => {
-      if (chimeTimer) clearTimeout(chimeTimer);
-      // Fade-out poi cleanup
+      clearInterval(kickTimer);
+      if (tickTimer) clearTimeout(tickTimer);
+      if (pingTimer) clearTimeout(pingTimer);
       const t = ctx.currentTime;
       master.gain.cancelScheduledValues(t);
       master.gain.setValueAtTime(master.gain.value, t);
       master.gain.linearRampToValueAtTime(0, t + 0.4);
       setTimeout(() => {
         try {
-          d1.stop();
-          d2.stop();
-          lfo.stop();
-          noise.stop();
+          for (const osc of padOscs) osc.stop();
+          sweep.stop();
           void ctx.close();
         } catch {
           /* ignore — oscillators may have already stopped */
@@ -211,7 +236,7 @@ export function MarketMap({
   // Avvia / ferma ambient audio in base al toggle.
   useEffect(() => {
     if (audioOn && !audioHandleRef.current) {
-      audioHandleRef.current = startMatrixAmbient();
+      audioHandleRef.current = startMarketAmbient();
     }
     if (!audioOn && audioHandleRef.current) {
       audioHandleRef.current.stop();
@@ -366,7 +391,9 @@ export function MarketMap({
                 onClick={() => setAudioOn((v) => !v)}
                 aria-pressed={audioOn}
                 aria-label={
-                  audioOn ? "Disattiva audio ambient" : "Attiva audio ambient Matrix"
+                  audioOn
+                    ? "Disattiva audio market pulse"
+                    : "Attiva audio market pulse"
                 }
                 className={`w-full font-mono text-xs uppercase tracking-wider rounded px-3 py-2 border transition-all flex items-center justify-center gap-2 ${
                   audioOn
@@ -382,7 +409,7 @@ export function MarketMap({
                   }
                   aria-hidden="true"
                 />
-                {audioOn ? "Audio ON · Matrix ambient" : "🎧 Attiva audio Matrix"}
+                {audioOn ? "Audio ON · Market Pulse" : "🎧 Attiva Market Pulse"}
               </button>
             </div>
           </div>
