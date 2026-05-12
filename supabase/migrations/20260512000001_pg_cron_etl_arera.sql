@@ -1,14 +1,26 @@
 -- ============================================================
--- ETL pg_cron schedule for etl-arera-placet
+-- ETL ARERA — NON usa pg_cron (ARERA blocca IP egress Supabase con 403)
 -- ============================================================
 -- Doc-only migration (no DDL).
 --
--- Active schedule:
--- jobname:  etl-arera-placet-daily
--- schedule: '0 0 * * *' (UTC) = 02:00 CEST (summer) / 01:00 CET (winter)
---           Sicuro dopo refresh ARERA giornaliero ~22:30 UTC.
--- target:   https://epbluenhmdwgmgcewrsf.supabase.co/functions/v1/etl-arera-placet
--- auth:     Bearer <SUPABASE_SERVICE_ROLE_KEY>
+-- !!! DEPRECATED — NON attivare questo schedule !!!
+--
+-- Test 2026-05-12: l'edge function `etl-arera-placet` riceve 403 Forbidden
+-- (Microsoft IIS WAF) quando chiama ARERA dal range IP Supabase/AWS.
+-- Le stesse URL funzionano da locale e da GitHub Actions runner.
+--
+-- Workaround attivo: l'ETL gira da GitHub Actions schedulato.
+-- File: .github/workflows/etl-arera-daily.yml
+-- Schedule: '0 1 * * *' UTC (= 03:00 CEST / 02:00 CET)
+-- Riusa lo script `scripts/backfill-arera-placet.ts` con
+-- BACKFILL_START=BACKFILL_END=today.
+-- Secrets richiesti nel repo GitHub: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
+--
+-- L'edge function `etl-arera-placet` resta deployata ma NON deve essere
+-- chiamata da pg_cron — fallirebbe ogni giorno con 403 e riempirebbe
+-- etl_runs di errori inutili.
+--
+-- Pattern storico (lasciato qui per riferimento se ARERA toglie il block):
 --
 -- How to re-apply (Supabase Dashboard SQL Editor):
 --
