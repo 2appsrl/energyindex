@@ -167,6 +167,30 @@ export default async function MercatoLiberoPage() {
         </p>
       </header>
 
+      <a
+        href="/it/mercato-libero/ticker"
+        className="group relative block overflow-hidden rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/10 via-black/40 to-transparent p-5 sm:p-6 transition-all hover:-translate-y-0.5 hover:border-emerald-400/60 hover:shadow-xl hover:shadow-emerald-500/20"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs font-mono uppercase tracking-widest text-emerald-400">
+              ▶ Market Map · novità
+            </p>
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight">
+              Visualizza tutte le offerte come mappa interattiva
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Tutte le 1.500+ offerte PLACET in un colpo d&apos;occhio.
+              Cerca un fornitore per nome, identifica al volo dove si colloca
+              rispetto al mercato.
+            </p>
+          </div>
+          <span className="hidden sm:inline-block text-2xl text-emerald-400 group-hover:translate-x-1 transition-transform">
+            →
+          </span>
+        </div>
+      </a>
+
       <section className="grid gap-4 sm:grid-cols-2">
         {AGGREGATE_SLUGS.map((a) => {
           const row = latestBySlug.get(a.slug);
