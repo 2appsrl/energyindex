@@ -86,6 +86,27 @@ function offersToRows(
     });
 }
 
+/**
+ * Dedup batch by (offer_code, valid_from). ARERA pubblica piu' righe per
+ * la stessa offerta con varianti regionali (regione/provincia/comune):
+ * il `codice_offerta` ripete. Postgres UPSERT batch non gestisce duplicati
+ * intra-batch ("ON CONFLICT DO UPDATE command cannot affect row a second
+ * time"): teniamo la prima riga per ogni chiave.
+ */
+function dedupeByConflictKey<T extends { offer_code: string; valid_from: string }>(
+  rows: T[],
+): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const r of rows) {
+    const k = `${r.offer_code}|${r.valid_from}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
+
 async function main() {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -133,10 +154,10 @@ async function main() {
         console.warn(`[${date}] parse G failed: ${(err as Error).message}`);
       }
 
-      const rows = [
+      const rows = dedupeByConflictKey([
         ...offersToRows(offersE, "electricity", date),
         ...offersToRows(offersG, "gas", date),
-      ];
+      ]);
 
       if (rows.length > 0) {
         const { error } = await db
