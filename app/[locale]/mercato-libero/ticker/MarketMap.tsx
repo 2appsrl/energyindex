@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Flame, Zap } from "lucide-react";
 
 /**
  * "Market pulse" — ambient procedurale via Web Audio API per la pagina
@@ -161,10 +162,22 @@ export interface Offer {
 interface Section {
   key: string;
   title: string;
+  icon: ReactNode;
   unit: string;
   isSpread: boolean;
   offers: Offer[];
 }
+
+const LUCE_ICON = (
+  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40 shadow-[0_0_10px_rgba(20,217,122,0.35)]">
+    <Zap className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+  </span>
+);
+const GAS_ICON = (
+  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/40 shadow-[0_0_10px_rgba(251,191,36,0.35)]">
+    <Flame className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+  </span>
+);
 
 const NUMBER_4DP = new Intl.NumberFormat("it-IT", {
   minimumFractionDigits: 4,
@@ -192,28 +205,32 @@ function groupOffers(offers: Offer[]): Section[] {
   const meta: Section[] = [
     {
       key: "electricity_fisso",
-      title: "⚡ LUCE FISSA",
+      title: "LUCE FISSA",
+      icon: LUCE_ICON,
       unit: "€/kWh",
       isSpread: false,
       offers: groups.get("electricity_fisso") ?? [],
     },
     {
       key: "electricity_variabile",
-      title: "⚡ LUCE VARIABILE (spread)",
+      title: "LUCE VARIABILE (spread)",
+      icon: LUCE_ICON,
       unit: "€/kWh",
       isSpread: true,
       offers: groups.get("electricity_variabile") ?? [],
     },
     {
       key: "gas_fisso",
-      title: "🔥 GAS FISSA",
+      title: "GAS FISSA",
+      icon: GAS_ICON,
       unit: "€/Smc",
       isSpread: false,
       offers: groups.get("gas_fisso") ?? [],
     },
     {
       key: "gas_variabile",
-      title: "🔥 GAS VARIABILE (spread)",
+      title: "GAS VARIABILE (spread)",
+      icon: GAS_ICON,
       unit: "€/Smc",
       isSpread: true,
       offers: groups.get("gas_variabile") ?? [],
@@ -476,8 +493,9 @@ export function MarketMap({
               section.offers[Math.floor(section.offers.length / 2)].price;
             return (
               <section key={section.key}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3 border-b border-emerald-400/15 pb-2">
-                  <h2 className="text-lg sm:text-xl font-mono font-bold text-emerald-300 tracking-wider">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-emerald-400/15 pb-2">
+                  <h2 className="flex items-center gap-2 text-lg sm:text-xl font-mono font-bold text-emerald-300 tracking-wider">
+                    {section.icon}
                     {section.title}
                   </h2>
                   <span className="font-mono text-xs sm:text-sm text-emerald-300/60 tabular-nums">
