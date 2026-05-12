@@ -252,33 +252,45 @@ export function MarketMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
   const [search, setSearch] = useState("");
-  // Audio default ON: il context parte "suspended" (browser block autoplay),
-  // si sblocca al primo click ovunque sulla pagina via listener globale.
+  // Audio default ON: ma il browser blocca autoplay senza user gesture.
+  // Strategia: ritardiamo la creazione dell'AudioContext fino al primo
+  // gesto utente (hasInteracted), poi parte subito.
   const [audioOn, setAudioOn] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const audioHandleRef = useRef<{ stop: () => void; resume: () => void } | null>(null);
 
+  // Detect prima interazione utente (qualsiasi click/keypress/touch).
   useEffect(() => {
-    if (!audioOn) {
+    if (hasInteracted) return;
+    const markInteracted = () => setHasInteracted(true);
+    const opts = { once: true } as const;
+    document.addEventListener("pointerdown", markInteracted, opts);
+    document.addEventListener("keydown", markInteracted, opts);
+    document.addEventListener("touchstart", markInteracted, opts);
+    return () => {
+      document.removeEventListener("pointerdown", markInteracted);
+      document.removeEventListener("keydown", markInteracted);
+      document.removeEventListener("touchstart", markInteracted);
+    };
+  }, [hasInteracted]);
+
+  // Avvia/ferma audio quando lo stato cambia. La creazione dell'AudioContext
+  // avviene SOLO dopo hasInteracted=true: a quel punto siamo dentro un
+  // gesture handler (o subito dopo) e ctx.resume() funziona.
+  useEffect(() => {
+    if (!audioOn || !hasInteracted) {
       audioHandleRef.current?.stop();
       audioHandleRef.current = null;
       return;
     }
-
     const handle = startMarketAmbient();
     audioHandleRef.current = handle;
-
-    // Auto-resume al primo gesture (browser blocca autoplay senza click).
-    const tryResume = () => handle.resume();
-    document.addEventListener("pointerdown", tryResume, { once: true });
-    document.addEventListener("keydown", tryResume, { once: true });
-
+    handle.resume();
     return () => {
-      document.removeEventListener("pointerdown", tryResume);
-      document.removeEventListener("keydown", tryResume);
       handle.stop();
       audioHandleRef.current = null;
     };
-  }, [audioOn]);
+  }, [audioOn, hasInteracted]);
 
   const sections = useMemo(() => groupOffers(offers), [offers]);
 
