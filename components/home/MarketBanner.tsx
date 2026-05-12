@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, LineChart } from "lucide-react";
 
+const NUMBER_4DP = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+});
+
 export interface MarketBannerProps {
   /** Mediana luce variabile (alpha), null se nessun dato. */
   luceVariabileMedian: number | null;
@@ -27,7 +32,7 @@ export function MarketBanner({ luceVariabileMedian, totalOffers }: MarketBannerP
               <p className="text-sm sm:text-base text-muted-foreground">
                 Spread mediano luce variabile:{" "}
                 <span className="font-semibold tabular-nums text-foreground">
-                  +{luceVariabileMedian!.toFixed(4)} €/kWh
+                  +{NUMBER_4DP.format(luceVariabileMedian!)} €/kWh
                 </span>{" "}
                 · {totalOffers} offerte ARERA
               </p>

@@ -21,6 +21,7 @@ interface AggregateRow {
   median: number;
   p25: number | null;
   p75: number | null;
+  min: number | null;
   sample_size: number;
   unit: string;
 }
@@ -32,7 +33,7 @@ export default async function MercatoLiberoPage() {
   const slugs = AGGREGATE_SLUGS.map((a) => a.slug);
   const { data: latest } = await supabase
     .from("energy_index_aggregates")
-    .select("aggregate_slug, computed_at, median, p25, p75, sample_size, unit")
+    .select("aggregate_slug, computed_at, median, p25, p75, min, sample_size, unit")
     .in("aggregate_slug", slugs)
     .order("computed_at", { ascending: false });
 
@@ -103,6 +104,7 @@ export default async function MercatoLiberoPage() {
               median={row?.median ?? null}
               p25={row?.p25 ?? null}
               p75={row?.p75 ?? null}
+              min={row?.min ?? null}
               sampleSize={row?.sample_size ?? 0}
               unit={a.unit}
               isSpread={isSpread}
