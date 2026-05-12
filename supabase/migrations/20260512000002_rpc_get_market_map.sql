@@ -1,6 +1,10 @@
 -- RPC per Market Map: tutte le offerte ARERA PLACET attive oggi (domestico),
 -- gia' con la mediana di categoria pre-calcolata per il color delta.
 -- Evita giochini con OR/filter di Supabase JS sui timestamptz.
+--
+-- SECURITY DEFINER: arera_offers ha RLS attivo senza public-read policy
+-- (volontariamente "interna"). La RPC bypassa RLS ed espone solo la sliced
+-- view "offerte attive + domestico" — niente esposizione collaterale.
 
 CREATE OR REPLACE FUNCTION get_market_map()
 RETURNS TABLE(
@@ -13,7 +17,7 @@ RETURNS TABLE(
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public
 AS $$
   WITH active AS (
