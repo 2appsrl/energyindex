@@ -4,6 +4,8 @@ import {
   parsePlacetElectric,
   parsePlacetGas,
   statsFor,
+} from "../../supabase/functions/_shared/parsers/arera-placet.js";
+import {
   buildPlacetUrl,
   buildMliberoUrl,
 } from "../../spikes/arera-offers.js";
