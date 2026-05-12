@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { LatestValueCard } from "@/components/LatestValueCard";
@@ -31,6 +32,37 @@ const NUMBER_2DP = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 2,
 });
 
+/**
+ * Lookup `asset_id` per asset_slug usando mv_latest_price_per_asset.
+ * Memoizzato a livello di richiesta via React.cache cosi' generateMetadata e
+ * IndicePage non duplicano la stessa query Supabase.
+ */
+const getAssetMetaBySlug = cache(async (slug: string) => {
+  const supabase = await createServerClient();
+  return supabase
+    .from("mv_latest_price_per_asset")
+    .select("asset_id, asset_slug, display_name_it, unit, commodity, pricing_kind")
+    .eq("asset_slug", slug)
+    .maybeSingle();
+});
+
+/**
+ * Recupera le ultime N osservazioni <= ora corrente per un asset_id.
+ * Memoizzato per richiesta. Default limit=2 (serve sia per latest, sia per
+ * delta vs precedente nella card).
+ */
+const getLatestObservations = cache(async (assetId: string | number, limit = 2) => {
+  const supabase = await createServerClient();
+  const nowIso = new Date().toISOString();
+  return supabase
+    .from("price_observations")
+    .select("observed_at, value")
+    .eq("asset_id", assetId)
+    .lte("observed_at", nowIso)
+    .order("observed_at", { ascending: false })
+    .limit(limit);
+});
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -47,23 +79,17 @@ export async function generateMetadata({
   const effectiveSlug = zone ? zone.slug : slug;
 
   // Lookup ultimo prezzo per il title dinamico (via mv_latest_price_per_asset
-  // per recuperare asset_id, poi price_observations).
-  const supabase = await createServerClient();
-  const { data: meta } = await supabase
-    .from("mv_latest_price_per_asset")
-    .select("asset_id")
-    .eq("asset_slug", effectiveSlug)
-    .maybeSingle();
+  // per recuperare asset_id, poi price_observations). Helpers memoizzati via
+  // React.cache: condividono la stessa promise con IndicePage in questa request.
   let price: number | null = null;
-  if (meta?.asset_id) {
-    const { data: rows } = await supabase
-      .from("price_observations")
-      .select("value")
-      .eq("asset_id", meta.asset_id)
-      .lte("observed_at", new Date().toISOString())
-      .order("observed_at", { ascending: false })
-      .limit(1);
-    if (rows?.[0]) price = Number(rows[0].value);
+  try {
+    const { data: metaRow } = await getAssetMetaBySlug(effectiveSlug);
+    if (metaRow?.asset_id) {
+      const { data: rows } = await getLatestObservations(metaRow.asset_id, 1);
+      if (rows?.[0]) price = Number(rows[0].value);
+    }
+  } catch {
+    // fallback: metadata senza prezzo (priceStr = "—")
   }
   const priceStr = price !== null ? `${NUMBER_2DP.format(price)} €/MWh` : "—";
 
@@ -114,13 +140,7 @@ export default async function IndicePage({
   const sourceGranularity = SOURCE_GRANULARITY_BY_SLUG[slug] ?? "hourly";
   const tf = resolveTimeframe(tfParam, sourceGranularity);
 
-  const supabase = await createServerClient();
-
-  const { data: assetMeta } = await supabase
-    .from("mv_latest_price_per_asset")
-    .select("asset_id, asset_slug, display_name_it, unit, commodity, pricing_kind")
-    .eq("asset_slug", effectiveSlug)
-    .maybeSingle();
+  const { data: assetMeta } = await getAssetMetaBySlug(effectiveSlug);
 
   if (!assetMeta) {
     return (
@@ -137,14 +157,7 @@ export default async function IndicePage({
   // Latest price for big number card: separate query for the last 2 hourly
   // observations <= NOW(). Aggregated bucket queries are not appropriate here
   // (e.g. monthly average is not "current price").
-  const nowIso = new Date().toISOString();
-  const { data: latestRows } = await supabase
-    .from("price_observations")
-    .select("observed_at, value")
-    .eq("asset_id", assetMeta.asset_id)
-    .lte("observed_at", nowIso)
-    .order("observed_at", { ascending: false })
-    .limit(2);
+  const { data: latestRows } = await getLatestObservations(assetMeta.asset_id, 2);
 
   const latestPoint = latestRows?.[0]
     ? {
@@ -166,6 +179,7 @@ export default async function IndicePage({
   }
 
   // Bucketed series for the chart, via RPC
+  const supabase = await createServerClient();
   const { data: series } = await supabase.rpc("get_price_series", {
     p_asset_id: assetMeta.asset_id,
     p_interval: tf.intervalSql,
