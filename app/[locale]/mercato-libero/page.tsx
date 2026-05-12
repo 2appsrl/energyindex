@@ -7,6 +7,8 @@ import {
 } from "@/components/mercato-libero/AggregateTrendChart";
 import { CtaToEnergiapro } from "@/components/CtaToEnergiapro";
 import { FaqSection } from "@/components/FaqSection";
+import type { Metadata } from "next";
+import { breadcrumbList, jsonLdString } from "@/lib/seo/jsonld";
 
 const COLORS: Record<AggregateSlug, string> = {
   "mercato-libero-luce-fissa": "#14d97a",
@@ -31,6 +33,46 @@ interface AggregateRow {
   min: number | null;
   sample_size: number;
   unit: string;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  // Quante offerte totali sull'ultimo snapshot (4 slug × 1 row each via latest).
+  let total = 0;
+  try {
+    const supabase = await createServerClient();
+    const { data: totals } = await supabase
+      .from("energy_index_aggregates")
+      .select("aggregate_slug, sample_size, computed_at")
+      .order("computed_at", { ascending: false });
+    const seen = new Set<string>();
+    for (const r of (totals ?? []) as Array<{ aggregate_slug: string; sample_size: number }>) {
+      if (seen.has(r.aggregate_slug)) continue;
+      seen.add(r.aggregate_slug);
+      total += Number(r.sample_size ?? 0);
+      if (seen.size >= 4) break;
+    }
+  } catch {
+    total = 0;
+  }
+
+  const title = total > 0
+    ? `Mercato libero luce e gas: ${total} offerte PLACET ARERA`
+    : "Mercato libero luce e gas — Osservatorio offerte ARERA";
+  const description =
+    "Osservatorio statistico delle offerte PLACET mercato libero. Confronto mediana fissa vs variabile per luce e gas, storico 12 mesi, dati ARERA aggiornati ogni giorno.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "it_IT",
+      url: "/it/mercato-libero",
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 export default async function MercatoLiberoPage() {
@@ -158,6 +200,17 @@ export default async function MercatoLiberoPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdString(
+            breadcrumbList([
+              { name: "Home", url: "https://energyindex.it/it" },
+              { name: "Mercato Libero", url: "https://energyindex.it/it/mercato-libero" },
+            ]),
+          ),
+        }}
+      />
       <header className="space-y-2">
         <h1 className="text-4xl font-bold">Mercato Libero</h1>
         <p className="text-muted-foreground">
