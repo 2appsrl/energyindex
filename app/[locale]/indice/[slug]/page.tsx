@@ -108,7 +108,12 @@ export default async function IndicePage({
     }),
   );
 
-  const description = SLUG_DESCRIPTIONS[slug] ?? "";
+  // Description zone-aware: per una zona PUN specifica, descrive il prezzo zonale;
+  // per nazionale o PSV usa la descrizione di default dello slug.
+  const description =
+    zone && !zone.isNational
+      ? `Prezzo zonale ${zone.displayShort} derivato dall'asta MGP del Mercato del Giorno Prima (GME). In caso di congestioni di rete, le zone divergono dal PUN nazionale.`
+      : (SLUG_DESCRIPTIONS[slug] ?? "");
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
