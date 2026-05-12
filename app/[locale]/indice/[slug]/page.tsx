@@ -6,6 +6,9 @@ import { FaqSection } from "@/components/FaqSection";
 import { CtaToEnergiapro } from "@/components/CtaToEnergiapro";
 import { TimeframeSelector } from "@/components/chart/TimeframeSelector";
 import { resolveTimeframe } from "@/lib/timeframes";
+import { resolveZone } from "@/lib/pun-zones";
+import { ZoneSelector } from "@/components/chart/ZoneSelector";
+import { ZoneMapItalia } from "@/components/chart/ZoneMapItalia";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
@@ -26,14 +29,17 @@ export default async function IndicePage({
   searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ tf?: string }>;
+  searchParams: Promise<{ tf?: string; zone?: string }>;
 }) {
   const { slug } = await params;
-  const { tf: tfParam } = await searchParams;
+  const { tf: tfParam, zone: zoneParam } = await searchParams;
 
   if (!SUPPORTED_SLUGS.includes(slug as (typeof SUPPORTED_SLUGS)[number])) {
     notFound();
   }
+
+  const zone = slug === "pun" ? resolveZone(zoneParam) : null;
+  const effectiveSlug = zone ? zone.slug : slug;
 
   const sourceGranularity = SOURCE_GRANULARITY_BY_SLUG[slug] ?? "hourly";
   const tf = resolveTimeframe(tfParam, sourceGranularity);
@@ -43,7 +49,7 @@ export default async function IndicePage({
   const { data: assetMeta } = await supabase
     .from("mv_latest_price_per_asset")
     .select("asset_id, asset_slug, display_name_it, unit, commodity, pricing_kind")
-    .eq("asset_slug", slug)
+    .eq("asset_slug", effectiveSlug)
     .maybeSingle();
 
   if (!assetMeta) {
@@ -120,6 +126,30 @@ export default async function IndicePage({
         unit={assetMeta.unit}
         observed_at={latestPoint.observed_at}
       />
+
+      {zone && (
+        <section className="space-y-4">
+          <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+            <ZoneMapItalia
+              active={zone.code}
+              basePath={`/it/indice/${slug}`}
+              preserveTf={tf.id === "5Y" ? null : tf.id}
+            />
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Esplora per zona di mercato</h3>
+              <p className="text-sm text-muted-foreground">
+                Il PUN nazionale è la media ponderata sui volumi delle 6 zone fisiche.
+                Le zone possono divergere quando ci sono congestioni di rete.
+              </p>
+              <ZoneSelector
+                active={zone.code}
+                basePath={`/it/indice/${slug}`}
+                preserveTf={tf.id === "5Y" ? null : tf.id}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
