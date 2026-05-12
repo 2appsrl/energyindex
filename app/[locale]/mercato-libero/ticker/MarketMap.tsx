@@ -252,6 +252,9 @@ export function MarketMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
   const [search, setSearch] = useState("");
+  const [comboOpen, setComboOpen] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const comboRef = useRef<HTMLDivElement>(null);
   // Audio default ON: ma il browser blocca autoplay senza user gesture.
   // Strategia: ritardiamo la creazione dell'AudioContext fino al primo
   // gesto utente (hasInteracted), poi parte subito.
@@ -297,8 +300,34 @@ export function MarketMap({
   const distinctVendors = useMemo(() => {
     const set = new Set<string>();
     for (const o of offers) set.add(o.vendor);
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
   }, [offers]);
+
+  // Vendor filtrati per il combobox: top 12 match.
+  const comboMatches = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return distinctVendors.slice(0, 12);
+    return distinctVendors
+      .filter((v) => v.toLowerCase().includes(q))
+      .slice(0, 12);
+  }, [distinctVendors, search]);
+
+  // Reset highlight quando cambia la lista.
+  useEffect(() => {
+    setHighlightedIdx(-1);
+  }, [search]);
+
+  // Chiudi combobox al click fuori.
+  useEffect(() => {
+    if (!comboOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (comboRef.current && !comboRef.current.contains(e.target as Node)) {
+        setComboOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [comboOpen]);
 
   const searchActive = search.trim().length > 0;
   const searchLower = search.trim().toLowerCase();
@@ -407,24 +436,96 @@ export function MarketMap({
             </div>
 
             <div className="w-full sm:w-80 space-y-2">
-              <div>
-                <label className="block text-xs font-mono text-emerald-300/60 mb-1 uppercase tracking-wider">
+              <div ref={comboRef} className="relative">
+                <label
+                  htmlFor="vendor-search"
+                  className="block text-xs font-mono text-emerald-300/60 mb-1 uppercase tracking-wider"
+                >
                   Cerca fornitore
                 </label>
                 <input
-                  list="vendors-list"
-                  type="search"
+                  id="vendor-search"
+                  type="text"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setComboOpen(true);
+                  }}
+                  onFocus={() => setComboOpen(true)}
+                  onKeyDown={(e) => {
+                    if (!comboOpen) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlightedIdx((i) =>
+                        Math.min(comboMatches.length - 1, i + 1),
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlightedIdx((i) => Math.max(0, i - 1));
+                    } else if (e.key === "Enter") {
+                      if (
+                        highlightedIdx >= 0 &&
+                        highlightedIdx < comboMatches.length
+                      ) {
+                        e.preventDefault();
+                        setSearch(comboMatches[highlightedIdx]);
+                        setComboOpen(false);
+                      }
+                    } else if (e.key === "Escape") {
+                      setComboOpen(false);
+                    }
+                  }}
                   placeholder="Es. ENEL, EDISON, A2A…"
                   aria-label="Cerca fornitore"
+                  aria-autocomplete="list"
+                  aria-expanded={comboOpen}
+                  aria-controls="vendor-combobox-list"
+                  role="combobox"
                   className="w-full bg-black/80 border border-emerald-400/40 rounded px-3 py-2 text-emerald-200 placeholder:text-emerald-300/30 font-mono text-sm focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_12px_rgba(20,217,122,0.5)] transition-shadow"
                 />
-                <datalist id="vendors-list">
-                  {distinctVendors.map((v) => (
-                    <option key={v} value={v} />
-                  ))}
-                </datalist>
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch("");
+                      setComboOpen(false);
+                    }}
+                    aria-label="Cancella ricerca"
+                    className="absolute right-2 top-[26px] text-emerald-300/50 hover:text-emerald-300 font-mono text-sm w-5 h-5 flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
+                )}
+                {comboOpen && comboMatches.length > 0 && (
+                  <ul
+                    id="vendor-combobox-list"
+                    role="listbox"
+                    className="absolute top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-black/95 border border-emerald-400/40 rounded shadow-[0_0_20px_rgba(20,217,122,0.3)] z-40 font-mono text-sm backdrop-blur-sm"
+                  >
+                    {comboMatches.map((v, i) => (
+                      <li
+                        key={v}
+                        role="option"
+                        aria-selected={i === highlightedIdx}
+                        onMouseEnter={() => setHighlightedIdx(i)}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSearch(v);
+                          setComboOpen(false);
+                        }}
+                        className={
+                          i === highlightedIdx
+                            ? "px-3 py-1.5 cursor-pointer bg-emerald-400/20 text-emerald-200 border-l-2 border-emerald-400"
+                            : "px-3 py-1.5 cursor-pointer text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200 border-l-2 border-transparent"
+                        }
+                      >
+                        {v}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <button
