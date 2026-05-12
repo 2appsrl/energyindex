@@ -1,15 +1,24 @@
 /**
  * Edge Function `etl-arera-placet` — Slice 4.
  *
+ * !!! NON usata in produzione (vedi nota sotto). Mantenuta per riferimento. !!!
+ *
+ * ARERA blocca con 403 Forbidden le richieste dal range IP Supabase/AWS.
+ * Confermato 2026-05-12: tutte le date provate ritornano 403 (Microsoft IIS WAF).
+ * Le stesse URL funzionano da locale e da GitHub Actions runner.
+ *
+ * Workaround attivo: l'ETL daily gira da GitHub Actions invece di pg_cron.
+ * File: .github/workflows/etl-arera-daily.yml
+ *
+ * Questa edge function resta deployata ma non deve essere invocata.
+ * Verra' riattivata se in futuro ARERA toglie il block IP.
+ *
+ * Flow originale (preserved):
  * 1) Scarica i 2 CSV PLACET (Elettrico + Gas) per oggi.
- *    Fallback a ieri se 404 (ARERA refresh ~22:30 UTC quindi prima della
- *    mezzanotte UTC + cron 00:00 il file di oggi e' gia' disponibile).
+ *    Fallback a ieri se 404.
  * 2) Parse via parsePlacetElectric / parsePlacetGas (shared parser).
  * 3) UPSERT righe in arera_offers con onConflict (offer_code, valid_from).
- * 4) Computa 4 aggregati (mediana, p25, p75, min, max, n) e UPSERT in
- *    energy_index_aggregates con onConflict (aggregate_slug, computed_at).
- *
- * Invocata da pg_cron alle 00:00 UTC. Niente auth utente: --no-verify-jwt.
+ * 4) Computa 4 aggregati e UPSERT in energy_index_aggregates.
  */
 import { runEtl } from "../_shared/etl-runner.ts";
 import {

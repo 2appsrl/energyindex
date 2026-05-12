@@ -1,0 +1,59 @@
+name: ETL ARERA PLACET daily
+
+# Schedula l'ETL ARERA Portale Offerte da GitHub Actions invece che dalle
+# Supabase Edge Functions perche' ARERA blocca con 403 le richieste in
+# uscita dal range IP Supabase/AWS. I runner GitHub Actions invece passano.
+#
+# Schedula: ogni giorno alle 01:00 UTC (= 03:00 CEST / 02:00 CET) — dopo il
+# refresh ARERA ~22:30 UTC.
+#
+# Workflow_dispatch consente esecuzione manuale per smoke test / catch-up.
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+    inputs:
+      backfill_start:
+        description: "Start date (YYYY-MM-DD). Default = oggi"
+        required: false
+      backfill_end:
+        description: "End date (YYYY-MM-DD). Default = oggi"
+        required: false
+
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run ARERA PLACET ETL
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Default: solo oggi (start=end=oggi). Manual override per catch-up.
+          BACKFILL_START: ${{ inputs.backfill_start || '' }}
+          BACKFILL_END: ${{ inputs.backfill_end || '' }}
+        run: |
+          # Se i secret non sono settati il job fallisce subito con messaggio chiaro.
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere settati come repo secrets"
+            exit 1
+          fi
+          # Default range = oggi (sia start che end). Se inputs sono dati, usali.
+          if [ -z "$BACKFILL_START" ]; then
+            export BACKFILL_START=$(date -u +%Y-%m-%d)
+          fi
+          if [ -z "$BACKFILL_END" ]; then
+            export BACKFILL_END=$(date -u +%Y-%m-%d)
+          fi
+          echo "Running ETL for $BACKFILL_START -> $BACKFILL_END"
+          npm run backfill:arera-placet
