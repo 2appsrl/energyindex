@@ -94,6 +94,8 @@ export default async function MercatoLiberoPage() {
       <section className="grid gap-4 sm:grid-cols-2">
         {AGGREGATE_SLUGS.map((a) => {
           const row = latestBySlug.get(a.slug);
+          const isSpread = a.priceType === "variabile";
+          const referenceLabel = a.referenceAssetSlug.toUpperCase();
           return (
             <AggregateCard
               key={a.slug}
@@ -103,6 +105,8 @@ export default async function MercatoLiberoPage() {
               p75={row?.p75 ?? null}
               sampleSize={row?.sample_size ?? 0}
               unit={a.unit}
+              isSpread={isSpread}
+              referenceLabel={referenceLabel}
             />
           );
         })}

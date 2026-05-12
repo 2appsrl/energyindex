@@ -167,12 +167,16 @@ async function main() {
         totalRows += rows.length;
       }
 
-      // Aggregati per il giorno (skip se n=0)
+      // Aggregati per il giorno (skip se n=0).
+      // Filtro a `tipo_cliente === 'domestico'` per allineare la mediana al
+      // caso d'uso "consumatore residenziale" — altrimenti business e
+      // condominio gonfiano la mediana (tariffe non comparabili al privato).
+      const isDomestico = (o: PlacetOffer) => o.tipo_cliente === "domestico";
       const aggs = [
-        { slug: "mercato-libero-luce-fissa",     offers: offersE.filter((o) => o.tipo_offerta === "prezzo fisso"),     unit: "€/kWh" },
-        { slug: "mercato-libero-luce-variabile", offers: offersE.filter((o) => o.tipo_offerta === "prezzo variabile"), unit: "€/kWh" },
-        { slug: "mercato-libero-gas-fissa",      offers: offersG.filter((o) => o.tipo_offerta === "prezzo fisso"),     unit: "€/Smc" },
-        { slug: "mercato-libero-gas-variabile",  offers: offersG.filter((o) => o.tipo_offerta === "prezzo variabile"), unit: "€/Smc" },
+        { slug: "mercato-libero-luce-fissa",     offers: offersE.filter((o) => o.tipo_offerta === "prezzo fisso"     && isDomestico(o)), unit: "€/kWh" },
+        { slug: "mercato-libero-luce-variabile", offers: offersE.filter((o) => o.tipo_offerta === "prezzo variabile" && isDomestico(o)), unit: "€/kWh" },
+        { slug: "mercato-libero-gas-fissa",      offers: offersG.filter((o) => o.tipo_offerta === "prezzo fisso"     && isDomestico(o)), unit: "€/Smc" },
+        { slug: "mercato-libero-gas-variabile",  offers: offersG.filter((o) => o.tipo_offerta === "prezzo variabile" && isDomestico(o)), unit: "€/Smc" },
       ];
       const aggRows = aggs
         .map((a) => ({ ...a, stats: statsFor(a.offers) }))

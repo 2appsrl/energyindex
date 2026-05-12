@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils";
-
 export interface AggregateCardProps {
   title: string;
   median: number | null;
@@ -7,8 +5,17 @@ export interface AggregateCardProps {
   p75: number | null;
   sampleSize: number;
   unit: string;
-  /** Spread vs wholesale reference, percent. Optional. */
-  spreadPct?: number | null;
+  /**
+   * Se true, il valore mostrato e' uno SPREAD additivo sull'indice wholesale
+   * di riferimento (PUN o PSV), non un prezzo finale. La UI prepende "+"
+   * e mostra una nota esplicativa.
+   */
+  isSpread?: boolean;
+  /**
+   * Nome dell'indice wholesale di riferimento (es. "PUN" o "PSV"). Usato
+   * solo quando isSpread=true per il testo "+ X €/kWh sopra <reference>".
+   */
+  referenceLabel?: string;
 }
 
 export function AggregateCard({
@@ -18,7 +25,8 @@ export function AggregateCard({
   p75,
   sampleSize,
   unit,
-  spreadPct,
+  isSpread = false,
+  referenceLabel,
 }: AggregateCardProps) {
   const noData = median === null || sampleSize === 0;
   return (
@@ -32,25 +40,22 @@ export function AggregateCard({
         ) : (
           <>
             <p className="text-3xl sm:text-4xl font-bold tabular-nums">
+              {isSpread ? "+" : ""}
               {median!.toFixed(4)}{" "}
               <span className="text-base font-normal text-muted-foreground">
                 {unit}
               </span>
             </p>
-            {spreadPct !== undefined && spreadPct !== null && (
-              <p
-                className={cn(
-                  "text-sm font-semibold tabular-nums",
-                  spreadPct >= 0 ? "text-rose-400" : "text-emerald-400",
-                )}
-              >
-                {spreadPct >= 0 ? "+" : ""}
-                {spreadPct.toFixed(1)}% vs wholesale
+            {isSpread && referenceLabel && (
+              <p className="text-sm text-muted-foreground">
+                Spread mediano sopra il {referenceLabel} all&apos;ingrosso.
+                Bolletta = {referenceLabel} + spread.
               </p>
             )}
             <div className="text-xs text-muted-foreground tabular-nums">
-              p25 {p25?.toFixed(4) ?? "—"} · p75 {p75?.toFixed(4) ?? "—"} ·{" "}
-              {sampleSize} offerte
+              p25 {isSpread ? "+" : ""}
+              {p25?.toFixed(4) ?? "—"} · p75 {isSpread ? "+" : ""}
+              {p75?.toFixed(4) ?? "—"} · {sampleSize} offerte domestico
             </div>
           </>
         )}
