@@ -1,6 +1,26 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 import { MarketBanner } from "@/components/home/MarketBanner";
+
+export const metadata: Metadata = {
+  title: "Energy Index — Prezzi luce e gas in tempo reale",
+  description:
+    "Osservatorio gratuito su PUN (luce), PSV (gas) e offerte ARERA mercato libero. Confronta tariffe luce e gas in pochi click.",
+  openGraph: {
+    title: "Energy Index — Prezzi luce e gas in tempo reale",
+    description:
+      "Osservatorio gratuito su PUN, PSV e offerte ARERA mercato libero.",
+    type: "website",
+    locale: "it_IT",
+    url: "/it",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Energy Index — Prezzi luce e gas in tempo reale",
+    description: "Osservatorio gratuito su PUN, PSV e offerte ARERA mercato libero.",
+  },
+};
 
 async function getLatestPair(
   supabase: Awaited<ReturnType<typeof createServerClient>>,

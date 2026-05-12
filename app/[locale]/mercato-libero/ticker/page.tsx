@@ -3,9 +3,22 @@ import { createServerClient } from "@/lib/supabase/server";
 import { MarketMap, type Offer } from "./MarketMap";
 
 export const metadata: Metadata = {
-  title: "Market Map — Tutte le offerte | Energy Index",
+  title: "Market Map — Tutte le offerte luce e gas in tempo reale",
   description:
-    "Mappa interattiva di tutte le offerte PLACET pubblicate dal Portale Offerte ARERA. Confronta in tempo reale 1.500+ tariffe luce e gas.",
+    "Mappa interattiva di tutte le 1.500+ offerte PLACET pubblicate dal Portale Offerte ARERA. Cerca fornitore, confronta prezzi luce e gas.",
+  openGraph: {
+    title: "Market Map — Tutte le offerte luce e gas",
+    description:
+      "Mappa interattiva di 1.500+ offerte PLACET ARERA. Cerca fornitore, confronta prezzi.",
+    type: "website",
+    locale: "it_IT",
+    url: "/it/mercato-libero/ticker",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Market Map — Tutte le offerte luce e gas",
+    description: "Mappa interattiva di 1.500+ offerte PLACET ARERA.",
+  },
 };
 
 interface MarketRow {
