@@ -127,29 +127,33 @@ export default async function IndicePage({
         observed_at={latestPoint.observed_at}
       />
 
-      {zone && (
-        <section className="space-y-4">
-          <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
-            <ZoneMapItalia
-              active={zone.code}
-              basePath={`/it/indice/${slug}`}
-              preserveTf={tf.id === "5Y" ? null : tf.id}
-            />
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Esplora per zona di mercato</h3>
-              <p className="text-sm text-muted-foreground">
-                Il PUN nazionale è la media ponderata sui volumi delle 6 zone fisiche.
-                Le zone possono divergere quando ci sono congestioni di rete.
-              </p>
-              <ZoneSelector
+      {zone && (() => {
+        const preserveTf = tf.id === "5Y" ? null : tf.id;
+        const zoneBasePath = `/it/indice/${slug}`;
+        return (
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">Esplora per zona di mercato</h2>
+            <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-start">
+              <ZoneMapItalia
                 active={zone.code}
-                basePath={`/it/indice/${slug}`}
-                preserveTf={tf.id === "5Y" ? null : tf.id}
+                basePath={zoneBasePath}
+                preserveTf={preserveTf}
               />
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Il PUN nazionale è la media ponderata sui volumi delle 6 zone fisiche.
+                  Le zone possono divergere quando ci sono congestioni di rete.
+                </p>
+                <ZoneSelector
+                  active={zone.code}
+                  basePath={zoneBasePath}
+                  preserveTf={preserveTf}
+                />
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
