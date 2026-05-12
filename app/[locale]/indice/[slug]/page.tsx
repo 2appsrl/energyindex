@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { LatestValueCard } from "@/components/LatestValueCard";
@@ -9,6 +10,7 @@ import { resolveTimeframe } from "@/lib/timeframes";
 import { resolveZone } from "@/lib/pun-zones";
 import { ZoneSelector } from "@/components/chart/ZoneSelector";
 import { ZoneMapItalia } from "@/components/chart/ZoneMapItalia";
+import { breadcrumbList, dataset, jsonLdString } from "@/lib/seo/jsonld";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
@@ -23,6 +25,74 @@ const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
   pun: "hourly",
   psv: "daily",
 };
+
+const NUMBER_2DP = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ zone?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { zone: zoneParam } = await searchParams;
+  if (!SUPPORTED_SLUGS.includes(slug as (typeof SUPPORTED_SLUGS)[number])) {
+    return { title: "Indice non trovato" };
+  }
+  const zone = slug === "pun" ? resolveZone(zoneParam) : null;
+  const effectiveSlug = zone ? zone.slug : slug;
+
+  // Lookup ultimo prezzo per il title dinamico (via mv_latest_price_per_asset
+  // per recuperare asset_id, poi price_observations).
+  const supabase = await createServerClient();
+  const { data: meta } = await supabase
+    .from("mv_latest_price_per_asset")
+    .select("asset_id")
+    .eq("asset_slug", effectiveSlug)
+    .maybeSingle();
+  let price: number | null = null;
+  if (meta?.asset_id) {
+    const { data: rows } = await supabase
+      .from("price_observations")
+      .select("value")
+      .eq("asset_id", meta.asset_id)
+      .lte("observed_at", new Date().toISOString())
+      .order("observed_at", { ascending: false })
+      .limit(1);
+    if (rows?.[0]) price = Number(rows[0].value);
+  }
+  const priceStr = price !== null ? `${NUMBER_2DP.format(price)} €/MWh` : "—";
+
+  const isPun = slug === "pun";
+  const zoneLabel = zone && !zone.isNational ? ` Zona ${zone.displayShort}` : "";
+
+  const title = isPun
+    ? `PUN${zoneLabel} oggi: ${priceStr}`
+    : `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
+
+  const description = isPun
+    ? `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`
+    : "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "it_IT",
+      url: zone && !zone.isNational
+        ? `/it/indice/${slug}?zone=${zone.code}`
+        : `/it/indice/${slug}`,
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function IndicePage({
   params,
@@ -117,6 +187,40 @@ export default async function IndicePage({
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdString(
+            dataset({
+              name:
+                slug === "pun"
+                  ? "PUN — Prezzo Unico Nazionale (Italia)"
+                  : "PSV — Punto di Scambio Virtuale gas (Italia)",
+              description:
+                slug === "pun"
+                  ? "Serie storica del Prezzo Unico Nazionale dell'energia elettrica italiana, asta MGP del giorno prima. Dati orari dal 2021."
+                  : "Serie storica del prezzo PSV per il gas naturale italiano, asta MGP-GAS. Dati giornalieri dal 2021.",
+              url: `https://energyindex.it/it/indice/${slug}`,
+              keywords:
+                slug === "pun"
+                  ? ["PUN", "Prezzo Unico Nazionale", "energia elettrica", "Italia", "GME", "MGP", "day-ahead"]
+                  : ["PSV", "Punto di Scambio Virtuale", "gas naturale", "Italia", "GME", "MGP-GAS"],
+              temporalCoverage: "2021-05-07/..",
+            }),
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdString(
+            breadcrumbList([
+              { name: "Home", url: "https://energyindex.it/it" },
+              { name: assetMeta.display_name_it, url: `https://energyindex.it/it/indice/${slug}` },
+            ]),
+          ),
+        }}
+      />
       <header className="space-y-2">
         <h1 className="text-4xl font-bold tabular-nums">
           {assetMeta.display_name_it}
