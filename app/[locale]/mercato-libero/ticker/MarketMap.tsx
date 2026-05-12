@@ -2,6 +2,123 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+/**
+ * Genera un drone ambient cyberpunk procedurale via Web Audio API.
+ * Niente asset esterno: 2 oscillator drone + noise filtrato + chimes random
+ * in scala pentatonica. Tutto sintetizzato in-browser.
+ *
+ * Ritorna un handle con `stop()` che fade-out + cleanup oscillatori.
+ * Richiede user gesture (browser blocca autoplay senza interazione).
+ */
+function startMatrixAmbient(): { stop: () => void } {
+  const AC =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext })
+      .webkitAudioContext;
+  const ctx = new AC();
+  // Su iOS Safari il context parte "suspended" — sblocca esplicitamente.
+  void ctx.resume();
+
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+  // Fade-in 1.5s
+  master.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 1.5);
+
+  // Drone 1: sawtooth a 55 Hz attraverso lowpass con LFO (respiro)
+  const d1 = ctx.createOscillator();
+  d1.type = "sawtooth";
+  d1.frequency.value = 55;
+  const d1g = ctx.createGain();
+  d1g.gain.value = 0.1;
+  const droneFilter = ctx.createBiquadFilter();
+  droneFilter.type = "lowpass";
+  droneFilter.frequency.value = 500;
+  droneFilter.Q.value = 4;
+  d1.connect(d1g).connect(droneFilter).connect(master);
+  d1.start();
+
+  // LFO sul filtro per modulare il timbro lentamente
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.08;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 350;
+  lfo.connect(lfoGain).connect(droneFilter.frequency);
+  lfo.start();
+
+  // Drone 2: sine quinta sopra (82.5 Hz)
+  const d2 = ctx.createOscillator();
+  d2.type = "sine";
+  d2.frequency.value = 82.5;
+  const d2g = ctx.createGain();
+  d2g.gain.value = 0.05;
+  d2.connect(d2g).connect(master);
+  d2.start();
+
+  // White noise filtrato bandpass — texture "pioggia digitale"
+  const bufSize = 2 * ctx.sampleRate;
+  const noiseBuffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer;
+  noise.loop = true;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.value = 1200;
+  noiseFilter.Q.value = 0.6;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.05;
+  noise.connect(noiseFilter).connect(noiseGain).connect(master);
+  noise.start();
+
+  // Chimes random in scala pentatonica E minor: occasionali, sparse
+  let chimeTimer: ReturnType<typeof setTimeout> | null = null;
+  const NOTES = [329.6, 392, 440, 523.2, 587.3, 659.2, 783.9];
+  const scheduleChime = () => {
+    chimeTimer = setTimeout(
+      () => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = NOTES[Math.floor(Math.random() * NOTES.length)];
+        const g = ctx.createGain();
+        const t0 = ctx.currentTime;
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(0.08, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.8);
+        osc.connect(g).connect(master);
+        osc.start(t0);
+        osc.stop(t0 + 2);
+        scheduleChime();
+      },
+      4000 + Math.random() * 8000,
+    );
+  };
+  scheduleChime();
+
+  return {
+    stop: () => {
+      if (chimeTimer) clearTimeout(chimeTimer);
+      // Fade-out poi cleanup
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
+      master.gain.linearRampToValueAtTime(0, t + 0.4);
+      setTimeout(() => {
+        try {
+          d1.stop();
+          d2.stop();
+          lfo.stop();
+          noise.stop();
+          void ctx.close();
+        } catch {
+          /* ignore — oscillators may have already stopped */
+        }
+      }, 500);
+    },
+  };
+}
+
 export interface Offer {
   codice: string;
   vendor: string;
@@ -88,6 +205,26 @@ export function MarketMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
   const [search, setSearch] = useState("");
+  const [audioOn, setAudioOn] = useState(false);
+  const audioHandleRef = useRef<{ stop: () => void } | null>(null);
+
+  // Avvia / ferma ambient audio in base al toggle.
+  useEffect(() => {
+    if (audioOn && !audioHandleRef.current) {
+      audioHandleRef.current = startMatrixAmbient();
+    }
+    if (!audioOn && audioHandleRef.current) {
+      audioHandleRef.current.stop();
+      audioHandleRef.current = null;
+    }
+    // Cleanup on unmount
+    return () => {
+      if (audioHandleRef.current) {
+        audioHandleRef.current.stop();
+        audioHandleRef.current = null;
+      }
+    };
+  }, [audioOn]);
 
   const sections = useMemo(() => groupOffers(offers), [offers]);
 
@@ -203,24 +340,50 @@ export function MarketMap({
               </div>
             </div>
 
-            <div className="w-full sm:w-80">
-              <label className="block text-xs font-mono text-emerald-300/60 mb-1 uppercase tracking-wider">
-                Cerca fornitore
-              </label>
-              <input
-                list="vendors-list"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Es. ENEL, EDISON, A2A…"
-                aria-label="Cerca fornitore"
-                className="w-full bg-black/80 border border-emerald-400/40 rounded px-3 py-2 text-emerald-200 placeholder:text-emerald-300/30 font-mono text-sm focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_12px_rgba(20,217,122,0.5)] transition-shadow"
-              />
-              <datalist id="vendors-list">
-                {distinctVendors.map((v) => (
-                  <option key={v} value={v} />
-                ))}
-              </datalist>
+            <div className="w-full sm:w-80 space-y-2">
+              <div>
+                <label className="block text-xs font-mono text-emerald-300/60 mb-1 uppercase tracking-wider">
+                  Cerca fornitore
+                </label>
+                <input
+                  list="vendors-list"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Es. ENEL, EDISON, A2A…"
+                  aria-label="Cerca fornitore"
+                  className="w-full bg-black/80 border border-emerald-400/40 rounded px-3 py-2 text-emerald-200 placeholder:text-emerald-300/30 font-mono text-sm focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_12px_rgba(20,217,122,0.5)] transition-shadow"
+                />
+                <datalist id="vendors-list">
+                  {distinctVendors.map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAudioOn((v) => !v)}
+                aria-pressed={audioOn}
+                aria-label={
+                  audioOn ? "Disattiva audio ambient" : "Attiva audio ambient Matrix"
+                }
+                className={`w-full font-mono text-xs uppercase tracking-wider rounded px-3 py-2 border transition-all flex items-center justify-center gap-2 ${
+                  audioOn
+                    ? "bg-emerald-400/10 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(20,217,122,0.4)]"
+                    : "bg-black/80 border-emerald-400/40 text-emerald-300/70 hover:border-emerald-400 hover:text-emerald-300"
+                }`}
+              >
+                <span
+                  className={
+                    audioOn
+                      ? "inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+                      : "inline-block w-2 h-2 rounded-full border border-emerald-400/60"
+                  }
+                  aria-hidden="true"
+                />
+                {audioOn ? "Audio ON · Matrix ambient" : "🎧 Attiva audio Matrix"}
+              </button>
             </div>
           </div>
 
