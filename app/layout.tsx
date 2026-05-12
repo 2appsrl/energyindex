@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { organization, website, jsonLdString } from "@/lib/seo/jsonld";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +23,14 @@ export default function RootLayout({
   return (
     <html lang="it" className={inter.variable} suppressHydrationWarning>
       <body className="bg-background text-foreground font-sans antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdString(organization()) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdString(website()) }}
+        />
         {children}
         <Script
           defer
