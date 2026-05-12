@@ -1,8 +1,18 @@
+const NUMBER_4DP = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+});
+
+function fmt(n: number | null | undefined): string {
+  return n == null || !Number.isFinite(n) ? "—" : NUMBER_4DP.format(n);
+}
+
 export interface AggregateCardProps {
   title: string;
   median: number | null;
   p25: number | null;
   p75: number | null;
+  min?: number | null;
   sampleSize: number;
   unit: string;
   /**
@@ -23,6 +33,7 @@ export function AggregateCard({
   median,
   p25,
   p75,
+  min,
   sampleSize,
   unit,
   isSpread = false,
@@ -41,7 +52,7 @@ export function AggregateCard({
           <>
             <p className="text-3xl sm:text-4xl font-bold tabular-nums">
               {isSpread ? "+" : ""}
-              {median!.toFixed(4)}{" "}
+              {fmt(median)}{" "}
               <span className="text-base font-normal text-muted-foreground">
                 {unit}
               </span>
@@ -52,10 +63,13 @@ export function AggregateCard({
                 Bolletta = {referenceLabel} + spread.
               </p>
             )}
+            {!isSpread && min != null && Number.isFinite(min) && (
+              <p className="text-sm text-emerald-400 tabular-nums">
+                Migliore offerta: {fmt(min)} {unit}
+              </p>
+            )}
             <div className="text-xs text-muted-foreground tabular-nums">
-              p25 {isSpread ? "+" : ""}
-              {p25?.toFixed(4) ?? "—"} · p75 {isSpread ? "+" : ""}
-              {p75?.toFixed(4) ?? "—"} · {sampleSize} offerte domestico
+              p25 {isSpread ? "+" : ""}{fmt(p25)} · p75 {isSpread ? "+" : ""}{fmt(p75)} · {sampleSize} offerte domestico
             </div>
           </>
         )}
