@@ -112,16 +112,39 @@ Deno.serve(async () => {
     }
     if (csvE === null) throw new Error("ARERA PLACET E non disponibile");
 
-    // 2. Scarica G (stessa data di E per coerenza)
-    let csvG = await fetchPlacetForDate(asOf, "G");
+    // 2. Scarica G (DEVE essere stessa data di E per coerenza: mixare date
+    // diverse in un singolo computed_at falserebbe gli aggregati). Se G manca
+    // per asOf si throwa (no fallback): il giorno verra' riprocessato al
+    // prossimo cron.
+    const csvG = await fetchPlacetForDate(asOf, "G");
     if (csvG === null) {
-      ctx.log("G missing for asOf, retry without fallback", { asOf });
-      csvG = await fetchPlacetForDate(asOf, "G");
+      throw new Error(
+        `ARERA PLACET G non disponibile per ${asOf} (E presente, G mancante: date mismatch evitato)`,
+      );
     }
-    if (csvG === null) throw new Error("ARERA PLACET G non disponibile");
 
-    const offersE = parsePlacetElectric(csvE);
-    const offersG = parsePlacetGas(csvG);
+    // 3. Parse isolato per commodity: schema drift in una non blocca l'altra
+    let offersE: PlacetOffer[] = [];
+    let offersG: PlacetOffer[] = [];
+    let parseEError: string | null = null;
+    let parseGError: string | null = null;
+    try {
+      offersE = parsePlacetElectric(csvE);
+    } catch (err) {
+      parseEError = (err as Error).message;
+      ctx.log("parse E failed", { error: parseEError });
+    }
+    try {
+      offersG = parsePlacetGas(csvG);
+    } catch (err) {
+      parseGError = (err as Error).message;
+      ctx.log("parse G failed", { error: parseGError });
+    }
+    if (offersE.length === 0 && offersG.length === 0) {
+      throw new Error(
+        `Both E and G parsing failed: E=${parseEError ?? "no offers"} | G=${parseGError ?? "no offers"}`,
+      );
+    }
     ctx.log("parsed", { e_offers: offersE.length, g_offers: offersG.length });
 
     const db = dbServiceRole();
@@ -166,24 +189,28 @@ Deno.serve(async () => {
       },
     ];
 
-    const aggRows = aggregates.map((a) => {
-      const s = statsFor(a.offers);
-      return {
+    // Skippa aggregati con n=0 per non scrivere righe sentinella "0 €/kWh"
+    // che si confonderebbero con prezzi reali nei chart.
+    const aggRows = aggregates
+      .map((a) => ({ ...a, stats: statsFor(a.offers) }))
+      .filter((a) => a.stats.n > 0)
+      .map((a) => ({
         aggregate_slug: a.slug,
         computed_at: asOf,
-        median: Number.isFinite(s.median) ? s.median : 0,
-        p25: Number.isFinite(s.p25) ? s.p25 : null,
-        p75: Number.isFinite(s.p75) ? s.p75 : null,
-        min: Number.isFinite(s.min) ? s.min : 0,
-        max: Number.isFinite(s.max) ? s.max : 0,
-        sample_size: s.n,
+        median: a.stats.median,
+        p25: Number.isFinite(a.stats.p25) ? a.stats.p25 : null,
+        p75: Number.isFinite(a.stats.p75) ? a.stats.p75 : null,
+        min: a.stats.min,
+        max: a.stats.max,
+        sample_size: a.stats.n,
         unit: a.unit,
-      };
-    });
-    const { error: aggErr } = await db
-      .from("energy_index_aggregates")
-      .upsert(aggRows, { onConflict: "aggregate_slug,computed_at" });
-    if (aggErr) throw new Error(`upsert aggregates: ${aggErr.message}`);
+      }));
+    if (aggRows.length > 0) {
+      const { error: aggErr } = await db
+        .from("energy_index_aggregates")
+        .upsert(aggRows, { onConflict: "aggregate_slug,computed_at" });
+      if (aggErr) throw new Error(`upsert aggregates: ${aggErr.message}`);
+    }
     ctx.log("upserted aggregates", { rows: aggRows.length });
 
     return {
