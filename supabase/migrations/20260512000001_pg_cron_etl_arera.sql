@@ -1,0 +1,39 @@
+-- ============================================================
+-- ETL pg_cron schedule for etl-arera-placet
+-- ============================================================
+-- Doc-only migration (no DDL).
+--
+-- Active schedule:
+-- jobname:  etl-arera-placet-daily
+-- schedule: '0 0 * * *' (UTC) = 02:00 CEST (summer) / 01:00 CET (winter)
+--           Sicuro dopo refresh ARERA giornaliero ~22:30 UTC.
+-- target:   https://epbluenhmdwgmgcewrsf.supabase.co/functions/v1/etl-arera-placet
+-- auth:     Bearer <SUPABASE_SERVICE_ROLE_KEY>
+--
+-- How to re-apply (Supabase Dashboard SQL Editor):
+--
+--   SELECT cron.schedule(
+--     'etl-arera-placet-daily',
+--     '0 0 * * *',
+--     $$
+--     SELECT net.http_post(
+--       url := 'https://epbluenhmdwgmgcewrsf.supabase.co/functions/v1/etl-arera-placet',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer YOUR_SERVICE_ROLE_KEY_HERE'
+--       ),
+--       timeout_milliseconds := 120000
+--     ) as request_id;
+--     $$
+--   );
+--
+-- How to verify:
+--
+--   SELECT jobid, schedule, jobname, active FROM cron.job
+--   WHERE jobname = 'etl-arera-placet-daily';
+--
+--   SELECT id, source, status, started_at, rows_ingested
+--   FROM etl_runs WHERE source='arera-placet'
+--   ORDER BY id DESC LIMIT 5;
+
+SELECT 1 AS pg_cron_etl_arera_documented;

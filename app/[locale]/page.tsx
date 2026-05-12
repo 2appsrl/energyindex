@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
+import { MarketBanner } from "@/components/home/MarketBanner";
 
 async function getLatestPair(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
@@ -28,11 +29,44 @@ async function getLatestPair(
   };
 }
 
+async function getMarketBannerData(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+): Promise<{ luceVariabileMedian: number | null; totalOffers: number }> {
+  // Latest luce-variabile aggregate
+  const { data: latest } = await supabase
+    .from("energy_index_aggregates")
+    .select("median, sample_size, computed_at")
+    .eq("aggregate_slug", "mercato-libero-luce-variabile")
+    .order("computed_at", { ascending: false })
+    .limit(1);
+
+  if (!latest || latest.length === 0) {
+    return { luceVariabileMedian: null, totalOffers: 0 };
+  }
+
+  // Total offers ON THAT same computed_at across all 4 slugs
+  const latestDate = latest[0].computed_at;
+  const { data: totals } = await supabase
+    .from("energy_index_aggregates")
+    .select("sample_size")
+    .eq("computed_at", latestDate);
+
+  const total = (totals ?? []).reduce(
+    (s, r) => s + Number(r.sample_size ?? 0),
+    0,
+  );
+  return {
+    luceVariabileMedian: Number(latest[0].median),
+    totalOffers: total,
+  };
+}
+
 export default async function HomeIt() {
   const supabase = await createServerClient();
-  const [pun, psv] = await Promise.all([
+  const [pun, psv, market] = await Promise.all([
     getLatestPair(supabase, "pun"),
     getLatestPair(supabase, "psv"),
+    getMarketBannerData(supabase),
   ]);
 
   return (
@@ -64,6 +98,11 @@ export default async function HomeIt() {
           ariaLabel="Apri analisi prezzi gas"
         />
       </div>
+
+      <MarketBanner
+        luceVariabileMedian={market.luceVariabileMedian}
+        totalOffers={market.totalOffers}
+      />
     </div>
   );
 }
