@@ -1,0 +1,24 @@
+name: ETL Brent (daily)
+
+on:
+  schedule:
+    - cron: "30 13 * * 1-5"  # 13:30 UTC = 15:30 IT (mar-sab perche' US chiude D-1)
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run ETL
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/etl-brent.ts
