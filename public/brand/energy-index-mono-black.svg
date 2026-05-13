@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 68" width="340" height="68">
+  <rect x="0" y="0" width="340" height="68" fill="#000000"/>
+  <text x="28" y="44" font-family="'SF Mono', Menlo, Consolas, monospace" font-size="26" font-weight="500" fill="#ffffff" letter-spacing="1.56">EIDX</text>
+  <line x1="124" y1="18" x2="124" y2="50" stroke="#ffffff" stroke-width="0.5"/>
+  <text x="142" y="44" font-family="-apple-system, system-ui, 'Helvetica Neue', sans-serif" font-size="20" font-weight="500" fill="#ffffff">Energy Index</text>
+  <polyline points="306,40 314,28 322,40" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
