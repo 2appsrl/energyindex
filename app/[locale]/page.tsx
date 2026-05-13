@@ -14,11 +14,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "it_IT",
     url: "/it",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Energy Index — Prezzi luce e gas in tempo reale",
     description: "Osservatorio gratuito su PUN, PSV e offerte ARERA mercato libero.",
+    images: ["/opengraph-image"],
   },
 };
 

@@ -13,11 +13,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "it_IT",
     url: "/it/mercato-libero/ticker",
+    images: ["/it/mercato-libero/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Market Map — Tutte le offerte luce e gas",
     description: "Mappa interattiva di 1.500+ offerte PLACET ARERA.",
+    images: ["/it/mercato-libero/opengraph-image"],
   },
 };
 
