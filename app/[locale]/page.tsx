@@ -108,6 +108,7 @@ export default async function HomeIt() {
           value={pun.value}
           prevValue={pun.prevValue}
           unit={pun.unit}
+          commodity="luce"
           ariaLabel="Apri analisi prezzi energia elettrica"
         />
         <PriceShowcaseCard
@@ -117,6 +118,7 @@ export default async function HomeIt() {
           value={psv.value}
           prevValue={psv.prevValue}
           unit={psv.unit}
+          commodity="gas"
           ariaLabel="Apri analisi prezzi gas"
         />
       </div>

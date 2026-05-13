@@ -248,6 +248,7 @@ export default async function IndicePage({
         prev_value={prevValue}
         unit={assetMeta.unit}
         observed_at={latestPoint.observed_at}
+        commodity={slug === "psv" ? "gas" : "luce"}
       />
 
       {zone && (() => {

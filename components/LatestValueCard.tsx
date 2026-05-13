@@ -3,6 +3,8 @@ import {
   formatEurMwh,
   formatPercentDelta,
   formatRelativeTime,
+  formatRetailEquivalent,
+  type Commodity,
 } from "@/lib/format";
 
 export interface LatestValueProps {
@@ -11,6 +13,8 @@ export interface LatestValueProps {
   observed_at: string;
   prev_value?: number;
   display_name: string;
+  /** Se specificato, mostra la conversione retail sotto il big number. */
+  commodity?: Commodity;
 }
 
 export function LatestValueCard({
@@ -19,10 +23,15 @@ export function LatestValueCard({
   observed_at,
   prev_value,
   display_name,
+  commodity,
 }: LatestValueProps) {
   const delta =
     prev_value !== undefined ? formatPercentDelta(value, prev_value) : null;
   const isUp = prev_value !== undefined && value >= prev_value;
+  const retail =
+    commodity && unit === "€/MWh"
+      ? formatRetailEquivalent(value, commodity)
+      : null;
 
   return (
     <Card className="p-6 flex flex-col gap-2">
@@ -32,6 +41,11 @@ export function LatestValueCard({
           ? formatEurMwh(value)
           : `${value.toFixed(2)} ${unit}`}
       </div>
+      {retail && (
+        <div className="text-sm tabular-nums text-muted-foreground">
+          ≈ {retail}
+        </div>
+      )}
       {delta && (
         <div
           className={`text-sm tabular-nums ${
