@@ -818,36 +818,37 @@ git push origin main
 
 ---
 
-## Task 6 — Temperatura Italia ETL (Meteostat)
+## Task 6 — Temperatura Italia ETL (Open-Meteo)
 
 **Files:**
 - Create: `scripts/etl-temperatura.ts`
 - Create: `scripts/backfill-temperatura.ts`
 - Create: `tests/scripts/etl-temperatura.test.ts`
-- Create: `tests/fixtures/meteostat-milano.json`
+- Create: `tests/fixtures/open-meteo-milano.json`
 - Create: `.github/workflows/etl-temperatura-daily.yml`
 
-**Step 1: Verifica station ID Meteostat**
+**Step 1: API e disponibilità**
 
-Prima di tutto, verifica gli station ID effettivi per le 9 città. Run da terminale:
+Open-Meteo NON richiede API key. Verifica volo che l'endpoint funzioni:
 
 ```bash
-curl -s "https://api.meteostat.net/v2/stations/search?query=Milano&limit=3" \
-  -H "x-api-key: $METEOSTAT_API_KEY" | jq '.data[] | {id, name, country}'
+curl -s "https://archive-api.open-meteo.com/v1/archive?latitude=45.4642&longitude=9.19&start_date=2026-05-10&end_date=2026-05-13&daily=temperature_2m_mean&timezone=Europe/Rome" | jq '.daily'
 ```
 
-Aggiorna le costanti nel file sotto sostituendo gli ID indicativi con quelli reali. Se l'API è instabile, mantenere la tabella della spec come default.
+Expected: oggetto `{ time: [...], temperature_2m_mean: [...] }` con 4 valori.
 
 **Step 2: Fixture**
 
-`tests/fixtures/meteostat-milano.json`:
+`tests/fixtures/open-meteo-milano.json`:
 
 ```json
 {
-  "data": [
-    { "date": "2026-05-12", "tavg": 18.3, "tmin": 14.2, "tmax": 22.5 },
-    { "date": "2026-05-13", "tavg": 19.1, "tmin": 15.0, "tmax": 23.0 }
-  ]
+  "latitude": 45.4642,
+  "longitude": 9.19,
+  "daily": {
+    "time": ["2026-05-12", "2026-05-13"],
+    "temperature_2m_mean": [18.3, 19.1]
+  }
 }
 ```
 
@@ -907,32 +908,41 @@ describe("TemperaturaIngestor", () => {
 
 ```ts
 /**
- * ETL Temperatura Italia — Meteostat API.
+ * ETL Temperatura Italia — Open-Meteo API (ERA5 reanalysis + forecast).
  *
- * Scarica T media giornaliera da 9 stazioni meteo italiane, calcola la media
- * nazionale ponderata per popolazione, e la salva come asset "temperatura-it".
+ * Scarica T media giornaliera da 9 coordinate (citta' principali italiane),
+ * calcola la media nazionale ponderata per popolazione, e la salva come asset
+ * "temperatura-it".
  *
- * Env vars: METEOSTAT_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+ * Open-Meteo NON richiede API key per uso non-commerciale; il sito cita la
+ * fonte in footer/JSON-LD (CC-BY 4.0).
+ *
+ * Endpoint storici (passato): archive-api.open-meteo.com/v1/archive
+ * Endpoint recenti (oggi, ieri): api.open-meteo.com/v1/forecast (past_days=N)
+ *
+ * Env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
 import { BaseIngestor, type Observation } from "./lib/base-ingestor";
 
 export interface City {
-  id: string;
   name: string;
+  lat: number;
+  lon: number;
   weight: number;
 }
 
-// Pesi: somma 1.00 (popolazione 9 city = ~50% Italia, ma rappresentativa)
+// Pesi: somma 1.00 (9 citta' = ~50% popolazione Italia, ma rappresentative
+// per macro-zone climatiche).
 export const CITIES: City[] = [
-  { id: "16080", name: "milano",  weight: 0.20 },
-  { id: "16242", name: "roma",    weight: 0.18 },
-  { id: "16289", name: "napoli",  weight: 0.12 },
-  { id: "16059", name: "torino",  weight: 0.10 },
-  { id: "16140", name: "bologna", weight: 0.08 },
-  { id: "16170", name: "firenze", weight: 0.07 },
-  { id: "16270", name: "bari",    weight: 0.08 },
-  { id: "16405", name: "palermo", weight: 0.10 },
-  { id: "16090", name: "verona",  weight: 0.07 },
+  { name: "milano",  lat: 45.4642, lon:  9.1900, weight: 0.20 },
+  { name: "roma",    lat: 41.9028, lon: 12.4964, weight: 0.18 },
+  { name: "napoli",  lat: 40.8518, lon: 14.2681, weight: 0.12 },
+  { name: "torino",  lat: 45.0703, lon:  7.6869, weight: 0.10 },
+  { name: "bologna", lat: 44.4949, lon: 11.3426, weight: 0.08 },
+  { name: "firenze", lat: 43.7696, lon: 11.2558, weight: 0.07 },
+  { name: "bari",    lat: 41.1171, lon: 16.8719, weight: 0.08 },
+  { name: "palermo", lat: 38.1157, lon: 13.3615, weight: 0.10 },
+  { name: "verona",  lat: 45.4384, lon: 10.9916, weight: 0.07 },
 ];
 
 export function weightedAverage(items: { weight: number; value: number }[]): number | null {
@@ -942,12 +952,17 @@ export function weightedAverage(items: { weight: number; value: number }[]): num
   return sum / totalWeight;
 }
 
-interface MeteostatRow { date: string; tavg: number | null }
+interface OpenMeteoResponse {
+  daily: {
+    time: string[];
+    temperature_2m_mean: (number | null)[];
+  };
+}
 
 interface CityRaw {
   city: string;
   weight: number;
-  rows: MeteostatRow[];
+  rows: { date: string; tavg: number | null }[];
 }
 
 export class TemperaturaIngestor extends BaseIngestor {
@@ -955,19 +970,33 @@ export class TemperaturaIngestor extends BaseIngestor {
   assetSlug = "temperatura-it";
 
   async fetch(start: Date, end: Date): Promise<CityRaw[]> {
-    const apiKey = process.env.METEOSTAT_API_KEY;
-    if (!apiKey) throw new Error("METEOSTAT_API_KEY mancante");
     const startStr = start.toISOString().slice(0, 10);
     const endStr = end.toISOString().slice(0, 10);
+    // Open-Meteo archive ha dati con qualche giorno di delay. Per coprire anche
+    // oggi/ieri (forecast endpoint) split: se end e' negli ultimi 5 giorni, usa
+    // forecast con past_days; altrimenti usa archive.
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setUTCDate(fiveDaysAgo.getUTCDate() - 5);
+    const useForecast = end >= fiveDaysAgo;
+
     const out: CityRaw[] = [];
     for (const city of CITIES) {
-      const url = `https://api.meteostat.net/v2/stations/daily?station=${city.id}&start=${startStr}&end=${endStr}`;
-      const res = await fetch(url, { headers: { "x-api-key": apiKey } });
-      if (!res.ok) throw new Error(`Meteostat ${city.name} HTTP ${res.status}`);
-      const json = (await res.json()) as { data: MeteostatRow[] };
-      out.push({ city: city.name, weight: city.weight, rows: json.data });
-      // Rate limit: 1 req/sec per essere conservativi
-      await new Promise((r) => setTimeout(r, 250));
+      const url = useForecast
+        ? `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&daily=temperature_2m_mean&timezone=Europe%2FRome&past_days=7`
+        : `https://archive-api.open-meteo.com/v1/archive?latitude=${city.lat}&longitude=${city.lon}&start_date=${startStr}&end_date=${endStr}&daily=temperature_2m_mean&timezone=Europe%2FRome`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Open-Meteo ${city.name} HTTP ${res.status}`);
+      const json = (await res.json()) as OpenMeteoResponse;
+      const rows: { date: string; tavg: number | null }[] = [];
+      for (let i = 0; i < json.daily.time.length; i++) {
+        rows.push({
+          date: json.daily.time[i],
+          tavg: json.daily.temperature_2m_mean[i],
+        });
+      }
+      out.push({ city: city.name, weight: city.weight, rows });
+      // Rate limit conservativo: max 600 chiamate/min (Open-Meteo limit) → 100ms tra una e l'altra basta
+      await new Promise((r) => setTimeout(r, 150));
     }
     return out;
   }
@@ -1010,8 +1039,9 @@ if (require.main === module) {
 
 ```ts
 /**
- * Backfill Temperatura 5 anni con chunking annuale (Meteostat preferisce
- * range < 365 giorni per chiamata).
+ * Backfill Temperatura 5 anni con chunking annuale.
+ * Open-Meteo archive accetta range estesi ma chunking riduce risposta JSON
+ * a dimensioni gestibili e da' miglior progress feedback.
  */
 import { TemperaturaIngestor } from "./etl-temperatura";
 
@@ -1055,11 +1085,12 @@ jobs:
       - run: npm ci
       - name: Run ETL
         env:
-          METEOSTAT_API_KEY: ${{ secrets.METEOSTAT_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/etl-temperatura.ts
 ```
+
+(Open-Meteo non richiede API key, quindi non servono secret per la fonte meteo.)
 
 **Step 7: Run tests + commit**
 
@@ -1070,12 +1101,12 @@ npx vitest run tests/scripts/etl-temperatura.test.ts
 Expected: 4 passed.
 
 ```bash
-for f in scripts/etl-temperatura.ts scripts/backfill-temperatura.ts tests/scripts/etl-temperatura.test.ts tests/fixtures/meteostat-milano.json .github/workflows/etl-temperatura-daily.yml; do
+for f in scripts/etl-temperatura.ts scripts/backfill-temperatura.ts tests/scripts/etl-temperatura.test.ts tests/fixtures/open-meteo-milano.json .github/workflows/etl-temperatura-daily.yml; do
   mkdir -p "/tmp/eidx-slice7/$(dirname "$f")"; cp "..."/$f /tmp/eidx-slice7/$f
 done
 cd /tmp/eidx-slice7
-git add scripts/etl-temperatura.ts scripts/backfill-temperatura.ts tests/scripts/etl-temperatura.test.ts tests/fixtures/meteostat-milano.json .github/workflows/etl-temperatura-daily.yml
-git commit -m "feat(etl): Temperatura Italia daily via Meteostat (9 citta', media ponderata)"
+git add scripts/etl-temperatura.ts scripts/backfill-temperatura.ts tests/scripts/etl-temperatura.test.ts tests/fixtures/open-meteo-milano.json .github/workflows/etl-temperatura-daily.yml
+git commit -m "feat(etl): Temperatura Italia daily via Open-Meteo (9 citta', media ponderata)"
 git push origin main
 ```
 
@@ -1634,11 +1665,10 @@ Expected: build verde, route output mostra tutte le nuove pagine indice come din
 
 Comunica all'utente:
 
-1. Registra EIA API key su https://www.eia.gov/opendata/register.php
-2. Registra Meteostat API key su https://dev.meteostat.net/
+1. ✅ EIA API key gia' fornita dall'utente (verra' aggiunta a GitHub Secret dal subagent durante l'esecuzione)
+2. Open-Meteo: nessuna registrazione necessaria
 3. Aggiungi a GitHub Secrets del repo `2appsrl/energyindex`:
-   - `EIA_API_KEY`
-   - `METEOSTAT_API_KEY`
+   - `EIA_API_KEY` (valore fornito dall'utente)
    (i secret `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` dovrebbero esistere già dall'ETL ARERA — verificare)
 4. Lancia i 3 backfill da terminale locale (1 sola volta, ~5 min totali):
    ```bash

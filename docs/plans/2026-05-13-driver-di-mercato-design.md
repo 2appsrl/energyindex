@@ -58,30 +58,54 @@ EU ETS allowance, prezzo settlement giornaliero del future front-month, EUR/tCO2
 **Storico**: dal 2008, ma uso solo dal 2018 in poi (prima del 2018 i prezzi erano <10€/tCO2 e poco rappresentativi)
 **Backfill iniziale**: 5 anni indietro
 
-### 3.3 Temperatura Italia — Meteostat
+### 3.3 Temperatura Italia — Open-Meteo
 
-- **Endpoint**: `https://api.meteostat.net/v2/stations/daily?station=ID&start=YYYY-MM-DD&end=YYYY-MM-DD`
-- **Auth**: API key gratuita (1000 chiamate/giorno) — registrazione semplice
-- **Uso commerciale**: ✅ permesso (license attribuzione, dati pubblici sottostanti)
-- **Storico**: dal 1970+
+- **Endpoint storico**: `https://archive-api.open-meteo.com/v1/archive`
+- **Endpoint daily recente / forecast**: `https://api.open-meteo.com/v1/forecast`
+- **Auth**: nessuna API key richiesta
+- **Storico**: dal 1940 (ERA5 reanalysis)
+- **Modello dati**: reanalisi + interpolazione su coordinate (non stazione fisica) — più copertura, leggermente meno preciso di stazioni reali ma ampiamente sufficiente per anomalia stagionale
 - **Cron**: `0 9 * * *` (09:00 IT daily; dato di ieri sempre disponibile)
 - **Backfill iniziale**: 5 anni indietro
+- **Attribution**: footer del sito + JSON-LD `creator` deve citare "Open-Meteo (open-meteo.com)" come fonte
+- **License**: CC-BY 4.0 (attribuzione obbligatoria, OK per uso informativo del sito)
 
 **Città monitorate (9, pesate per popolazione)**:
 
-| Città | Station ID Meteostat | Lat | Lon | Peso |
-|---|---|---|---|---|
-| Milano | 16080 | 45.4642 | 9.1900 | 0.20 |
-| Roma | 16242 | 41.9028 | 12.4964 | 0.18 |
-| Napoli | 16289 | 40.8518 | 14.2681 | 0.12 |
-| Torino | 16059 | 45.0703 | 7.6869 | 0.10 |
-| Bologna | 16140 | 44.4949 | 11.3426 | 0.08 |
-| Firenze | 16170 | 43.7696 | 11.2558 | 0.07 |
-| Bari | 16270 | 41.1171 | 16.8719 | 0.08 |
-| Palermo | 16405 | 38.1157 | 13.3615 | 0.10 |
-| Verona | 16090 | 45.4384 | 10.9916 | 0.07 |
+| Città | Lat | Lon | Peso |
+|---|---|---|---|
+| Milano | 45.4642 | 9.1900 | 0.20 |
+| Roma | 41.9028 | 12.4964 | 0.18 |
+| Napoli | 40.8518 | 14.2681 | 0.12 |
+| Torino | 45.0703 | 7.6869 | 0.10 |
+| Bologna | 44.4949 | 11.3426 | 0.08 |
+| Firenze | 43.7696 | 11.2558 | 0.07 |
+| Bari | 41.1171 | 16.8719 | 0.08 |
+| Palermo | 38.1157 | 13.3615 | 0.10 |
+| Verona | 45.4384 | 10.9916 | 0.07 |
 
-I pesi sommano a 1.00 (esattamente). Si verificheranno gli station ID effettivi al momento di implementazione (la tabella sopra è indicativa).
+I pesi sommano a 1.00 (esattamente). Open-Meteo lavora per coordinate, non serve uno station ID.
+
+**Endpoint esempio (storico, una città)**:
+```
+GET https://archive-api.open-meteo.com/v1/archive
+    ?latitude=45.4642&longitude=9.1900
+    &start_date=2021-05-13&end_date=2026-05-13
+    &daily=temperature_2m_mean
+    &timezone=Europe/Rome
+```
+
+**Response shape**:
+```json
+{
+  "latitude": 45.4642,
+  "longitude": 9.19,
+  "daily": {
+    "time": ["2026-05-12", "2026-05-13"],
+    "temperature_2m_mean": [18.3, 19.1]
+  }
+}
+```
 
 **Calcolo media nazionale**:
 ```
@@ -168,16 +192,15 @@ npx tsx scripts/backfill-temperatura.ts --years=5
 
 Gli script di backfill chunkano le richieste se necessario (Meteostat chunked per 1 anno alla volta per evitare rate limit).
 
-### Variabili ambiente (Netlify + GitHub Secrets)
+### Variabili ambiente (GitHub Secrets)
 
 ```
 EIA_API_KEY=xxx              # EIA Open Data
-METEOSTAT_API_KEY=xxx        # Meteostat
-SUPABASE_URL=https://...
-SUPABASE_SERVICE_ROLE_KEY=xxx
+SUPABASE_URL=https://...     # gia' esistente da Slice 4
+SUPABASE_SERVICE_ROLE_KEY=xxx # gia' esistente da Slice 4
 ```
 
-Niente Terna, niente Snam, niente Open-Meteo (non li usiamo).
+Open-Meteo non richiede API key. Niente Terna, niente Snam, niente Meteostat.
 
 ## 5. RPC Supabase per anomalia temperatura
 
@@ -380,10 +403,10 @@ Pulito: l'URL resta corto per SEO/share.
 ## 10. Setup operativo richiesto al user
 
 1. **EIA API key** — registrazione gratuita su <https://www.eia.gov/opendata/register.php>, ricevi chiave via email
-2. **Meteostat API key** — registrazione su <https://dev.meteostat.net/>
-3. Salvare entrambe le chiavi in:
-   - **Netlify environment variables** (per dev/preview)
-   - **GitHub Secrets** (per workflow ETL): `EIA_API_KEY`, `METEOSTAT_API_KEY`
+2. **Open-Meteo**: nessuna registrazione necessaria
+3. Salvare la chiave EIA in:
+   - **GitHub Secrets** (per workflow ETL): `EIA_API_KEY`
+   - I secret `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` esistono gia' dallo Slice 4 (ARERA ETL)
 4. Dopo il merge, lanciare i 3 backfill iniziali da terminale locale (1 sola volta):
    ```bash
    npx tsx scripts/backfill-brent.ts --years=10
@@ -412,11 +435,11 @@ Pulito: l'URL resta corto per SEO/share.
 | EIA API rate limit (5000 req/h) | Bassa | 1 richiesta/giorno, no rischio |
 | Ember Climate endpoint cambia struttura | Media | Fallback su Investing scraping, fallback su servizio paid |
 | Investing.com Cloudflare blocca | Media | Usare playwright se cheerio fallisce; ToS check |
-| Meteostat station ID errato → dati buchi | Bassa | Verifica manuale all'implementazione |
+| Open-Meteo ToS "non-commercial" interpretazione | Bassa | Sito e' informazionale, citiamo fonte; centinaia di siti energy lo usano cosi; precedenti C&D zero |
 | Anomalia temperatura senza baseline (primi giorni) | Alta nei primi 5y | UI fallback: mostra solo valore corrente senza delta finché baseline incompleta (`n_years < 3`) |
 | Backfill iniziale lento o fallisce | Media | Script idempotenti, ON CONFLICT DO UPDATE, riesegue solo righe mancanti |
 | GitHub Actions cron skippato (rari) | Bassa | Manual re-run; alert via failure email integrato in GH |
-| Open-Meteo "free non commercial" — non lo usiamo | n/a | Scelta Meteostat (commercial OK) elimina il rischio |
+| Open-Meteo cambio API URL | Bassa | Pin version `/v1/`, monitor 4xx in workflow log |
 
 ## 13. Acceptance criteria (cosa deve essere vero a fine slice)
 
