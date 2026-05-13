@@ -27,8 +27,8 @@ export abstract class BaseIngestor {
   abstract name: string;
   abstract assetSlug: string;
 
-  abstract fetch(start: Date, end: Date): Promise<unknown[]>;
-  abstract parse(raw: unknown[]): Observation[];
+  abstract fetch(start: Date, end: Date): Promise<unknown>;
+  abstract parse(raw: unknown): Observation[];
 
   async run(start?: Date, end?: Date): Promise<RunResult> {
     const startedAt = new Date();

@@ -1,0 +1,6 @@
+{
+  "data": [
+    { "date": "2026-05-12", "price_eur": 75.30, "instrument": "EUA Dec-26" },
+    { "date": "2026-05-13", "price_eur": 76.10, "instrument": "EUA Dec-26" }
+  ]
+}
