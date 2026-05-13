@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
 export const alt = "Energy Index — Prezzi luce e gas in tempo reale";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -13,6 +12,8 @@ const DEEP_FOREST = "#0a3d2e";
 const SIGNAL_GREEN = "#16a34a";
 const WHITE = "#ffffff";
 
+// Satori (motore di next/og) richiede display:flex esplicito su ogni <div>
+// con piu' di un figlio. Quindi flex everywhere.
 export default async function Image() {
   return new ImageResponse(
     (
@@ -33,6 +34,7 @@ export default async function Image() {
             width: 24,
             background: SIGNAL_GREEN,
             height: "100%",
+            display: "flex",
           }}
         />
         <div
@@ -52,6 +54,7 @@ export default async function Image() {
               fontWeight: 500,
               letterSpacing: 6,
               color: WHITE,
+              display: "flex",
             }}
           >
             EIDX · ENERGY INDEX
@@ -64,11 +67,12 @@ export default async function Image() {
               lineHeight: 1.05,
               color: WHITE,
               letterSpacing: -1,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            Prezzi luce e gas
-            <br />
-            in tempo reale
+            <span>Prezzi luce e gas</span>
+            <span>in tempo reale</span>
           </div>
           <div
             style={{
@@ -76,6 +80,7 @@ export default async function Image() {
               color: "rgba(255,255,255,0.72)",
               marginTop: 36,
               fontWeight: 400,
+              display: "flex",
             }}
           >
             PUN · PSV · offerte ARERA mercato libero
@@ -93,8 +98,8 @@ export default async function Image() {
               gap: 12,
             }}
           >
-            {/* Freccia ↗ stile logo. */}
-            <svg width="28" height="28" viewBox="0 0 28 28" style={{ display: "block" }}>
+            {/* Freccia stile logo. */}
+            <svg width="28" height="28" viewBox="0 0 28 28">
               <polyline
                 points="6,18 14,8 22,18"
                 fill="none"
@@ -104,7 +109,7 @@ export default async function Image() {
                 strokeLinejoin="round"
               />
             </svg>
-            energyindex.it
+            <span>energyindex.it</span>
           </div>
         </div>
       </div>

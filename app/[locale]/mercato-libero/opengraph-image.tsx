@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 import { createServerClient } from "@/lib/supabase/server";
 
-export const runtime = "edge";
 export const alt = "Energy Index — Mercato Libero offerte ARERA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -52,7 +51,7 @@ export default async function Image() {
       if (seen.size >= 4) break;
     }
   } catch {
-    // fallback: render brand-only senza statistiche
+    // fallback brand-only senza statistiche
   }
 
   return new ImageResponse(
@@ -73,6 +72,7 @@ export default async function Image() {
             width: 24,
             background: SIGNAL_GREEN,
             height: "100%",
+            display: "flex",
           }}
         />
         <div
@@ -90,6 +90,7 @@ export default async function Image() {
               fontWeight: 500,
               letterSpacing: 5,
               color: WHITE,
+              display: "flex",
             }}
           >
             EIDX · ENERGY INDEX
@@ -102,6 +103,7 @@ export default async function Image() {
               lineHeight: 1.05,
               color: WHITE,
               letterSpacing: -1,
+              display: "flex",
             }}
           >
             Mercato Libero
@@ -111,6 +113,7 @@ export default async function Image() {
               fontSize: 30,
               color: MUTED,
               marginTop: 14,
+              display: "flex",
             }}
           >
             {total > 0
@@ -126,6 +129,7 @@ export default async function Image() {
                     color: SIGNAL_GREEN,
                     fontWeight: 700,
                     letterSpacing: 2,
+                    display: "flex",
                   }}
                 >
                   LUCE FISSA · mediana
@@ -136,10 +140,15 @@ export default async function Image() {
                     color: WHITE,
                     fontWeight: 800,
                     marginTop: 6,
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 12,
                   }}
                 >
-                  {NUMBER_4DP.format(luce.median)}{" "}
-                  <span style={{ fontSize: 28, color: MUTED }}>{luce.unit}</span>
+                  <span>{NUMBER_4DP.format(luce.median)}</span>
+                  <span style={{ fontSize: 28, color: MUTED }}>
+                    {luce.unit}
+                  </span>
                 </div>
               </div>
             )}
@@ -151,6 +160,7 @@ export default async function Image() {
                     color: SIGNAL_GREEN,
                     fontWeight: 700,
                     letterSpacing: 2,
+                    display: "flex",
                   }}
                 >
                   GAS FISSO · mediana
@@ -161,10 +171,15 @@ export default async function Image() {
                     color: WHITE,
                     fontWeight: 800,
                     marginTop: 6,
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 12,
                   }}
                 >
-                  {NUMBER_4DP.format(gas.median)}{" "}
-                  <span style={{ fontSize: 28, color: MUTED }}>{gas.unit}</span>
+                  <span>{NUMBER_4DP.format(gas.median)}</span>
+                  <span style={{ fontSize: 28, color: MUTED }}>
+                    {gas.unit}
+                  </span>
                 </div>
               </div>
             )}
@@ -182,7 +197,7 @@ export default async function Image() {
               gap: 10,
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 28 28" style={{ display: "block" }}>
+            <svg width="26" height="26" viewBox="0 0 28 28">
               <polyline
                 points="6,18 14,8 22,18"
                 fill="none"
@@ -192,7 +207,7 @@ export default async function Image() {
                 strokeLinejoin="round"
               />
             </svg>
-            energyindex.it/mercato-libero
+            <span>energyindex.it/mercato-libero</span>
           </div>
         </div>
       </div>

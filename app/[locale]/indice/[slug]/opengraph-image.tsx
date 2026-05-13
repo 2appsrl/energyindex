@@ -1,15 +1,14 @@
 import { ImageResponse } from "next/og";
 import { createServerClient } from "@/lib/supabase/server";
 
-export const runtime = "edge";
 export const alt = "Energy Index — Prezzo asset";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Cache l'OG per 1h (i prezzi orari aggiornano comunque a ogni revalidate).
+// Cache OG per 1h (i prezzi orari aggiornano comunque a ogni revalidate).
 export const revalidate = 3600;
 
-// Palette ufficiale brand Energy Index (cfr. public/brand/README.md).
+// Brand palette (cfr. public/brand/README.md).
 const DEEP_FOREST = "#0a3d2e";
 const SIGNAL_GREEN = "#16a34a";
 const WHITE = "#ffffff";
@@ -54,15 +53,14 @@ export default async function Image({
       if (rows?.[1]) prev = Number(rows[1].value);
     }
   } catch {
-    // fallback: render brand-only senza prezzo
+    // fallback brand-only senza prezzo
   }
 
   const deltaPct =
     value !== null && prev !== null && prev !== 0
       ? ((value - prev) / prev) * 100
       : null;
-  // Prezzo in salita = colore "rialzo" rosso (negativo per chi paga); in
-  // discesa = signal green (occasione di risparmio).
+  // Prezzo in salita = rosso (rincaro), discesa = signal green (risparmio).
   const deltaColor =
     deltaPct !== null && deltaPct >= 0 ? UP_RED : SIGNAL_GREEN;
   const deltaSym = deltaPct !== null ? (deltaPct >= 0 ? "▲" : "▼") : "";
@@ -80,12 +78,12 @@ export default async function Image({
           position: "relative",
         }}
       >
-        {/* Rail Signal Green */}
         <div
           style={{
             width: 24,
             background: SIGNAL_GREEN,
             height: "100%",
+            display: "flex",
           }}
         />
         <div
@@ -103,6 +101,7 @@ export default async function Image({
               fontWeight: 500,
               letterSpacing: 5,
               color: WHITE,
+              display: "flex",
             }}
           >
             EIDX · ENERGY INDEX
@@ -113,6 +112,7 @@ export default async function Image({
               fontWeight: 600,
               marginTop: 56,
               color: MUTED,
+              display: "flex",
             }}
           >
             {displayName}
@@ -132,11 +132,14 @@ export default async function Image({
                 color: WHITE,
                 letterSpacing: -3,
                 lineHeight: 1,
+                display: "flex",
               }}
             >
               {value !== null ? NUMBER_2DP.format(value) : "—"}
             </div>
-            <div style={{ fontSize: 42, color: MUTED }}>{unit}</div>
+            <div style={{ fontSize: 42, color: MUTED, display: "flex" }}>
+              {unit}
+            </div>
           </div>
           {deltaPct !== null && (
             <div
@@ -145,9 +148,14 @@ export default async function Image({
                 color: deltaColor,
                 fontWeight: 700,
                 marginTop: 20,
+                display: "flex",
+                gap: 12,
               }}
             >
-              {deltaSym} {Math.abs(deltaPct).toFixed(1)}% vs ora precedente
+              <span>{deltaSym}</span>
+              <span>
+                {Math.abs(deltaPct).toFixed(1)}% vs ora precedente
+              </span>
             </div>
           )}
           <div
@@ -163,7 +171,7 @@ export default async function Image({
               gap: 12,
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 28 28" style={{ display: "block" }}>
+            <svg width="28" height="28" viewBox="0 0 28 28">
               <polyline
                 points="6,18 14,8 22,18"
                 fill="none"
@@ -173,7 +181,7 @@ export default async function Image({
                 strokeLinejoin="round"
               />
             </svg>
-            energyindex.it
+            <span>energyindex.it</span>
           </div>
         </div>
       </div>
