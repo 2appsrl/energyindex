@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 import { MarketBanner } from "@/components/home/MarketBanner";
+import { DriverCard } from "@/components/home/DriverCard";
+import { Droplets, Leaf, Thermometer } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Energy Index — Prezzi luce e gas in tempo reale",
@@ -83,12 +85,34 @@ async function getMarketBannerData(
   };
 }
 
+async function getDriverLatest(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  slug: string,
+): Promise<{ value: number | null; prevValue: number | null; unit: string }> {
+  return getLatestPair(supabase, slug);
+}
+
+async function getTemperatureAnomaly(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+): Promise<{ value: number | null; anomaly: number | null; baseline_years: number }> {
+  const { data } = await supabase.rpc("get_temperature_anomaly");
+  const row = Array.isArray(data) ? data[0] : null;
+  return {
+    value: row?.value ?? null,
+    anomaly: row?.anomaly ?? null,
+    baseline_years: row?.baseline_years ?? 0,
+  };
+}
+
 export default async function HomeIt() {
   const supabase = await createServerClient();
-  const [pun, psv, market] = await Promise.all([
+  const [pun, psv, market, brent, co2, tempAnom] = await Promise.all([
     getLatestPair(supabase, "pun"),
     getLatestPair(supabase, "psv"),
     getMarketBannerData(supabase),
+    getDriverLatest(supabase, "brent"),
+    getDriverLatest(supabase, "co2"),
+    getTemperatureAnomaly(supabase),
   ]);
 
   return (
@@ -122,6 +146,42 @@ export default async function HomeIt() {
           ariaLabel="Apri analisi prezzi gas"
         />
       </div>
+
+      <section className="space-y-4">
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight border-l-4 border-primary pl-3">
+          Driver di mercato
+        </h2>
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+          <DriverCard
+            href="/it/indice/brent"
+            icon={Droplets}
+            title="Brent"
+            subtitle="Petrolio greggio"
+            value={brent.value}
+            prevValue={brent.prevValue}
+            unit="$/bbl"
+          />
+          <DriverCard
+            href="/it/indice/co2"
+            icon={Leaf}
+            title="CO2 EUA"
+            subtitle="Quota emissione EU ETS"
+            value={co2.value}
+            prevValue={co2.prevValue}
+            unit="€/tCO2"
+          />
+          <DriverCard
+            href="/it/indice/temperatura"
+            icon={Thermometer}
+            title="Temperatura Italia"
+            subtitle="Anomalia stagionale"
+            value={tempAnom.value}
+            unit="°C"
+            anomaly={tempAnom.baseline_years >= 3 ? tempAnom.anomaly : null}
+            baselineLabel="vs media 5 anni"
+          />
+        </div>
+      </section>
 
       <MarketBanner
         luceVariabileMedian={market.luceVariabileMedian}
