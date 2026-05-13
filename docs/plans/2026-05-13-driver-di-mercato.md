@@ -59,27 +59,66 @@ Niente commit qui — è solo setup.
 
 ---
 
-## Task 1 — Migration: 3 nuovi asset
+## Task 1 — Migration: estendere CHECK constraints + 3 nuovi asset
 
 **Files:**
 - Create: `supabase/migrations/20260513000001_add_driver_assets.sql`
+
+**Contesto schema (verificato live tramite MCP):**
+
+La tabella `assets` ha CHECK constraints stretti che NON ammettono i driver di mercato senza estensione:
+- `kind` ∈ `{wholesale_index, country_dayahead, retail_aggregate}` — aggiungiamo `driver`
+- `commodity` ∈ `{electricity, gas}` — aggiungiamo `oil`, `co2`, `temperature`
+- `source` ∈ `{gme, entsoe, arera, computed}` — aggiungiamo `eia`, `ember`, `open-meteo`
+- `pricing_kind` ∈ `{absolute, spread_on_reference}` — `absolute` (default) basta per tutti e 3
+
+Geography ha già `IT` (id=2, country) e `EU` (id=1, continent). Per il Brent globale aggiungiamo `WORLD`.
 
 **Step 1: Crea il file migration**
 
 `supabase/migrations/20260513000001_add_driver_assets.sql`:
 
 ```sql
--- Slice 7 Driver di mercato: 3 nuovi asset.
--- Convenzioni:
---   slug:           kebab-case URL-friendly
---   commodity:      categoria logica (oil, co2, temperature) per filtri
---   pricing_kind:   spot / settlement / observation (per indicare la natura del valore)
+-- Slice 7 Driver di mercato - pre-step + 3 nuovi asset.
+--
+-- 1) Estende i CHECK constraints di assets per i nuovi driver:
+--    - kind:      aggiungo 'driver' (indicatori non-mercato-tradizionale)
+--    - commodity: aggiungo 'oil', 'co2', 'temperature'
+--    - source:    aggiungo 'eia' (Brent), 'ember' (CO2), 'open-meteo' (temp)
+--
+-- 2) Aggiunge geography 'WORLD' per Brent (petrolio globale).
+--    CO2 -> EU (id=1, gia' esistente); Temperatura -> IT (id=2, gia' esistente).
+--
+-- 3) Inserisce i 3 nuovi asset.
 
-INSERT INTO assets (slug, display_name_it, unit, commodity, pricing_kind)
+-- 1. Estendi CHECK constraints
+ALTER TABLE assets DROP CONSTRAINT assets_kind_check;
+ALTER TABLE assets ADD CONSTRAINT assets_kind_check
+  CHECK (kind = ANY (ARRAY['wholesale_index','country_dayahead','retail_aggregate','driver']));
+
+ALTER TABLE assets DROP CONSTRAINT assets_commodity_check;
+ALTER TABLE assets ADD CONSTRAINT assets_commodity_check
+  CHECK (commodity = ANY (ARRAY['electricity','gas','oil','co2','temperature']));
+
+ALTER TABLE assets DROP CONSTRAINT assets_source_check;
+ALTER TABLE assets ADD CONSTRAINT assets_source_check
+  CHECK (source = ANY (ARRAY['gme','entsoe','arera','computed','eia','ember','open-meteo']));
+
+-- 2. Geography 'WORLD' (continente fittizio per il petrolio globale).
+--    geography.code ha UNIQUE INDEX, quindi ON CONFLICT (code) funziona.
+INSERT INTO geography (kind, code, name_it, name_en, parent_id)
+VALUES ('continent','WORLD','Mondo','World',NULL)
+ON CONFLICT (code) DO NOTHING;
+
+-- 3. I 3 nuovi asset (lookup geography via subselect per evitare hardcode di id)
+INSERT INTO assets (slug, kind, commodity, unit, pricing_kind, geography_id, source, display_name_it)
 VALUES
-  ('brent',          'Brent — Petrolio greggio',       '$/bbl',  'oil',         'spot'),
-  ('co2',            'CO2 — Quota emissione EU ETS',   '€/tCO2', 'co2',         'settlement'),
-  ('temperatura-it', 'Temperatura Italia (media naz.)', '°C',    'temperature', 'observation')
+  ('brent',          'driver', 'oil',         '$/bbl',  'absolute',
+    (SELECT id FROM geography WHERE code='WORLD'), 'eia',         'Brent — Petrolio greggio'),
+  ('co2',            'driver', 'co2',         '€/tCO2', 'absolute',
+    (SELECT id FROM geography WHERE code='EU'),    'ember',       'CO2 — Quota emissione EU ETS'),
+  ('temperatura-it', 'driver', 'temperature', '°C',     'absolute',
+    (SELECT id FROM geography WHERE code='IT'),    'open-meteo',  'Temperatura Italia (media naz.)')
 ON CONFLICT (slug) DO NOTHING;
 ```
 
