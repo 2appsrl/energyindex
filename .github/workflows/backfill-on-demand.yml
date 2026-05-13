@@ -1,0 +1,54 @@
+name: ETL Backfill (on demand)
+
+# Workflow manuale per popolare lo storico di un asset.
+# Una volta sola dopo il primo deploy di un nuovo driver, oppure quando
+# serve riempire dei buchi dopo problemi di rete/quote API.
+#
+# Triggering: GitHub UI "Run workflow" -> scegli quale backfill lanciare.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Quale backfill"
+        required: true
+        type: choice
+        options:
+          - brent
+          - co2
+          - temperatura
+          - all
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+
+      - name: Backfill Brent (10 anni EIA)
+        if: inputs.target == 'brent' || inputs.target == 'all'
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/backfill-brent.ts
+
+      - name: Backfill CO2 (5 anni Ember/Investing)
+        if: inputs.target == 'co2' || inputs.target == 'all'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/backfill-co2.ts
+
+      - name: Backfill Temperatura (5 anni Open-Meteo)
+        if: inputs.target == 'temperatura' || inputs.target == 'all'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/backfill-temperatura.ts
