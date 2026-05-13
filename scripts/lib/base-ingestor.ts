@@ -58,8 +58,15 @@ export abstract class BaseIngestor {
       .select("id")
       .eq("slug", this.assetSlug)
       .maybeSingle();
-    if (assetErr || !asset) {
-      throw new Error(`asset slug '${this.assetSlug}' non trovato`);
+    if (assetErr) {
+      throw new Error(
+        `lookup assets fallita per slug '${this.assetSlug}': ${assetErr.message} (code=${assetErr.code ?? "?"}, details=${assetErr.details ?? "?"})`,
+      );
+    }
+    if (!asset) {
+      throw new Error(
+        `asset slug '${this.assetSlug}' non trovato in tabella assets (query ok, 0 risultati)`,
+      );
     }
     const records = rows.map((r) => ({
       asset_id: asset.id,
@@ -69,7 +76,11 @@ export abstract class BaseIngestor {
     const { error: upErr, count } = await supabase
       .from("price_observations")
       .upsert(records, { onConflict: "asset_id,observed_at", count: "exact" });
-    if (upErr) throw new Error(`upsert error: ${upErr.message}`);
+    if (upErr) {
+      throw new Error(
+        `upsert price_observations fallita: ${upErr.message} (code=${upErr.code ?? "?"}, details=${upErr.details ?? "?"})`,
+      );
+    }
     return count ?? records.length;
   }
 
@@ -77,8 +88,17 @@ export abstract class BaseIngestor {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
-      throw new Error("SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere set");
+      const missing: string[] = [];
+      if (!url) missing.push("SUPABASE_URL");
+      if (!key) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+      throw new Error(`Env vars mancanti: ${missing.join(", ")}`);
     }
+    // Log diagnostico: prima parte dell'URL e lunghezza della key (mai esporre
+    // il valore intero della service role).
+    const urlPrefix = url.slice(0, 40);
+    const keyLen = key.length;
+    const keyHead = key.slice(0, 6);
+    console.log(`[${this.name}] supabase url=${urlPrefix}... key=${keyHead}...(len=${keyLen})`);
     return createClient(url, key, { auth: { persistSession: false } });
   }
 
