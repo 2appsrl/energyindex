@@ -40,7 +40,7 @@ export function SiteHeader() {
           <img
             src="/brand/energy-index-compact.svg"
             alt="Energy Index"
-            width={136}
+            width={164}
             height={36}
             className="h-9 w-auto dark:hidden"
           />
@@ -48,7 +48,7 @@ export function SiteHeader() {
           <img
             src="/brand/energy-index-compact-darkmode.svg"
             alt="Energy Index"
-            width={136}
+            width={164}
             height={36}
             className="hidden h-9 w-auto dark:block"
           />
