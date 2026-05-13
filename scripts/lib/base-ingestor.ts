@@ -93,6 +93,16 @@ export abstract class BaseIngestor {
         `upsert price_observations fallita: ${upErr.message} (code=${upErr.code ?? "?"}, details=${upErr.details ?? "?"})`,
       );
     }
+    // Refresh della MV "ultimi prezzi per asset" cosi' il sito vede subito
+    // i nuovi dati senza aspettare un refresh manuale. Non-fatal: se la RPC
+    // fallisce loggiamo ma non bloccchiamo l'upsert (i dati sono comunque
+    // gia' su price_observations).
+    const { error: rpcErr } = await supabase.rpc("refresh_latest_prices_mv");
+    if (rpcErr) {
+      console.warn(`[${this.name}] WARN refresh_latest_prices_mv fallita: ${rpcErr.message}`);
+    } else {
+      console.log(`[${this.name}] MV refresh ok`);
+    }
     return count ?? records.length;
   }
 
