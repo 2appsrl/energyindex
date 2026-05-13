@@ -15,16 +15,85 @@ import { breadcrumbList, dataset, jsonLdString } from "@/lib/seo/jsonld";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
-const SUPPORTED_SLUGS = ["pun", "psv"] as const;
+const SUPPORTED_SLUGS = ["pun", "psv", "brent", "co2", "temperatura"] as const;
+
+// Mappa URL slug -> DB asset slug (alias per URL puliti).
+// es. "/it/indice/temperatura" -> asset slug "temperatura-it" in DB.
+const URL_TO_ASSET_SLUG: Record<string, string> = {
+  temperatura: "temperatura-it",
+};
 
 const SLUG_DESCRIPTIONS: Record<string, string> = {
   pun: "Prezzo Unico Nazionale del mercato elettrico italiano. Asta MGP del giorno prima, esiti pubblicati intorno alle 12:30.",
   psv: "Punto di Scambio Virtuale, riferimento all'ingrosso del gas naturale italiano. Asta MGP-GAS, esiti pubblicati intorno alle 17:00.",
+  brent: "Prezzo benchmark del petrolio crude oil europeo (North Sea), riferimento globale. Driver storico di gas e elettrico.",
+  co2: "Quota di emissione CO2 nell'EU Emissions Trading System. Costo che si scarica sui produttori termoelettrici e indirettamente sulla bolletta.",
+  temperatura: "Temperatura media nazionale italiana, media pesata di 9 stazioni meteo per popolazione. Driver dei consumi di gas (riscaldamento) e elettrico (raffrescamento).",
 };
 
 const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
   pun: "hourly",
   psv: "daily",
+  brent: "daily",
+  co2: "daily",
+  temperatura: "daily",
+};
+
+// Dataset metadata per JSON-LD, per ogni slug supportato.
+const DATASET_DEF: Record<
+  string,
+  { name: string; description: string; keywords: string[]; temporalCoverage: string }
+> = {
+  pun: {
+    name: "PUN — Prezzo Unico Nazionale (Italia)",
+    description:
+      "Serie storica del Prezzo Unico Nazionale dell'energia elettrica italiana, asta MGP del giorno prima. Dati orari dal 2021.",
+    keywords: [
+      "PUN",
+      "Prezzo Unico Nazionale",
+      "energia elettrica",
+      "Italia",
+      "GME",
+      "MGP",
+      "day-ahead",
+    ],
+    temporalCoverage: "2021-05-07/..",
+  },
+  psv: {
+    name: "PSV — Punto di Scambio Virtuale gas (Italia)",
+    description:
+      "Serie storica del prezzo PSV per il gas naturale italiano, asta MGP-GAS. Dati giornalieri dal 2021.",
+    keywords: [
+      "PSV",
+      "Punto di Scambio Virtuale",
+      "gas naturale",
+      "Italia",
+      "GME",
+      "MGP-GAS",
+    ],
+    temporalCoverage: "2021-05-07/..",
+  },
+  brent: {
+    name: "Brent — Petrolio greggio (spot)",
+    description:
+      "Serie storica del prezzo Brent crude oil (North Sea), benchmark europeo del petrolio. Dati giornalieri dall'EIA Open Data.",
+    keywords: ["Brent", "petrolio", "oil", "crude", "EIA", "commodity"],
+    temporalCoverage: "2016-05-13/..",
+  },
+  co2: {
+    name: "CO2 EUA — Quota emissione EU ETS",
+    description:
+      "Serie storica del prezzo settlement giornaliero del future EUA (EU Emissions Trading System). Driver del costo elettrico termoelettrico.",
+    keywords: ["CO2", "EUA", "EU ETS", "carbon", "emissioni", "quota"],
+    temporalCoverage: "2021-05-13/..",
+  },
+  temperatura: {
+    name: "Temperatura Italia (media nazionale)",
+    description:
+      "Serie storica della temperatura media giornaliera in Italia, media pesata di 9 stazioni meteo. Driver dei consumi gas/elettrici.",
+    keywords: ["temperatura", "Italia", "meteo", "HDD", "CDD", "consumi", "clima"],
+    temporalCoverage: "2021-05-13/..",
+  },
 };
 
 const NUMBER_2DP = new Intl.NumberFormat("it-IT", {
@@ -76,14 +145,16 @@ export async function generateMetadata({
     return { title: "Indice non trovato" };
   }
   const zone = slug === "pun" ? resolveZone(zoneParam) : null;
-  const effectiveSlug = zone ? zone.slug : slug;
+  const effectiveAssetSlug = zone ? zone.slug : (URL_TO_ASSET_SLUG[slug] ?? slug);
 
   // Lookup ultimo prezzo per il title dinamico (via mv_latest_price_per_asset
   // per recuperare asset_id, poi price_observations). Helpers memoizzati via
   // React.cache: condividono la stessa promise con IndicePage in questa request.
   let price: number | null = null;
+  let unit = "€/MWh";
   try {
-    const { data: metaRow } = await getAssetMetaBySlug(effectiveSlug);
+    const { data: metaRow } = await getAssetMetaBySlug(effectiveAssetSlug);
+    if (metaRow?.unit) unit = String(metaRow.unit);
     if (metaRow?.asset_id) {
       const { data: rows } = await getLatestObservations(metaRow.asset_id, 1);
       if (rows?.[0]) price = Number(rows[0].value);
@@ -91,18 +162,32 @@ export async function generateMetadata({
   } catch {
     // fallback: metadata senza prezzo (priceStr = "—")
   }
-  const priceStr = price !== null ? `${NUMBER_2DP.format(price)} €/MWh` : "—";
+  const priceStr = price !== null ? `${NUMBER_2DP.format(price)} ${unit}` : "—";
 
-  const isPun = slug === "pun";
-  const zoneLabel = zone && !zone.isNational ? ` Zona ${zone.displayShort}` : "";
-
-  const title = isPun
-    ? `PUN${zoneLabel} oggi: ${priceStr}`
-    : `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
-
-  const description = isPun
-    ? `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`
-    : "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
+  let title: string;
+  let description: string;
+  if (slug === "pun") {
+    const zoneLabel = zone && !zone.isNational ? ` Zona ${zone.displayShort}` : "";
+    title = `PUN${zoneLabel} oggi: ${priceStr}`;
+    description = `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`;
+  } else if (slug === "psv") {
+    title = `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
+    description =
+      "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
+  } else if (slug === "brent") {
+    title = `Brent oggi: ${priceStr} — Petrolio greggio`;
+    description =
+      "Andamento del prezzo Brent crude oil (North Sea), benchmark europeo del petrolio. Driver storico dei prezzi gas ed elettrico.";
+  } else if (slug === "co2") {
+    title = `CO2 EUA oggi: ${priceStr} — Quota emissione EU ETS`;
+    description =
+      "Prezzo settlement della quota di emissione CO2 nell'EU Emissions Trading System. Costo per i produttori termoelettrici, impatta indirettamente la bolletta elettrica.";
+  } else {
+    // temperatura
+    title = `Temperatura Italia oggi: ${priceStr}`;
+    description =
+      "Temperatura media nazionale italiana (media pesata di 9 citta'), driver dei consumi gas e elettrici. Anomalia stagionale vs media 5 anni.";
+  }
 
   return {
     title,
@@ -135,12 +220,12 @@ export default async function IndicePage({
   }
 
   const zone = slug === "pun" ? resolveZone(zoneParam) : null;
-  const effectiveSlug = zone ? zone.slug : slug;
+  const effectiveAssetSlug = zone ? zone.slug : (URL_TO_ASSET_SLUG[slug] ?? slug);
 
   const sourceGranularity = SOURCE_GRANULARITY_BY_SLUG[slug] ?? "hourly";
   const tf = resolveTimeframe(tfParam, sourceGranularity);
 
-  const { data: assetMeta } = await getAssetMetaBySlug(effectiveSlug);
+  const { data: assetMeta } = await getAssetMetaBySlug(effectiveAssetSlug);
 
   if (!assetMeta) {
     return (
@@ -178,8 +263,24 @@ export default async function IndicePage({
     );
   }
 
-  // Bucketed series for the chart, via RPC
   const supabase = await createServerClient();
+
+  // Per temperatura: chiama RPC anomalia (delta vs media 5 anni stesso giorno).
+  let temperatureAnomaly: { anomaly: number | null; baseline_years: number } | null = null;
+  if (slug === "temperatura") {
+    const { data: anomData } = await supabase.rpc("get_temperature_anomaly", {
+      p_date: latestPoint.observed_at.slice(0, 10),
+    });
+    const row = Array.isArray(anomData) ? anomData[0] : null;
+    if (row) {
+      temperatureAnomaly = {
+        anomaly: row.anomaly ?? null,
+        baseline_years: row.baseline_years ?? 0,
+      };
+    }
+  }
+
+  // Bucketed series for the chart, via RPC
   const { data: series } = await supabase.rpc("get_price_series", {
     p_asset_id: assetMeta.asset_id,
     p_interval: tf.intervalSql,
@@ -206,20 +307,8 @@ export default async function IndicePage({
         dangerouslySetInnerHTML={{
           __html: jsonLdString(
             dataset({
-              name:
-                slug === "pun"
-                  ? "PUN — Prezzo Unico Nazionale (Italia)"
-                  : "PSV — Punto di Scambio Virtuale gas (Italia)",
-              description:
-                slug === "pun"
-                  ? "Serie storica del Prezzo Unico Nazionale dell'energia elettrica italiana, asta MGP del giorno prima. Dati orari dal 2021."
-                  : "Serie storica del prezzo PSV per il gas naturale italiano, asta MGP-GAS. Dati giornalieri dal 2021.",
+              ...DATASET_DEF[slug],
               url: `https://energyindex.it/it/indice/${slug}`,
-              keywords:
-                slug === "pun"
-                  ? ["PUN", "Prezzo Unico Nazionale", "energia elettrica", "Italia", "GME", "MGP", "day-ahead"]
-                  : ["PSV", "Punto di Scambio Virtuale", "gas naturale", "Italia", "GME", "MGP-GAS"],
-              temporalCoverage: "2021-05-07/..",
             }),
           ),
         }}
@@ -245,10 +334,20 @@ export default async function IndicePage({
       <LatestValueCard
         display_name={assetMeta.display_name_it}
         value={latestPoint.value}
-        prev_value={prevValue}
+        prev_value={slug === "temperatura" ? undefined : prevValue}
         unit={assetMeta.unit}
         observed_at={latestPoint.observed_at}
-        commodity={slug === "psv" ? "gas" : "luce"}
+        commodity={slug === "pun" ? "luce" : slug === "psv" ? "gas" : undefined}
+        anomaly={
+          slug === "temperatura" && temperatureAnomaly && temperatureAnomaly.baseline_years >= 3
+            ? temperatureAnomaly.anomaly
+            : undefined
+        }
+        baselineLabel={
+          slug === "temperatura" && temperatureAnomaly && temperatureAnomaly.baseline_years >= 3
+            ? `vs media ${new Date().getFullYear() - 5}-${new Date().getFullYear() - 1}`
+            : undefined
+        }
       />
 
       {zone && (() => {
@@ -286,10 +385,13 @@ export default async function IndicePage({
             <p className="text-xs text-muted-foreground">
               {(() => {
                 const bucketLabels: Record<typeof tf.bucket, string> = {
-                  raw: "Ogni punto = prezzo orario rilevato dal GME.",
-                  day: "Ogni punto = media giornaliera. Le ore con prezzi bassi (es. surplus solare di metà giorno) sono mediate con le ore alte serali.",
+                  raw:
+                    slug === "pun"
+                      ? "Ogni punto = prezzo orario rilevato dal GME."
+                      : "Ogni punto = valore puntuale.",
+                  day: "Ogni punto = media giornaliera.",
                   week: "Ogni punto = media settimanale.",
-                  month: "Ogni punto = media mensile. La card in alto mostra invece il prezzo dell'ora corrente — può divergere molto dalla media del mese.",
+                  month: "Ogni punto = media mensile.",
                 };
                 return bucketLabels[tf.bucket];
               })()}
