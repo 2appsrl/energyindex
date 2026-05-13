@@ -9,6 +9,7 @@
  *
  * Env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
+import { fileURLToPath } from "node:url";
 import { BaseIngestor, type Observation } from "./lib/base-ingestor";
 
 export interface City {
@@ -105,7 +106,8 @@ export class TemperaturaIngestor extends BaseIngestor {
   }
 }
 
-if (require.main === module) {
+// Entry CLI: ESM-safe (no `require` in moduli ESM moderni).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   void (async () => {
     const result = await new TemperaturaIngestor().run();
     process.exit(result.status === "success" ? 0 : 1);

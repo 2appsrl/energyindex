@@ -7,6 +7,7 @@
  *
  * Env vars: EIA_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
+import { fileURLToPath } from "node:url";
 import { BaseIngestor, type Observation } from "./lib/base-ingestor";
 
 interface EiaRow {
@@ -45,7 +46,10 @@ export class BrentIngestor extends BaseIngestor {
   }
 }
 
-if (require.main === module) {
+// Entry CLI: lo script si auto-esegue solo se invocato direttamente
+// (es. `npx tsx scripts/etl-brent.ts`), non quando importato dai test.
+// Pattern ESM-safe equivalente a CJS `require.main === module`.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   void (async () => {
     const result = await new BrentIngestor().run();
     process.exit(result.status === "success" ? 0 : 1);

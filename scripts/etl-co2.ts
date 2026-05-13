@@ -5,6 +5,7 @@
  *
  * Env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
+import { fileURLToPath } from "node:url";
 import * as cheerio from "cheerio";
 import { BaseIngestor, type Observation } from "./lib/base-ingestor";
 
@@ -68,7 +69,8 @@ export class Co2Ingestor extends BaseIngestor {
   }
 }
 
-if (require.main === module) {
+// Entry CLI: ESM-safe (no `require` in moduli ESM moderni).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   void (async () => {
     const result = await new Co2Ingestor().run();
     process.exit(result.status === "success" ? 0 : 1);
