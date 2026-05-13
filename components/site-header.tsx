@@ -30,8 +30,28 @@ export function SiteHeader() {
   return (
     <header className="border-b">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/it" className="font-bold tabular-nums tracking-tight">
-          Energy Index
+        <Link
+          href="/it"
+          aria-label="Energy Index — home"
+          className="inline-flex items-center"
+        >
+          {/* Brand badge: variante chiara per light theme, variante scura per dark theme. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/energy-index-compact.svg"
+            alt="Energy Index"
+            width={136}
+            height={36}
+            className="h-9 w-auto dark:hidden"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/energy-index-compact-darkmode.svg"
+            alt="Energy Index"
+            width={136}
+            height={36}
+            className="hidden h-9 w-auto dark:block"
+          />
         </Link>
         <ThemeToggle />
       </div>
