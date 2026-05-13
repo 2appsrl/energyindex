@@ -7,6 +7,7 @@ import { BaseIngestor, type Observation } from "@/scripts/lib/base-ingestor";
 class TestIngestor extends BaseIngestor {
   name = "test";
   assetSlug = "test-asset";
+  granularity = "daily" as const;
   async fetch() { return [{ date: "2026-05-13", value: 100 }]; }
   parse(raw: { date: string; value: number }[]): Observation[] {
     return raw.map((r) => ({
@@ -30,6 +31,7 @@ describe("BaseIngestor", () => {
   it("run() cattura errori e li riporta nel result senza throw", async () => {
     class FailingIngestor extends BaseIngestor {
       name = "fail"; assetSlug = "test-asset";
+      granularity = "daily" as const;
       async fetch(): Promise<never> { throw new Error("boom"); }
       parse(): Observation[] { return []; }
     }

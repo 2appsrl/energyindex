@@ -23,9 +23,20 @@ export interface RunResult {
   finishedAt: Date;
 }
 
+/**
+ * Granularita' valide su price_observations.granularity (CHECK constraint).
+ */
+export type Granularity = "hourly" | "daily" | "quarter_hour";
+
 export abstract class BaseIngestor {
   abstract name: string;
   abstract assetSlug: string;
+  /**
+   * Granularita' del dato sorgente. Va salvata in price_observations.granularity
+   * (colonna NOT NULL). Esempi: PUN orario = 'hourly', PSV/Brent/CO2/Temperatura
+   * giornaliero = 'daily'.
+   */
+  abstract granularity: Granularity;
 
   abstract fetch(start: Date, end: Date): Promise<unknown>;
   abstract parse(raw: unknown): Observation[];
@@ -72,6 +83,7 @@ export abstract class BaseIngestor {
       asset_id: asset.id,
       observed_at: r.observed_at.toISOString(),
       value: r.value,
+      granularity: this.granularity,
     }));
     const { error: upErr, count } = await supabase
       .from("price_observations")

@@ -54,6 +54,7 @@ interface CityRaw {
 export class TemperaturaIngestor extends BaseIngestor {
   name = "temperatura";
   assetSlug = "temperatura-it";
+  granularity = "daily" as const;
 
   async fetch(start: Date, end: Date): Promise<CityRaw[]> {
     const startStr = start.toISOString().slice(0, 10);

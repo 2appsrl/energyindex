@@ -42,6 +42,7 @@ export function parseInvesting(html: string): Observation[] {
 export class Co2Ingestor extends BaseIngestor {
   name = "co2";
   assetSlug = "co2";
+  granularity = "daily" as const;
 
   async fetch(): Promise<unknown> {
     // Strategy 1: Ember Climate

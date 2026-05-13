@@ -18,6 +18,7 @@ interface EiaRow {
 export class BrentIngestor extends BaseIngestor {
   name = "brent";
   assetSlug = "brent";
+  granularity = "daily" as const;
 
   async fetch(start: Date, end: Date): Promise<EiaRow[]> {
     const apiKey = process.env.EIA_API_KEY;
