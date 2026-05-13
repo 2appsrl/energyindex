@@ -1,4 +1,7 @@
+"use client";
+
 import { Zap } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 export function CtaToEnergiapro({ campaign }: { campaign: string }) {
   const url = `https://energiapro.biz/?utm_source=energy-index&utm_medium=cta&utm_campaign=${encodeURIComponent(campaign)}`;
@@ -7,6 +10,7 @@ export function CtaToEnergiapro({ campaign }: { campaign: string }) {
       href={url}
       target="_blank"
       rel="noopener"
+      onClick={() => trackEvent("cta_energiapro_click", { campaign })}
       aria-label="Vai al comparatore EnergiaPro"
       className="group relative block cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-10 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
