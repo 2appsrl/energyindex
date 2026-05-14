@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "hourly" as const,
     })),
     { url: `${BASE}/it/indice/psv`, lastModified: now, priority: 0.9, changeFrequency: "daily" },
+    { url: `${BASE}/it/indice/ttf`, lastModified: now, priority: 0.8, changeFrequency: "daily" },
     { url: `${BASE}/it/indice/brent`, lastModified: now, priority: 0.7, changeFrequency: "daily" },
     { url: `${BASE}/it/indice/co2`, lastModified: now, priority: 0.7, changeFrequency: "daily" },
     { url: `${BASE}/it/indice/temperatura`, lastModified: now, priority: 0.6, changeFrequency: "daily" },

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   AreaSeries,
+  LineSeries,
   type IChartApi,
   type Time,
 } from "lightweight-charts";
@@ -13,12 +14,21 @@ export interface PricePoint {
   value: number;
 }
 
+export interface OverlaySeries {
+  label: string;       // es. "TTF Europa"
+  color: string;       // es. "#f59e0b"
+  points: PricePoint[];
+}
+
 export function PriceChart({
   points,
   unit,
+  overlay,
 }: {
   points: PricePoint[];
   unit: string;
+  /** Serie aggiuntiva sovrapposta (line series, no area). Opzionale. */
+  overlay?: OverlaySeries;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -44,18 +54,34 @@ export function PriceChart({
       },
     });
 
+    // Serie principale (area verde).
     const series = chart.addSeries(AreaSeries, {
       lineColor: "#14d97a",
       topColor: "rgba(20, 217, 122, 0.4)",
       bottomColor: "rgba(20, 217, 122, 0.0)",
     });
-
     series.setData(
       points.map((p) => ({
         time: Math.floor(new Date(p.observed_at).getTime() / 1000) as Time,
         value: p.value,
       })),
     );
+
+    // Overlay opzionale: line series colorata sopra l'area.
+    if (overlay && overlay.points.length > 0) {
+      const overlaySeries = chart.addSeries(LineSeries, {
+        color: overlay.color,
+        lineWidth: 2,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+      overlaySeries.setData(
+        overlay.points.map((p) => ({
+          time: Math.floor(new Date(p.observed_at).getTime() / 1000) as Time,
+          value: p.value,
+        })),
+      );
+    }
 
     chart.timeScale().fitContent();
     chartRef.current = chart;
@@ -70,7 +96,7 @@ export function PriceChart({
       window.removeEventListener("resize", onResize);
       chart.remove();
     };
-  }, [points, unit]);
+  }, [points, unit, overlay]);
 
   return <div ref={containerRef} className="w-full" />;
 }

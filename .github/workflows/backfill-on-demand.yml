@@ -17,6 +17,7 @@ on:
           - brent
           - co2
           - temperatura
+          - ttf
           - all
 
 jobs:
@@ -52,3 +53,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npx tsx scripts/backfill-temperatura.ts
+
+      - name: Backfill TTF (8 anni Yahoo Finance)
+        if: inputs.target == 'ttf' || inputs.target == 'all'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/backfill-ttf.ts

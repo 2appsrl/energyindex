@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 import { MarketBanner } from "@/components/home/MarketBanner";
 import { DriverCard } from "@/components/home/DriverCard";
-import { Droplets, Leaf, Thermometer } from "lucide-react";
+import { Droplets, Flame as FlameIcon, Leaf, Thermometer } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Energy Index — Prezzi luce e gas in tempo reale",
@@ -106,13 +106,14 @@ async function getTemperatureAnomaly(
 
 export default async function HomeIt() {
   const supabase = await createServerClient();
-  const [pun, psv, market, brent, co2, tempAnom] = await Promise.all([
+  const [pun, psv, market, brent, co2, tempAnom, ttf] = await Promise.all([
     getLatestPair(supabase, "pun"),
     getLatestPair(supabase, "psv"),
     getMarketBannerData(supabase),
     getDriverLatest(supabase, "brent"),
     getDriverLatest(supabase, "co2"),
     getTemperatureAnomaly(supabase),
+    getDriverLatest(supabase, "ttf"),
   ]);
 
   return (
@@ -151,7 +152,16 @@ export default async function HomeIt() {
         <h2 className="text-xl sm:text-2xl font-semibold tracking-tight border-l-4 border-primary pl-3">
           Driver di mercato
         </h2>
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+          <DriverCard
+            href="/it/indice/ttf"
+            icon={FlameIcon}
+            title="TTF Gas Europa"
+            subtitle="Benchmark front-month"
+            value={ttf.value}
+            prevValue={ttf.prevValue}
+            unit="€/MWh"
+          />
           <DriverCard
             href="/it/indice/brent"
             icon={Droplets}

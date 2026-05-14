@@ -15,7 +15,7 @@ import { breadcrumbList, dataset, jsonLdString } from "@/lib/seo/jsonld";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
-const SUPPORTED_SLUGS = ["pun", "psv", "brent", "co2", "temperatura"] as const;
+const SUPPORTED_SLUGS = ["pun", "psv", "brent", "co2", "temperatura", "ttf"] as const;
 
 // Mappa URL slug -> DB asset slug (alias per URL puliti).
 // es. "/it/indice/temperatura" -> asset slug "temperatura-it" in DB.
@@ -29,6 +29,7 @@ const SLUG_DESCRIPTIONS: Record<string, string> = {
   brent: "Prezzo benchmark del petrolio crude oil europeo (North Sea), riferimento globale. Driver storico di gas e elettrico.",
   co2: "Quota di emissione CO2 nell'EU Emissions Trading System. Costo che si scarica sui produttori termoelettrici e indirettamente sulla bolletta.",
   temperatura: "Temperatura media nazionale italiana, media pesata di 9 stazioni meteo per popolazione. Driver dei consumi di gas (riscaldamento) e elettrico (raffrescamento).",
+  ttf: "Title Transfer Facility, hub virtuale del gas naturale olandese. Benchmark europeo del gas: il PSV italiano lo segue con spread di 1-3 €/MWh.",
 };
 
 const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
@@ -37,6 +38,7 @@ const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
   brent: "daily",
   co2: "daily",
   temperatura: "daily",
+  ttf: "daily",
 };
 
 // Dataset metadata per JSON-LD, per ogni slug supportato.
@@ -93,6 +95,21 @@ const DATASET_DEF: Record<
       "Serie storica della temperatura media giornaliera in Italia, media pesata di 9 stazioni meteo. Driver dei consumi gas/elettrici.",
     keywords: ["temperatura", "Italia", "meteo", "HDD", "CDD", "consumi", "clima"],
     temporalCoverage: "2021-05-13/..",
+  },
+  ttf: {
+    name: "TTF — Gas Europa (front-month future)",
+    description:
+      "Serie storica del prezzo Title Transfer Facility, benchmark europeo del gas naturale. Front-month future, fonte ICE Endex. Il PSV italiano insegue il TTF con spread tipico 1-3 €/MWh.",
+    keywords: [
+      "TTF",
+      "Title Transfer Facility",
+      "gas naturale",
+      "Europa",
+      "ICE Endex",
+      "front-month",
+      "future",
+    ],
+    temporalCoverage: "2018-05-13/..",
   },
 };
 
@@ -182,6 +199,10 @@ export async function generateMetadata({
     title = `CO2 EUA oggi: ${priceStr} — Quota emissione EU ETS`;
     description =
       "Prezzo settlement della quota di emissione CO2 nell'EU Emissions Trading System. Costo per i produttori termoelettrici, impatta indirettamente la bolletta elettrica.";
+  } else if (slug === "ttf") {
+    title = `TTF oggi: ${priceStr} — Gas Europa (front-month)`;
+    description =
+      "Andamento del TTF (Title Transfer Facility), benchmark europeo del gas naturale. Driver principale del PSV italiano.";
   } else {
     // temperatura
     title = `Temperatura Italia oggi: ${priceStr}`;
@@ -293,6 +314,33 @@ export default async function IndicePage({
     }),
   );
 
+  // Overlay TTF sul chart PSV: rende visibile lo spread TTF→PSV (driver Europa
+  // vs hub italiano). Solo per PSV nazionale (no zone), e solo se TTF ha dati.
+  let ttfOverlay: { label: string; color: string; points: typeof points } | null = null;
+  if (slug === "psv") {
+    const { data: ttfMeta } = await getAssetMetaBySlug("ttf");
+    if (ttfMeta?.asset_id) {
+      const { data: ttfSeries } = await supabase.rpc("get_price_series", {
+        p_asset_id: ttfMeta.asset_id,
+        p_interval: tf.intervalSql,
+        p_bucket: tf.bucket,
+      });
+      const ttfPoints = (ttfSeries ?? []).map(
+        (p: { observed_at: string; value: number | string }) => ({
+          observed_at: String(p.observed_at),
+          value: Number(p.value),
+        }),
+      );
+      if (ttfPoints.length > 0) {
+        ttfOverlay = {
+          label: "TTF Europa",
+          color: "#f59e0b", // amber-500 — netto contrasto col verde principale
+          points: ttfPoints,
+        };
+      }
+    }
+  }
+
   // Description zone-aware: per una zona PUN specifica, descrive il prezzo zonale;
   // per nazionale o PSV usa la descrizione di default dello slug.
   const description =
@@ -399,7 +447,24 @@ export default async function IndicePage({
           </div>
           <TimeframeSelector active={tf.id} basePath={`/it/indice/${slug}`} />
         </div>
-        <PriceChart key={tf.id} points={points} unit={assetMeta.unit} />
+        {ttfOverlay && (
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2 w-3 rounded-sm bg-emerald-500" />
+              PSV (Italia)
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2 w-3 rounded-sm bg-amber-500" />
+              TTF (Europa)
+            </span>
+          </div>
+        )}
+        <PriceChart
+          key={tf.id}
+          points={points}
+          unit={assetMeta.unit}
+          overlay={ttfOverlay ?? undefined}
+        />
       </section>
 
       <FaqSection slug={slug} />
