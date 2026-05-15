@@ -42,6 +42,21 @@ export interface ForecastOutput {
   model_version: string;
 }
 
+/**
+ * Genera un forecast end-to-end per un asset+horizon.
+ *
+ * Pipeline: features → train Ridge → calibra conformal → predict → attribution.
+ *
+ * Ritorna `null` (mai throw) se:
+ *  - i dati storici sono insufficienti (X.length < MIN_TRAINING_ROWS, oppure
+ *    XTrain.length < MIN_TRAINING_ROWS dopo split calib)
+ *  - `buildLatestFeatureRow` non riesce a costruire la riga corrente
+ *  - `trainRidge` / `predictRidge` falliscono (matrice singolare, NaN, etc.)
+ *
+ * I caller (cron daily, backfill) possono quindi iterare assets × horizon
+ * senza preoccuparsi di catch: una run fallita su un singolo asset non
+ * blocca le altre.
+ */
 export function generateForecastForAsset(input: ForecastInput): ForecastOutput | null {
   const { target, drivers, horizonDays, generatedAt, assetSlug } = input;
 
@@ -62,18 +77,27 @@ export function generateForecastForAsset(input: ForecastInput): ForecastOutput |
   const yCalib = y.slice(calibStart);
   if (XTrain.length < MIN_TRAINING_ROWS) return null;
 
-  // 3) Addestra Ridge sul train
-  const model = trainRidge(XTrain, yTrain, RIDGE_LAMBDA);
+  // 3-5) Train + calib conformal + predict in un try/catch: trainRidge /
+  // predictRidge possono raramente throw (matrice singolare, NaN). In quel
+  // caso il contratto e' ritornare null come per "dati insufficienti", cosi'
+  // un fallimento su un singolo asset non aborta il backfill (4380 chiamate).
+  let model: ReturnType<typeof trainRidge>;
+  let conformalQ: number;
+  let latest: ReturnType<typeof buildLatestFeatureRow>;
+  let value: number;
+  try {
+    model = trainRidge(XTrain, yTrain, RIDGE_LAMBDA);
+    conformalQ = calibrateConformal(model, XCalib, yCalib, CONFORMAL_ALPHA);
+    latest = buildLatestFeatureRow({ target, drivers, meteoForecast: null });
+    if (!latest) return null;
+    value = predictRidge(model, latest.row);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[forecast] ${assetSlug} h=${horizonDays}: training/predict failed: ${msg}`);
+    return null;
+  }
 
-  // 4) Calibra banda conformal sui residui del calib set
-  const conformalQ = calibrateConformal(model, XCalib, yCalib, CONFORMAL_ALPHA);
-
-  // 5) Build feature row di "oggi" e predict
-  const latest = buildLatestFeatureRow({ target, drivers, meteoForecast: null });
-  if (!latest) return null;
-  const value = predictRidge(model, latest.row);
-
-  // 6) Driver attribution
+  // 6) Driver attribution (puro: non puo' fallire se siamo arrivati qui)
   // featureMeansTraining: medie del training (X non standardizzato). Le abbiamo
   // gia' in model.featureMeans (lo standardizer le ha calcolate).
   const driversAttr = computeAttribution(
