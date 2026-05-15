@@ -17,10 +17,14 @@ import { alignDriverToTarget, type SeriesPoint } from "@/lib/forecast/features";
 
 const TARGET_SLUGS = ["pun", "psv", "ttf"] as const;
 const HORIZONS = [7, 30, 90, 180] as const;
+// NOTE: CO2 (EU ETS) escluso temporaneamente. Asset aggiunto il 2026-04-13,
+// ha ~24 obs giornaliere — sotto la MIN_TRAINING_ROWS dell'orchestrator anche
+// dopo alignDriverToTarget. Verra' reinserito quando avra' >= 90 osservazioni
+// (~3 mesi). Tracciato in TODO/issue, non bloccante per il rollout.
 const DRIVER_SLUGS_PER_TARGET: Record<string, string[]> = {
-  pun: ["ttf", "brent", "co2", "temperatura-it"],
-  psv: ["ttf", "brent", "co2", "temperatura-it"],
-  ttf: ["brent", "co2", "psv"],
+  pun: ["ttf", "brent", "temperatura-it"],
+  psv: ["ttf", "brent", "temperatura-it"],
+  ttf: ["brent", "psv"],
 };
 
 // Mappa slug DB driver -> chiave usata in orchestrator

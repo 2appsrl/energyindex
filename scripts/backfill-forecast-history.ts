@@ -15,10 +15,11 @@ import { alignDriverToTarget, type SeriesPoint } from "@/lib/forecast/features";
 
 const TARGET_SLUGS = ["pun", "psv", "ttf"] as const;
 const HORIZONS = [7, 30, 90, 180] as const;
+// NOTE: CO2 escluso (vedi run-forecast-daily.ts). Asset troppo nuovo.
 const DRIVER_SLUGS_PER_TARGET: Record<string, string[]> = {
-  pun: ["ttf", "brent", "co2", "temperatura-it"],
-  psv: ["ttf", "brent", "co2", "temperatura-it"],
-  ttf: ["brent", "co2", "psv"],
+  pun: ["ttf", "brent", "temperatura-it"],
+  psv: ["ttf", "brent", "temperatura-it"],
+  ttf: ["brent", "psv"],
 };
 const DRIVER_KEY_MAP: Record<string, string> = {
   ttf: "ttf",
