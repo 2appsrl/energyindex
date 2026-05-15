@@ -68,6 +68,58 @@ export const dataset = (params: {
   },
 });
 
+export const forecastDataset = (params: {
+  name: string;
+  description: string;
+  url: string;
+  keywords: string[];
+  temporalCoverage: string;
+}) => ({
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  name: params.name,
+  description: params.description,
+  url: params.url,
+  keywords: params.keywords.join(", "),
+  temporalCoverage: params.temporalCoverage,
+  license: "https://energyindex.it/it/forecast/metodologia#licenza",
+  isAccessibleForFree: true,
+  publisher: organization(),
+  creator: {
+    "@type": "Organization",
+    name: "EIDX Research",
+    url: `${SITE_URL}/it/forecast/metodologia`,
+  },
+});
+
+export interface TechArticleParams {
+  headline: string;
+  description: string;
+  url: string;
+  author: string;
+  datePublished: string;       // ISO 8601 YYYY-MM-DD
+  dateModified?: string;
+  keywords?: string[];
+}
+
+export const techArticle = (p: TechArticleParams) => ({
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: p.headline,
+  description: p.description,
+  url: p.url,
+  inLanguage: "it-IT",
+  author: {
+    "@type": "Organization",
+    name: p.author,
+    url: SITE_URL,
+  },
+  datePublished: p.datePublished,
+  dateModified: p.dateModified ?? p.datePublished,
+  keywords: p.keywords?.join(", "),
+  publisher: organization(),
+});
+
 export interface FaqEntry {
   question: string;
   answer: string;
