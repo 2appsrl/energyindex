@@ -13,6 +13,8 @@ import {
   seasonalCyclic,
   isItalianHoliday,
   buildFeatureMatrix,
+  buildLatestFeatureRow,
+  TEMPERATURE_DRIVER_KEY,
   type SeriesPoint,
 } from "@/lib/forecast/features";
 
@@ -128,5 +130,103 @@ describe("buildFeatureMatrix", () => {
     expect(dates.length).toBe(X.length);
     // Tutti i valori finiti (no NaN/null nelle righe finali)
     for (const row of X) for (const v of row) expect(Number.isFinite(v)).toBe(true);
+  });
+});
+
+describe("isItalianHoliday — observance vs public", () => {
+  it("Mother's Day 2026 (osservanza) → false", () => {
+    // Festa della Mamma 2026 = 2a domenica di maggio = 2026-05-10
+    expect(isItalianHoliday(new Date("2026-05-10T12:00:00Z"))).toBe(false);
+  });
+  it("Ferragosto 2026 (pubblica) → true", () => {
+    expect(isItalianHoliday(new Date("2026-08-15T12:00:00Z"))).toBe(true);
+  });
+  it("25 aprile 2026 (Liberazione, pubblica) → true", () => {
+    expect(isItalianHoliday(new Date("2026-04-25T12:00:00Z"))).toBe(true);
+  });
+});
+
+describe("buildLatestFeatureRow", () => {
+  it("ritorna l'ultima riga di features con metadata", () => {
+    const target: SeriesPoint[] = Array.from({ length: 60 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 1));
+      d.setUTCDate(d.getUTCDate() + i);
+      return { date: d, value: 100 + i };
+    });
+    const drivers = {
+      ttf: target.map((p) => ({ date: p.date, value: 30 })),
+      temperature: target.map((p) => ({ date: p.date, value: 15 })),
+    };
+    const row = buildLatestFeatureRow({ target, drivers, meteoForecast: null });
+    expect(row).not.toBeNull();
+    expect(row!.row.length).toBe(row!.featureNames.length);
+    expect(row!.row.every(Number.isFinite)).toBe(true);
+    // L'ultima data target e' 2026-03-01 (60 giorni partendo da 2026-01-01)
+    // Per horizon=0 in buildFeatureMatrix, dates[] = target[i] del massimo i valido
+    expect(row!.date.getTime()).toBeLessThanOrEqual(target[target.length - 1].date.getTime());
+  });
+
+  it("ritorna null se non c'e' abbastanza storico", () => {
+    const target: SeriesPoint[] = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 1));
+      d.setUTCDate(d.getUTCDate() + i);
+      return { date: d, value: 100 + i };
+    });
+    const drivers = {
+      ttf: target.map((p) => ({ date: p.date, value: 30 })),
+      temperature: target.map((p) => ({ date: p.date, value: 15 })),
+    };
+    expect(buildLatestFeatureRow({ target, drivers, meteoForecast: null })).toBeNull();
+  });
+});
+
+describe("buildFeatureMatrix — temperature key contract", () => {
+  it("ritorna X vuoto se manca driver temperature (silent contract)", () => {
+    const target: SeriesPoint[] = Array.from({ length: 60 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 1));
+      d.setUTCDate(d.getUTCDate() + i);
+      return { date: d, value: 100 + i };
+    });
+    const drivers = {
+      ttf: target.map((p) => ({ date: p.date, value: 30 })),
+      // temperature missing -- contract violation
+    };
+    const out = buildFeatureMatrix({ target, drivers, meteoForecast: null, horizonDays: 7 });
+    expect(out.X.length).toBe(0);
+    expect(out.y.length).toBe(0);
+  });
+
+  it("esporta TEMPERATURE_DRIVER_KEY = 'temperature' (contratto con orchestrator)", () => {
+    expect(TEMPERATURE_DRIVER_KEY).toBe("temperature");
+  });
+});
+
+describe("buildFeatureMatrix — warmup truncation length", () => {
+  it("X.length = n - maxLag (30) - horizon, +/- 1 per gestione confini", () => {
+    const N = 100;
+    const target: SeriesPoint[] = Array.from({ length: N }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 1));
+      d.setUTCDate(d.getUTCDate() + i);
+      return { date: d, value: 100 + i };
+    });
+    const drivers = {
+      ttf: target.map((p) => ({ date: p.date, value: 30 })),
+      temperature: target.map((p) => ({ date: p.date, value: 15 })),
+    };
+    const horizon = 7;
+    const out = buildFeatureMatrix({ target, drivers, meteoForecast: null, horizonDays: horizon });
+    // Atteso: indici i tali che maxLag(30) <= i e i+horizon < N => i in [30, 92] => 63 righe
+    expect(out.X.length).toBe(N - 30 - horizon);
+    expect(out.dates.length).toBe(N - 30 - horizon);
+  });
+});
+
+describe("rollingStd / rollingMean — boundary conditions", () => {
+  it("rollingStd con window=1 ritorna tutto null", () => {
+    expect(rollingStd([1, 2, 3], 1)).toEqual([null, null, null]);
+  });
+  it("rollingMean con window = length ritorna mean solo all'ultimo indice", () => {
+    const out = rollingMean([1, 2, 3, 4], 4);
+    expect(out).toEqual([null, null, null, 2.5]);
   });
 });

@@ -26,6 +26,10 @@ const CDD_BASE = 21;
 
 const italyHolidays = new Holidays("IT");
 
+const holidayCache = new Map<string, boolean>();
+
+export const TEMPERATURE_DRIVER_KEY = "temperature";
+
 export function computeHDD(temperature: number): number {
   return Math.max(HDD_BASE - temperature, 0);
 }
@@ -108,8 +112,18 @@ export function seasonalCyclic(d: Date): {
 
 export function isItalianHoliday(d: Date): boolean {
   const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  const cached = holidayCache.get(iso);
+  if (cached !== undefined) return cached;
   const result = italyHolidays.isHoliday(iso);
-  return Array.isArray(result) ? result.length > 0 : Boolean(result);
+  let isPublic: boolean;
+  if (!Array.isArray(result)) {
+    // Backwards-compat: older date-holidays versions return a single object or false
+    isPublic = result !== false && (result as { type?: string }).type === "public";
+  } else {
+    isPublic = result.some((h) => h.type === "public");
+  }
+  holidayCache.set(iso, isPublic);
+  return isPublic;
 }
 
 export interface BuildMatrixParams {
@@ -193,7 +207,7 @@ export function buildFeatureMatrix(p: BuildMatrixParams): FeatureMatrix {
     }
     if (!valid) continue;
 
-    const tempSeries = drivers.temperature;
+    const tempSeries = drivers[TEMPERATURE_DRIVER_KEY];
     const tempLag1 = tempSeries && i >= 1 ? tempSeries[i - 1].value : null;
     if (tempLag1 === null) continue;
     row.push(computeHDD(tempLag1), computeCDD(tempLag1));
