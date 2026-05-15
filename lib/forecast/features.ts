@@ -1,5 +1,3 @@
-import "server-only";
-
 /**
  * Feature engineering puro per i modelli forecast.
  *
@@ -11,8 +9,14 @@ import "server-only";
  * Eventuali buchi (weekend, festivi senza dato) vanno gestiti dal caller
  * via interpolazione lineare PRIMA di chiamare buildFeatureMatrix.
  *
- * Import "server-only": evita bundling delle deps transitive di date-holidays
- * (moment ~5MB + astronomia ~18MB) nel client.
+ * CONSTRAINT: questo modulo NON deve essere importato da Client Components
+ * (`"use client"`). La libreria date-holidays trascina moment (~5MB) +
+ * astronomia (~18MB) nel bundle. Originariamente avevamo `import "server-only"`
+ * a protezione, ma quel modulo lancia anche dai Node script tsx (no
+ * RSC bundler) e bloccava run-forecast-daily / backfill-forecast-history.
+ * La protezione e' ora solo a livello di convenzione: orchestrator.ts
+ * (importatore unico user-facing) e' richiesto solo da server components
+ * (page.tsx, Server Actions) e da Node script (scripts/*.ts).
  */
 import Holidays from "date-holidays";
 
