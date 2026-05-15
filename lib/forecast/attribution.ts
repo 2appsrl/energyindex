@@ -78,19 +78,36 @@ export function computeAttribution(
     throw new Error("attribution: featureRow vs coefficients dim mismatch");
 
   // 1) Contributo per ogni feature singola
-  type Raw = { name: string; group: string; contribution: number };
+  type Raw = { name: string; group: string; contribution: number; featureValue: number };
   const raw: Raw[] = featureNames.map((name, i) => ({
     name,
     group: groupKey(name),
     contribution: coefficients[i] * (featureRow[i] - featureMeansTraining[i]),
+    featureValue: featureRow[i],
   }));
 
-  // 2) Aggrega per group: somma contributi, ma per il nome esponiamo il primo
+  // 2) Aggrega per group
+  // I gruppi one-hot (dow_*, month_*) richiedono un'aggregazione speciale: sommare
+  // i 7 (o 12) contributi genererebbe quasi sempre un aggregato piccolo per
+  // cancellazione tra il positivo della feature attiva e i negativi delle inattive,
+  // rendendo i calendar driver invisibili nel top K. Per questi gruppi teniamo solo
+  // il contributo della feature ATTIVA (featureRow != 0). I gruppi seasonal (sin/cos)
+  // mantengono la somma: il prodotto vettoriale 2D ha segno interpretabile.
+  const ONE_HOT_GROUPS = new Set(["calendar_dow", "calendar_month"]);
   const byGroup = new Map<string, Raw>();
   for (const r of raw) {
-    const existing = byGroup.get(r.group);
-    if (!existing) byGroup.set(r.group, { ...r });
-    else existing.contribution += r.contribution;
+    if (ONE_HOT_GROUPS.has(r.group)) {
+      if (r.featureValue !== 0) {
+        const existing = byGroup.get(r.group);
+        if (!existing || Math.abs(r.contribution) > Math.abs(existing.contribution)) {
+          byGroup.set(r.group, { ...r });
+        }
+      }
+    } else {
+      const existing = byGroup.get(r.group);
+      if (!existing) byGroup.set(r.group, { ...r });
+      else existing.contribution += r.contribution;
+    }
   }
 
   // 3) Ordina per |contribution| desc, prendi topK
