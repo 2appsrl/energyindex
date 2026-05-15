@@ -12,6 +12,7 @@ import { resolveZone } from "@/lib/pun-zones";
 import { ZoneSelector } from "@/components/chart/ZoneSelector";
 import { ZoneMapItalia } from "@/components/chart/ZoneMapItalia";
 import { breadcrumbList, dataset, jsonLdString } from "@/lib/seo/jsonld";
+import { ForecastSection } from "@/components/forecast/ForecastSection";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
 // rendering on-demand e ISR (revalidate) non si applica.
@@ -154,7 +155,7 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ zone?: string }>;
+  searchParams: Promise<{ zone?: string; fh?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   const { zone: zoneParam } = await searchParams;
@@ -231,10 +232,14 @@ export default async function IndicePage({
   searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ tf?: string; zone?: string }>;
+  searchParams: Promise<{ tf?: string; zone?: string; fh?: string }>;
 }) {
   const { slug } = await params;
-  const { tf: tfParam, zone: zoneParam } = await searchParams;
+  const { tf: tfParam, zone: zoneParam, fh: fhParam } = await searchParams;
+
+  const validHorizons = [7, 30, 90, 180];
+  const requestedH = fhParam ? Number(fhParam) : 30;
+  const forecastHorizon = validHorizons.includes(requestedH) ? requestedH : 30;
 
   if (!SUPPORTED_SLUGS.includes(slug as (typeof SUPPORTED_SLUGS)[number])) {
     notFound();
@@ -466,6 +471,15 @@ export default async function IndicePage({
           overlay={ttfOverlay ?? undefined}
         />
       </section>
+
+      {(slug === "pun" || slug === "psv" || slug === "ttf") && (
+        <ForecastSection
+          assetSlug={slug}
+          assetId={Number(assetMeta.asset_id)}
+          unit={assetMeta.unit}
+          horizonDays={forecastHorizon}
+        />
+      )}
 
       <FaqSection slug={slug} />
 
