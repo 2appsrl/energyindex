@@ -14,6 +14,7 @@ import {
   isItalianHoliday,
   buildFeatureMatrix,
   buildLatestFeatureRow,
+  alignDriverToTarget,
   TEMPERATURE_DRIVER_KEY,
   type SeriesPoint,
 } from "@/lib/forecast/features";
@@ -228,5 +229,68 @@ describe("rollingStd / rollingMean — boundary conditions", () => {
   it("rollingMean con window = length ritorna mean solo all'ultimo indice", () => {
     const out = rollingMean([1, 2, 3, 4], 4);
     expect(out).toEqual([null, null, null, 2.5]);
+  });
+});
+
+describe("alignDriverToTarget", () => {
+  it("riempie NaN per le date target mancanti nel driver", () => {
+    const target: SeriesPoint[] = [
+      { date: new Date(Date.UTC(2026, 0, 1, 12)), value: 100 },
+      { date: new Date(Date.UTC(2026, 0, 2, 12)), value: 110 },
+      { date: new Date(Date.UTC(2026, 0, 3, 12)), value: 120 },
+    ];
+    const driver: SeriesPoint[] = [
+      { date: new Date(Date.UTC(2026, 0, 2, 12)), value: 50 },
+    ];
+    const aligned = alignDriverToTarget(target, driver);
+    expect(aligned).toHaveLength(3);
+    expect(aligned[0].value).toBeNaN();
+    expect(aligned[1].value).toBe(50);
+    expect(aligned[2].value).toBeNaN();
+  });
+
+  it("preserva l'ordine cronologico di target", () => {
+    const target: SeriesPoint[] = [
+      { date: new Date(Date.UTC(2026, 0, 1, 12)), value: 100 },
+      { date: new Date(Date.UTC(2026, 0, 2, 12)), value: 110 },
+    ];
+    const driver: SeriesPoint[] = [
+      { date: new Date(Date.UTC(2026, 0, 2, 12)), value: 50 },
+      { date: new Date(Date.UTC(2026, 0, 1, 12)), value: 30 },
+    ];
+    const aligned = alignDriverToTarget(target, driver);
+    expect(aligned[0].date.getTime()).toBe(target[0].date.getTime());
+    expect(aligned[0].value).toBe(30);
+    expect(aligned[1].value).toBe(50);
+  });
+});
+
+describe("buildFeatureMatrix — driver shorter than target", () => {
+  it("non lancia se un driver ha lunghezza minore del target", () => {
+    const target: SeriesPoint[] = Array.from({ length: 100 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 1));
+      d.setUTCDate(d.getUTCDate() + i);
+      return { date: d, value: 100 + i };
+    });
+    // ttf driver completo
+    const ttf = target.map((p) => ({ date: p.date, value: 30 }));
+    // co2 driver SOLO sugli ultimi 20 giorni
+    const co2Sub = target.slice(80).map((p) => ({ date: p.date, value: 70 }));
+    const co2 = alignDriverToTarget(target, co2Sub);
+    const temperature = target.map((p) => ({ date: p.date, value: 15 }));
+
+    const out = buildFeatureMatrix({
+      target,
+      drivers: { ttf, co2, temperature },
+      meteoForecast: null,
+      horizonDays: 7,
+    });
+    // X.length deve essere ridotto (le righe iniziali hanno co2=NaN e vengono filtrate),
+    // ma NON deve throw.
+    expect(out.X.length).toBeGreaterThanOrEqual(0);
+    // Tutte le righe valide hanno valori finiti
+    for (const row of out.X) {
+      for (const v of row) expect(Number.isFinite(v)).toBe(true);
+    }
   });
 });

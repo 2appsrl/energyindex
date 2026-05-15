@@ -11,7 +11,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { generateForecastForAsset } from "@/lib/forecast/orchestrator";
 import { sanitizeSeries } from "./run-forecast-daily";
-import type { SeriesPoint } from "@/lib/forecast/features";
+import { alignDriverToTarget, type SeriesPoint } from "@/lib/forecast/features";
 
 const TARGET_SLUGS = ["pun", "psv", "ttf"] as const;
 const HORIZONS = [7, 30, 90, 180] as const;
@@ -110,7 +110,7 @@ async function run(): Promise<{ generated: number; skipped: number; errors: numb
         if (!ds) continue;
         const filtered = filterUpTo(ds, simulatedNow);
         if (filtered.length === 0) continue;
-        drivers[DRIVER_KEY_MAP[dSlug]] = filtered;
+        drivers[DRIVER_KEY_MAP[dSlug]] = alignDriverToTarget(target, filtered);
       }
 
       for (const horizon of HORIZONS) {

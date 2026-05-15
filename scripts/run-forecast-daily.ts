@@ -13,7 +13,7 @@
 import { fileURLToPath } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { generateForecastForAsset, type ForecastOutput } from "@/lib/forecast/orchestrator";
-import type { SeriesPoint } from "@/lib/forecast/features";
+import { alignDriverToTarget, type SeriesPoint } from "@/lib/forecast/features";
 
 const TARGET_SLUGS = ["pun", "psv", "ttf"] as const;
 const HORIZONS = [7, 30, 90, 180] as const;
@@ -161,7 +161,7 @@ export async function runDailyForecast(now: Date = new Date()): Promise<{
       if (!dId) continue;
       const series = await loadSeries(supabase, dId, 5);
       if (series.length === 0) continue;
-      drivers[DRIVER_KEY_MAP[dSlug]] = series;
+      drivers[DRIVER_KEY_MAP[dSlug]] = alignDriverToTarget(target, series);
     }
 
     for (const horizon of HORIZONS) {

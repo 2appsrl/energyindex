@@ -69,6 +69,25 @@ export function rollingStd(values: number[], window: number): (number | null)[] 
   return out;
 }
 
+/**
+ * Aligns a driver series to target's date axis. For each date in target,
+ * returns the driver's value at that date, or NaN if missing.
+ * Both series assumed to use mezzogiorno UTC (T12:00:00Z) as the daily key.
+ */
+export function alignDriverToTarget(
+  target: SeriesPoint[],
+  driver: SeriesPoint[],
+): SeriesPoint[] {
+  const dayKey = (d: Date) =>
+    `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  const byDay = new Map<string, number>();
+  for (const p of driver) byDay.set(dayKey(p.date), p.value);
+  return target.map((p) => ({
+    date: p.date,
+    value: byDay.get(dayKey(p.date)) ?? Number.NaN,
+  }));
+}
+
 export function buildLagFeatures(
   series: SeriesPoint[],
   lags: number[],
@@ -200,8 +219,13 @@ export function buildFeatureMatrix(p: BuildMatrixParams): FeatureMatrix {
 
     for (const dn of driverNames) {
       for (const l of LAGS_DRIVER) {
-        const v = driverLags[dn][i][`lag_${l}`];
-        if (v === null) {
+        const lagsForDriverAtI = driverLags[dn][i];
+        if (!lagsForDriverAtI) {
+          valid = false;
+          break;
+        }
+        const v = lagsForDriverAtI[`lag_${l}`];
+        if (v === null || !Number.isFinite(v)) {
           valid = false;
           break;
         }
