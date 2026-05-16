@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import {
   computeKpi,
   applyScenario,
+  applyWhatIf,
   computeBenchmarkVerdict,
+  NO_SHOCKS,
   SCENARIOS,
   type SimulatorInputs,
   type ForecastBand,
+  type WhatIfShocks,
 } from "@/lib/pro/margin-math";
 import type { ForecastChartPoint } from "@/components/forecast/ForecastChart";
 import { SimulatorInputsPanel } from "./SimulatorInputsPanel";
@@ -44,6 +47,7 @@ export function MarginSimulator({
   competitor: CompetitorData;
 }) {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_INPUTS);
+  const [whatIfShocks, setWhatIfShocks] = useState<WhatIfShocks>(NO_SHOCKS);
 
   const forecastBand: ForecastBand = useMemo(() => {
     // Fase 1: una sola media per tutte le durate contratto. Fase 2 (TODO):
@@ -78,6 +82,11 @@ export function MarginSimulator({
     [inputs, forecastBand],
   );
 
+  const whatIfKpi = useMemo(
+    () => applyWhatIf(inputs, forecastBand, whatIfShocks),
+    [inputs, forecastBand, whatIfShocks],
+  );
+
   const verdict = useMemo(
     () =>
       computeBenchmarkVerdict({
@@ -93,23 +102,36 @@ export function MarginSimulator({
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <SimulatorInputsPanel inputs={inputs} onChange={setInputs} />
       <div className="space-y-6 min-w-0">
-        <KpiCards kpi={kpi} />
-        <SimulatorChart
-          points={forecastPoints}
-          contractMonths={inputs.contractMonths}
-        />
-        <div className="grid gap-6 md:grid-cols-2">
-          <ScenarioStress
-            rows={scenarioRows}
-            baseMargineAnno={kpi.margineAnnoEur}
-          />
-          <CompetitorBenchmark
-            yourSpread={inputs.spreadEurPerMwh}
-            competitor={competitor}
-            verdict={verdict}
+        <div data-tour="kpi">
+          <KpiCards kpi={kpi} />
+        </div>
+        <div data-tour="chart">
+          <SimulatorChart
+            points={forecastPoints}
+            contractMonths={inputs.contractMonths}
           />
         </div>
-        <SimulatorActions />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div data-tour="scenarios">
+            <ScenarioStress
+              rows={scenarioRows}
+              baseMargineAnno={kpi.margineAnnoEur}
+              whatIfShocks={whatIfShocks}
+              onWhatIfChange={setWhatIfShocks}
+              whatIfKpi={whatIfKpi}
+            />
+          </div>
+          <div data-tour="competitor">
+            <CompetitorBenchmark
+              yourSpread={inputs.spreadEurPerMwh}
+              competitor={competitor}
+              verdict={verdict}
+            />
+          </div>
+        </div>
+        <div data-tour="actions">
+          <SimulatorActions />
+        </div>
       </div>
     </div>
   );

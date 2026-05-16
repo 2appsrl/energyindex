@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   computeKpi,
   applyScenario,
+  applyWhatIf,
   computeBenchmarkVerdict,
+  NO_SHOCKS,
   SCENARIOS,
   type SimulatorInputs,
   type ForecastBand,
@@ -142,6 +144,56 @@ describe("applyScenario", () => {
     // Both modes: 8.5 * (250 * 1.1) = 8.5 * 275 = 2337.5
     expect(resultVar.margineAnnoEur).toBeCloseTo(2337.5, 1);
     expect(resultFis.margineAnnoEur).toBeCloseTo(2337.5, 1);
+  });
+});
+
+describe("applyWhatIf", () => {
+  it("applyWhatIf: NO_SHOCKS returns same KPI as computeKpi (regression)", () => {
+    const inputs: SimulatorInputs = { ...baseInputs };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const a = computeKpi(inputs, forecast);
+    const b = applyWhatIf(inputs, forecast, NO_SHOCKS);
+    expect(b.margineAnnoEur).toBeCloseTo(a.margineAnnoEur, 4);
+    expect(b.ltvContrattoEur).toBeCloseTo(a.ltvContrattoEur, 4);
+  });
+
+  it("applyWhatIf: combined shocks compose multiplicatively for volume", () => {
+    const inputs: SimulatorInputs = { ...baseInputs };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const out = applyWhatIf(inputs, forecast, {
+      volumeShockPct: 0.2, // +20% volume
+      costShockEurPerMwh: 0,
+      churnShockPct: 0,
+    });
+    // base margine = 8.5 * 250 = 2125. With +20% vol = 8.5 * 300 = 2550.
+    expect(out.margineAnnoEur).toBeCloseTo(2550, 1);
+  });
+
+  it("applyWhatIf: churn shock reduces LTV but not margine/anno", () => {
+    const inputs: SimulatorInputs = { ...baseInputs, contractMonths: 24 };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const noShock = applyWhatIf(inputs, forecast, NO_SHOCKS);
+    const withChurnShock = applyWhatIf(inputs, forecast, {
+      ...NO_SHOCKS,
+      churnShockPct: 0.1,
+    });
+    expect(withChurnShock.margineAnnoEur).toBeCloseTo(
+      noShock.margineAnnoEur,
+      4,
+    );
+    expect(withChurnShock.ltvContrattoEur).toBeLessThan(noShock.ltvContrattoEur);
   });
 });
 

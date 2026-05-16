@@ -35,6 +35,7 @@ export function SimulatorInputsPanel({
 
   return (
     <aside className="bg-white rounded-xl border border-stone-200 p-6 space-y-6 self-start lg:sticky lg:top-6">
+      <div data-tour="inputs" className="space-y-6">
       <div>
         <h2 className="text-sm font-bold tracking-wide text-stone-500 uppercase">
           Input cliente
@@ -93,12 +94,14 @@ export function SimulatorInputsPanel({
         </select>
       </Field>
 
+      </div>
+
       <div className="pt-4 border-t border-stone-200 space-y-6">
         <h2 className="text-sm font-bold tracking-wide text-stone-500 uppercase">
           Pricing
         </h2>
 
-        <div className="space-y-2">
+        <div data-tour="contract-type" className="space-y-2">
           <label className="block text-xs font-semibold uppercase tracking-wide text-stone-500">
             Tipo contratto
           </label>
@@ -131,35 +134,37 @@ export function SimulatorInputsPanel({
           </p>
         </div>
 
-        <SliderField
-          label="Spread vendita"
-          min={0}
-          max={100}
-          step={0.5}
-          value={inputs.spreadEurPerMwh}
-          format={(v) => `+${NUM_1DP.format(v)} €/MWh`}
-          onChange={(v) => patch({ spreadEurPerMwh: v })}
-        />
+        <div data-tour="pricing" className="space-y-6">
+          <SliderField
+            label="Spread vendita"
+            min={0}
+            max={100}
+            step={0.5}
+            value={inputs.spreadEurPerMwh}
+            format={(v) => `+${NUM_1DP.format(v)} €/MWh`}
+            onChange={(v) => patch({ spreadEurPerMwh: v })}
+          />
 
-        <SliderField
-          label="CAC stimato"
-          min={0}
-          max={500}
-          step={10}
-          value={inputs.cacEur}
-          format={(v) => `${NUM_INT.format(v)} €`}
-          onChange={(v) => patch({ cacEur: v })}
-        />
+          <SliderField
+            label="CAC stimato"
+            min={0}
+            max={500}
+            step={10}
+            value={inputs.cacEur}
+            format={(v) => `${NUM_INT.format(v)} €`}
+            onChange={(v) => patch({ cacEur: v })}
+          />
 
-        <SliderField
-          label="Churn atteso"
-          min={0}
-          max={30}
-          step={0.5}
-          value={inputs.churnAnnualPct * 100}
-          format={(v) => `${NUM_1DP.format(v)} %`}
-          onChange={(v) => patch({ churnAnnualPct: v / 100 })}
-        />
+          <SliderField
+            label="Churn atteso"
+            min={0}
+            max={30}
+            step={0.5}
+            value={inputs.churnAnnualPct * 100}
+            format={(v) => `${NUM_1DP.format(v)} %`}
+            onChange={(v) => patch({ churnAnnualPct: v / 100 })}
+          />
+        </div>
       </div>
     </aside>
   );

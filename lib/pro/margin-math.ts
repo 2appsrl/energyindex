@@ -162,6 +162,53 @@ export function applyScenario(
   return computeKpi(effectiveInputs, effectiveForecast);
 }
 
+export interface WhatIfShocks {
+  /** Shock volume, frazione decimale (-0.20 .. +0.20, es. 0.10 = +10%). */
+  volumeShockPct: number;
+  /** Shock costo additivo, €/MWh (-10 .. +20). */
+  costShockEurPerMwh: number;
+  /** Shock churn additivo, frazione decimale (-0.10 .. +0.10). */
+  churnShockPct: number;
+}
+
+export const NO_SHOCKS: WhatIfShocks = {
+  volumeShockPct: 0,
+  costShockEurPerMwh: 0,
+  churnShockPct: 0,
+};
+
+/**
+ * Applica shock what-if arbitrari sul KPI base. Combina shock di volume,
+ * costo e churn. Il cost shock impatta il margine solo in modalita "fisso"
+ * (stessa logica di applyScenario per gli scenari preset).
+ */
+export function applyWhatIf(
+  inputs: SimulatorInputs,
+  forecast: ForecastBand,
+  shocks: WhatIfShocks,
+): KpiResult {
+  const effectiveSpread =
+    inputs.contractType === "fisso"
+      ? inputs.spreadEurPerMwh - shocks.costShockEurPerMwh
+      : inputs.spreadEurPerMwh;
+
+  const effectiveInputs: SimulatorInputs = {
+    ...inputs,
+    volumeKwhPerYear: inputs.volumeKwhPerYear * (1 + shocks.volumeShockPct),
+    spreadEurPerMwh: effectiveSpread,
+    churnAnnualPct: Math.max(
+      0,
+      Math.min(0.95, inputs.churnAnnualPct + shocks.churnShockPct),
+    ),
+  };
+  const effectiveForecast: ForecastBand = {
+    averageEurPerMwh: forecast.averageEurPerMwh + shocks.costShockEurPerMwh,
+    lowerEurPerMwh: forecast.lowerEurPerMwh + shocks.costShockEurPerMwh,
+    upperEurPerMwh: forecast.upperEurPerMwh + shocks.costShockEurPerMwh,
+  };
+  return computeKpi(effectiveInputs, effectiveForecast);
+}
+
 export interface CompetitorBenchmark {
   /** Spread vendita scelto dall'utente, €/MWh. */
   yourSpreadEurPerMwh: number;

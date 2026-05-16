@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { EidxProHeader } from "@/components/pro/EidxProHeader";
 import { MarginSimulator } from "@/components/pro/MarginSimulator";
+import { SimulatorTour } from "@/components/pro/SimulatorTour";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,10 @@ export default async function SimulatorPage() {
             &middot; banda 5–95%
           </p>
         </header>
+
+        <div className="flex justify-end">
+          <SimulatorTour />
+        </div>
 
         <MarginSimulator
           forecastPoints={forecastPoints}
