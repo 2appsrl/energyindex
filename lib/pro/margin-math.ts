@@ -7,6 +7,8 @@
  * See AGENTS / Slice 9 design notes for the underlying assumptions.
  */
 
+export type ContractType = "variabile" | "fisso";
+
 export interface SimulatorInputs {
   /** Volume annuo cliente in kWh. */
   volumeKwhPerYear: number;
@@ -20,6 +22,14 @@ export interface SimulatorInputs {
   churnAnnualPct: number;
   /** Overhead di approvvigionamento sopra il PUN, €/MWh. Default 3. */
   approvOverheadEurPerMwh?: number;
+  /**
+   * Tipo contratto:
+   * - "variabile": PUN passthrough. Cliente assorbe le variazioni di mercato,
+   *   il margine = spread × volume (invariato sotto cost shock).
+   * - "fisso": lock-in. Fornitore assorbe il rischio prezzo: un cost shock
+   *   riduce lo spread effettivo dello stesso importo.
+   */
+  contractType: ContractType;
 }
 
 export interface ForecastBand {
@@ -120,23 +130,36 @@ export function computeKpi(inputs: SimulatorInputs, forecast: ForecastBand): Kpi
 /**
  * Applica uno scenario di stress: scala il volume per `volumeMultiplier`
  * e somma `costShockEurPerMwh` al PUN medio del forecast, poi ricalcola
- * il KPI. In modello PUN+spread (passthrough) il margine dipende solo
- * dal volume.
+ * il KPI.
+ *
+ * In modalita "variabile" (PUN passthrough) il margine dipende solo dal
+ * volume — il cost shock passa al cliente.
+ *
+ * In modalita "fisso" (lock-in) il fornitore assorbe il rischio prezzo:
+ * il cost shock riduce lo spread effettivo dello stesso importo, erodendo
+ * il margine.
  */
 export function applyScenario(
   inputs: SimulatorInputs,
   forecast: ForecastBand,
   scenario: ScenarioModifier,
 ): KpiResult {
-  const stressedInputs: SimulatorInputs = {
+  const effectiveSpread =
+    inputs.contractType === "fisso"
+      ? inputs.spreadEurPerMwh - scenario.costShockEurPerMwh
+      : inputs.spreadEurPerMwh;
+
+  const effectiveInputs: SimulatorInputs = {
     ...inputs,
     volumeKwhPerYear: inputs.volumeKwhPerYear * scenario.volumeMultiplier,
+    spreadEurPerMwh: effectiveSpread,
   };
-  const stressedForecast: ForecastBand = {
-    ...forecast,
+  const effectiveForecast: ForecastBand = {
     averageEurPerMwh: forecast.averageEurPerMwh + scenario.costShockEurPerMwh,
+    lowerEurPerMwh: forecast.lowerEurPerMwh + scenario.costShockEurPerMwh,
+    upperEurPerMwh: forecast.upperEurPerMwh + scenario.costShockEurPerMwh,
   };
-  return computeKpi(stressedInputs, stressedForecast);
+  return computeKpi(effectiveInputs, effectiveForecast);
 }
 
 export interface CompetitorBenchmark {

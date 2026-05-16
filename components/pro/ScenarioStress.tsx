@@ -1,4 +1,5 @@
 import type { KpiResult, ScenarioModifier } from "@/lib/pro/margin-math";
+import { InfoTooltip } from "./InfoTooltip";
 
 const EUR_INT = new Intl.NumberFormat("it-IT", {
   style: "currency",
@@ -15,7 +16,13 @@ export function ScenarioStress({
 }) {
   return (
     <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
-      <h3 className="font-semibold text-stone-900">Scenario stress</h3>
+      <h3 className="font-semibold text-stone-900 flex items-center">
+        Scenario stress
+        <InfoTooltip
+          label="Scenari stress"
+          text="Come cambia il margine se il mercato si muove. Inverno freddo aumenta i consumi (volume +10%). TTF +20% aumenta il costo gas (+8 EUR/MWh): in contratti variabili passa al cliente, in contratti fissi te lo mangi. Recessione domanda riduce i volumi (-5%)."
+        />
+      </h3>
       <ul className="space-y-2 text-sm">
         {rows.map((r) => {
           const delta = r.kpi.margineAnnoEur - baseMargineAnno;

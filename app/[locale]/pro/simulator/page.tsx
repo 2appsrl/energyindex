@@ -81,7 +81,7 @@ export default async function SimulatorPage() {
             Simulazione margine retail
           </h1>
           <p className="text-sm text-stone-600">
-            Forecast PUN base &middot; contratto in passthrough variabile
+            Forecast PUN base &middot; scenari stress + benchmark mercato
             &middot; banda 5–95%
           </p>
         </header>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { SimulatorInputs } from "@/lib/pro/margin-math";
+import type { ContractType, SimulatorInputs } from "@/lib/pro/margin-math";
 
 const NUM_INT = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
 const NUM_1DP = new Intl.NumberFormat("it-IT", {
@@ -97,6 +97,39 @@ export function SimulatorInputsPanel({
         <h2 className="text-sm font-bold tracking-wide text-stone-500 uppercase">
           Pricing
         </h2>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold uppercase tracking-wide text-stone-500">
+            Tipo contratto
+          </label>
+          <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 rounded-md">
+            {(
+              [
+                { value: "variabile", label: "Variabile" },
+                { value: "fisso", label: "Fisso" },
+              ] as { value: ContractType; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => patch({ contractType: opt.value })}
+                aria-pressed={inputs.contractType === opt.value}
+                className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
+                  inputs.contractType === opt.value
+                    ? "bg-white shadow-sm text-stone-900"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-stone-500 leading-snug">
+            {inputs.contractType === "variabile"
+              ? "Passthrough PUN: il cliente assorbe le variazioni di mercato."
+              : "Lock-in: tu assorbi il rischio prezzo. Cost shock riduce il margine."}
+          </p>
+        </div>
 
         <SliderField
           label="Spread vendita"

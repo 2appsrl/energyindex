@@ -1,4 +1,5 @@
 import type { BenchmarkVerdict } from "@/lib/pro/margin-math";
+import { InfoTooltip } from "./InfoTooltip";
 
 const NUM_1DP = new Intl.NumberFormat("it-IT", {
   minimumFractionDigits: 1,
@@ -24,8 +25,12 @@ export function CompetitorBenchmark({
   return (
     <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-semibold text-stone-900">
+        <h3 className="font-semibold text-stone-900 flex items-center">
           Posizionamento competitor
+          <InfoTooltip
+            label="Posizionamento competitor"
+            text="Confronto del tuo spread con il mercato retail italiano. Dati live dalle offerte ARERA per electricity variabile. Mediano ~60 EUR/MWh include markup commerciale + brand + servizio cliente. Spread basso = competitivo (lead generation), alto = premium (margin focus)."
+          />
         </h3>
         <span className="text-xs text-stone-500 tabular-nums">
           {competitor.nOfferte} offerte ARERA

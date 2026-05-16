@@ -15,6 +15,7 @@ const baseInputs: SimulatorInputs = {
   spreadEurPerMwh: 8.5,
   cacEur: 120,
   churnAnnualPct: 0.14,
+  contractType: "variabile",
 };
 
 const baseForecast: ForecastBand = {
@@ -79,6 +80,68 @@ describe("applyScenario", () => {
     const baseKpi = computeKpi(baseInputs, baseForecast);
     const stressed = applyScenario(baseInputs, baseForecast, scenarioByName("recessione_domanda"));
     expect(stressed.margineAnnoEur).toBeCloseTo(baseKpi.margineAnnoEur * 0.95, 5);
+  });
+
+  it("FISSO mode: TTF spike eats into margine (cost shock reduces effective spread)", () => {
+    const inputsFisso: SimulatorInputs = {
+      volumeKwhPerYear: 250_000,
+      contractMonths: 12,
+      spreadEurPerMwh: 8.5,
+      cacEur: 120,
+      churnAnnualPct: 0.14,
+      contractType: "fisso",
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const ttfSpike = SCENARIOS.find((s) => s.name === "ttf_spike")!;
+    const result = applyScenario(inputsFisso, forecast, ttfSpike);
+    // margine = (8.5 - 8) * 250 = 0.5 * 250 = 125
+    expect(result.margineAnnoEur).toBeCloseTo(125, 1);
+  });
+
+  it("VARIABILE mode: TTF spike does NOT change margine (passthrough)", () => {
+    const inputsVar: SimulatorInputs = {
+      volumeKwhPerYear: 250_000,
+      contractMonths: 12,
+      spreadEurPerMwh: 8.5,
+      cacEur: 120,
+      churnAnnualPct: 0.14,
+      contractType: "variabile",
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const ttfSpike = SCENARIOS.find((s) => s.name === "ttf_spike")!;
+    const result = applyScenario(inputsVar, forecast, ttfSpike);
+    // margine = 8.5 * 250 = 2125 (unchanged)
+    expect(result.margineAnnoEur).toBeCloseTo(2125, 1);
+  });
+
+  it("BOTH modes: inverno freddo (volume +10%) grows margine proportionally", () => {
+    const inputs: SimulatorInputs = {
+      volumeKwhPerYear: 250_000,
+      contractMonths: 12,
+      spreadEurPerMwh: 8.5,
+      cacEur: 120,
+      churnAnnualPct: 0.14,
+      contractType: "variabile",
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const cold = SCENARIOS.find((s) => s.name === "inverno_freddo")!;
+    const resultVar = applyScenario(inputs, forecast, cold);
+    const resultFis = applyScenario({ ...inputs, contractType: "fisso" }, forecast, cold);
+    // Both modes: 8.5 * (250 * 1.1) = 8.5 * 275 = 2337.5
+    expect(resultVar.margineAnnoEur).toBeCloseTo(2337.5, 1);
+    expect(resultFis.margineAnnoEur).toBeCloseTo(2337.5, 1);
   });
 });
 

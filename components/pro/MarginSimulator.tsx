@@ -31,6 +31,7 @@ const DEFAULT_INPUTS: SimulatorInputs = {
   cacEur: 120,
   churnAnnualPct: 0.14,
   approvOverheadEurPerMwh: 3,
+  contractType: "variabile",
 };
 
 export function MarginSimulator({
