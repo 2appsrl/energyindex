@@ -27,6 +27,7 @@ interface ModuleCard {
   features: string[];
   status: "in arrivo" | "beta" | "live";
   tier: "Pro" | "Enterprise" | "Pro / Enterprise";
+  tryDemoHref?: string;
 }
 
 const MODULES: ModuleCard[] = [
@@ -43,6 +44,7 @@ const MODULES: ModuleCard[] = [
     ],
     status: "in arrivo",
     tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/simulator",
   },
   {
     number: "02",
@@ -246,6 +248,14 @@ export default function ProLandingPage() {
               <p className="text-xs text-muted-foreground pt-2 border-t">
                 Disponibile su: <span className="font-semibold">{m.tier}</span>
               </p>
+              {m.tryDemoHref && (
+                <Link
+                  href={m.tryDemoHref}
+                  className="inline-flex items-center justify-center w-full mt-2 px-4 py-2 rounded-md bg-[#0a3d2e] text-white text-sm font-semibold hover:bg-[#0a3d2e]/90 transition-colors"
+                >
+                  Prova la demo &rarr;
+                </Link>
+              )}
             </article>
           ))}
         </div>

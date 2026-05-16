@@ -8,8 +8,17 @@ import { ThemeToggle } from "./theme-toggle";
 // e il toggle theme non ha senso.
 const FORCED_DARK_PATHS = ["/mercato-libero/ticker"];
 
+// Rotte che usano un header dedicato brandizzato EIDX Pro: il global
+// SiteHeader e' soppresso per evitare doppia barra in cima.
+const HIDE_HEADER_PATHS = ["/pro/simulator"];
+
 export function SiteHeader() {
   const pathname = usePathname() ?? "";
+
+  if (HIDE_HEADER_PATHS.some((p) => pathname.endsWith(p) || pathname.includes(`${p}/`))) {
+    return null;
+  }
+
   const isDarkPage = FORCED_DARK_PATHS.some((p) => pathname.endsWith(p));
 
   if (isDarkPage) {

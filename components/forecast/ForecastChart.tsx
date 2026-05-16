@@ -28,16 +28,26 @@ export interface ForecastChartPoint {
 export function ForecastChart({
   points,
   unit,
+  forceTheme,
 }: {
   points: ForecastChartPoint[];
   unit: string;
+  /**
+   * Forza il tema del chart ignorando la `dark` class sul documento.
+   * Usato in scope EIDX Pro (light-only) per evitare il rendering scuro
+   * quando il global toggle e' su dark. Default: rispetta la `dark` class.
+   */
+  forceTheme?: "light" | "dark";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const isDark = document.documentElement.classList.contains("dark");
+    const isDark =
+      forceTheme !== undefined
+        ? forceTheme === "dark"
+        : document.documentElement.classList.contains("dark");
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
       height: 360,
@@ -100,7 +110,7 @@ export function ForecastChart({
       window.removeEventListener("resize", onResize);
       chart.remove();
     };
-  }, [points, unit]);
+  }, [points, unit, forceTheme]);
 
   return <div ref={containerRef} className="w-full" />;
 }
