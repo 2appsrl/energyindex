@@ -24,5 +24,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/it/forecast`, lastModified: now, priority: 0.9, changeFrequency: "daily" },
     { url: `${BASE}/it/forecast/track-record`, lastModified: now, priority: 0.6, changeFrequency: "daily" },
     { url: `${BASE}/it/forecast/metodologia`, lastModified: now, priority: 0.5, changeFrequency: "monthly" },
+    { url: `${BASE}/it/pro`, lastModified: now, priority: 0.8, changeFrequency: "weekly" },
   ];
 }
