@@ -31,6 +31,7 @@ const DEFAULT_INPUTS: SimulatorInputs = {
   volumeKwhPerYear: 250_000,
   contractMonths: 12,
   spreadEurPerMwh: 8.5,
+  fixedPriceEurPerMwh: 130, // ~ PUN recente + markup tipico
   cacEur: 120,
   churnAnnualPct: 0.14,
   approvOverheadEurPerMwh: 3,

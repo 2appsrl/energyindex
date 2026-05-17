@@ -15,6 +15,7 @@ const baseInputs: SimulatorInputs = {
   volumeKwhPerYear: 250_000,
   contractMonths: 12,
   spreadEurPerMwh: 8.5,
+  fixedPriceEurPerMwh: 130,
   cacEur: 120,
   churnAnnualPct: 0.14,
   contractType: "variabile",
@@ -85,10 +86,12 @@ describe("applyScenario", () => {
   });
 
   it("FISSO mode: TTF spike eats into margine (cost shock reduces effective spread)", () => {
+    // fixedPrice = 111.5 corrisponde al setup precedente (costo 103 + spread 8.5)
     const inputsFisso: SimulatorInputs = {
       volumeKwhPerYear: 250_000,
       contractMonths: 12,
       spreadEurPerMwh: 8.5,
+      fixedPriceEurPerMwh: 111.5,
       cacEur: 120,
       churnAnnualPct: 0.14,
       contractType: "fisso",
@@ -100,7 +103,8 @@ describe("applyScenario", () => {
     };
     const ttfSpike = SCENARIOS.find((s) => s.name === "ttf_spike")!;
     const result = applyScenario(inputsFisso, forecast, ttfSpike);
-    // margine = (8.5 - 8) * 250 = 0.5 * 250 = 125
+    // costo + shock = 100 + 8 + 3 = 111; effectiveSpread = 111.5 - 111 = 0.5
+    // margine = 0.5 * 250 = 125
     expect(result.margineAnnoEur).toBeCloseTo(125, 1);
   });
 
@@ -109,6 +113,7 @@ describe("applyScenario", () => {
       volumeKwhPerYear: 250_000,
       contractMonths: 12,
       spreadEurPerMwh: 8.5,
+      fixedPriceEurPerMwh: 130,
       cacEur: 120,
       churnAnnualPct: 0.14,
       contractType: "variabile",
@@ -125,10 +130,14 @@ describe("applyScenario", () => {
   });
 
   it("BOTH modes: inverno freddo (volume +10%) grows margine proportionally", () => {
+    // Per parita fisso/variabile sotto inverno_freddo (cost shock = 0):
+    // - variabile: spread=8.5
+    // - fisso: fixedPrice=111.5 (= costo 103 + 8.5) -> effectiveSpread = 8.5
     const inputs: SimulatorInputs = {
       volumeKwhPerYear: 250_000,
       contractMonths: 12,
       spreadEurPerMwh: 8.5,
+      fixedPriceEurPerMwh: 111.5,
       cacEur: 120,
       churnAnnualPct: 0.14,
       contractType: "variabile",
@@ -144,6 +153,61 @@ describe("applyScenario", () => {
     // Both modes: 8.5 * (250 * 1.1) = 8.5 * 275 = 2337.5
     expect(resultVar.margineAnnoEur).toBeCloseTo(2337.5, 1);
     expect(resultFis.margineAnnoEur).toBeCloseTo(2337.5, 1);
+  });
+
+  it("FISSO mode: prezzo vendita = fixedPriceEurPerMwh (user input, not derived)", () => {
+    const inputs: SimulatorInputs = {
+      ...baseInputs,
+      contractType: "fisso",
+      fixedPriceEurPerMwh: 130,
+      spreadEurPerMwh: 999, // ignorato in fisso
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const k = computeKpi(inputs, forecast);
+    // costo = 100 + 3 = 103; prezzo = 130 (user input); effectiveSpread = 27
+    expect(k.prezzoVenditaEurPerMwh).toBeCloseTo(130, 2);
+    expect(k.costoApprovvigionamentoEurPerMwh).toBeCloseTo(103, 2);
+    // margine = 27 * 250 = 6750
+    expect(k.margineAnnoEur).toBeCloseTo(6750, 1);
+  });
+
+  it("FISSO mode: cost shock erodes margine via derived spread (TTF spike)", () => {
+    const inputs: SimulatorInputs = {
+      ...baseInputs,
+      contractType: "fisso",
+      fixedPriceEurPerMwh: 130,
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const ttfSpike = SCENARIOS.find((s) => s.name === "ttf_spike")!;
+    const r = applyScenario(inputs, forecast, ttfSpike);
+    // costo+shock = 100 + 8 + 3 = 111; effectiveSpread = 130 - 111 = 19
+    // margine = 19 * 250 = 4750
+    expect(r.margineAnnoEur).toBeCloseTo(4750, 1);
+  });
+
+  it("FISSO mode: fixedPrice below costo produces negative margine (sales below cost)", () => {
+    const inputs: SimulatorInputs = {
+      ...baseInputs,
+      contractType: "fisso",
+      fixedPriceEurPerMwh: 95, // intentionally below costo
+    };
+    const forecast: ForecastBand = {
+      averageEurPerMwh: 100,
+      lowerEurPerMwh: 85,
+      upperEurPerMwh: 115,
+    };
+    const k = computeKpi(inputs, forecast);
+    // costo = 103; effectiveSpread = 95 - 103 = -8; margine = -8 * 250 = -2000
+    expect(k.margineAnnoEur).toBeCloseTo(-2000, 1);
+    expect(k.prezzoVenditaEurPerMwh).toBeCloseTo(95, 2);
   });
 });
 

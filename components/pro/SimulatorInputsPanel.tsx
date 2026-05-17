@@ -135,15 +135,27 @@ export function SimulatorInputsPanel({
         </div>
 
         <div data-tour="pricing" className="space-y-6">
-          <SliderField
-            label="Spread vendita"
-            min={0}
-            max={100}
-            step={0.5}
-            value={inputs.spreadEurPerMwh}
-            format={(v) => `+${NUM_1DP.format(v)} €/MWh`}
-            onChange={(v) => patch({ spreadEurPerMwh: v })}
-          />
+          {inputs.contractType === "variabile" ? (
+            <SliderField
+              label="Spread vendita"
+              min={0}
+              max={100}
+              step={0.5}
+              value={inputs.spreadEurPerMwh}
+              format={(v) => `+${NUM_1DP.format(v)} €/MWh`}
+              onChange={(v) => patch({ spreadEurPerMwh: v })}
+            />
+          ) : (
+            <SliderField
+              label="Prezzo vendita fisso"
+              min={50}
+              max={300}
+              step={1}
+              value={inputs.fixedPriceEurPerMwh}
+              format={(v) => `${NUM_INT.format(Math.round(v))} €/MWh`}
+              onChange={(v) => patch({ fixedPriceEurPerMwh: v })}
+            />
+          )}
 
           <SliderField
             label="CAC stimato"

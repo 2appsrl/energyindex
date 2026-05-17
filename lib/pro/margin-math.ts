@@ -14,8 +14,17 @@ export interface SimulatorInputs {
   volumeKwhPerYear: number;
   /** Durata contratto in mesi (tipicamente 6 | 12 | 18 | 24). */
   contractMonths: number;
-  /** Markup vendita applicato sopra il costo di approvvigionamento, €/MWh. */
+  /**
+   * Markup vendita applicato sopra il costo di approvvigionamento, €/MWh.
+   * Input naturale in modalita "variabile" (PUN passthrough).
+   */
   spreadEurPerMwh: number;
+  /**
+   * Prezzo di vendita fisso al cliente, €/MWh (assoluto, non spread).
+   * Input naturale in modalita "fisso" (lock-in): "vendo a 130 €/MWh per 12 mesi".
+   * In modalita "variabile" il valore e ignorato.
+   */
+  fixedPriceEurPerMwh: number;
   /** Costo acquisizione cliente, EUR (one-shot). */
   cacEur: number;
   /** Churn atteso annuo, frazione 0–1 (es. 0.14 = 14%). */
@@ -27,7 +36,8 @@ export interface SimulatorInputs {
    * - "variabile": PUN passthrough. Cliente assorbe le variazioni di mercato,
    *   il margine = spread × volume (invariato sotto cost shock).
    * - "fisso": lock-in. Fornitore assorbe il rischio prezzo: un cost shock
-   *   riduce lo spread effettivo dello stesso importo.
+   *   riduce lo spread effettivo dello stesso importo (derivato da
+   *   fixedPrice − costoApprov).
    */
   contractType: ContractType;
 }
@@ -106,10 +116,24 @@ function geometricRetentionSum(years: number, churnAnnualPct: number): number {
 export function computeKpi(inputs: SimulatorInputs, forecast: ForecastBand): KpiResult {
   const overhead = inputs.approvOverheadEurPerMwh ?? DEFAULT_APPROV_OVERHEAD_EUR_PER_MWH;
   const costoApprovvigionamentoEurPerMwh = forecast.averageEurPerMwh + overhead;
-  const prezzoVenditaEurPerMwh = costoApprovvigionamentoEurPerMwh + inputs.spreadEurPerMwh;
+
+  let prezzoVenditaEurPerMwh: number;
+  let effectiveSpread: number;
+  if (inputs.contractType === "fisso") {
+    // In fisso l'utente imposta il prezzo finale al cliente; lo spread
+    // effettivo e derivato (prezzo − costo). Puo essere negativo se
+    // l'utente vende sotto costo (visibile come margine negativo).
+    prezzoVenditaEurPerMwh = inputs.fixedPriceEurPerMwh;
+    effectiveSpread = prezzoVenditaEurPerMwh - costoApprovvigionamentoEurPerMwh;
+  } else {
+    // In variabile l'utente imposta lo spread; il prezzo finale segue
+    // il costo (PUN passthrough).
+    effectiveSpread = inputs.spreadEurPerMwh;
+    prezzoVenditaEurPerMwh = costoApprovvigionamentoEurPerMwh + effectiveSpread;
+  }
 
   const volumeMwh = inputs.volumeKwhPerYear / 1000;
-  const margineAnnoEur = inputs.spreadEurPerMwh * volumeMwh;
+  const margineAnnoEur = effectiveSpread * volumeMwh;
 
   const years = inputs.contractMonths / 12;
   const retentionSum = geometricRetentionSum(years, inputs.churnAnnualPct);
@@ -144,15 +168,13 @@ export function applyScenario(
   forecast: ForecastBand,
   scenario: ScenarioModifier,
 ): KpiResult {
-  const effectiveSpread =
-    inputs.contractType === "fisso"
-      ? inputs.spreadEurPerMwh - scenario.costShockEurPerMwh
-      : inputs.spreadEurPerMwh;
-
+  // Il cost shock fluisce attraverso forecast.averageEurPerMwh; computeKpi
+  // gestisce automaticamente il collasso dello spread in modalita fisso
+  // (prezzo fissato − costo che sale = margine eroso). In variabile lo
+  // spread e input diretto, quindi il margine resta invariato (passthrough).
   const effectiveInputs: SimulatorInputs = {
     ...inputs,
     volumeKwhPerYear: inputs.volumeKwhPerYear * scenario.volumeMultiplier,
-    spreadEurPerMwh: effectiveSpread,
   };
   const effectiveForecast: ForecastBand = {
     averageEurPerMwh: forecast.averageEurPerMwh + scenario.costShockEurPerMwh,
@@ -187,15 +209,11 @@ export function applyWhatIf(
   forecast: ForecastBand,
   shocks: WhatIfShocks,
 ): KpiResult {
-  const effectiveSpread =
-    inputs.contractType === "fisso"
-      ? inputs.spreadEurPerMwh - shocks.costShockEurPerMwh
-      : inputs.spreadEurPerMwh;
-
+  // Vedi applyScenario: il cost shock fluisce attraverso il forecast;
+  // computeKpi gestisce la differenza fisso/variabile.
   const effectiveInputs: SimulatorInputs = {
     ...inputs,
     volumeKwhPerYear: inputs.volumeKwhPerYear * (1 + shocks.volumeShockPct),
-    spreadEurPerMwh: effectiveSpread,
     churnAnnualPct: Math.max(
       0,
       Math.min(0.95, inputs.churnAnnualPct + shocks.churnShockPct),
