@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
+import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData } from "@/components/pro/PricingSection";
 import { breadcrumbList, jsonLdString, organization } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
@@ -76,22 +77,11 @@ const MODULES: ModuleCard[] = [
   },
 ];
 
-interface PricingTier {
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  features: string[];
-  ctaLabel: string;
-  ctaHref: string;
-  highlight?: boolean;
-}
-
-const TIERS: PricingTier[] = [
+const TIERS: PricingTierData[] = [
   {
     name: "Free",
-    price: "0",
-    period: "€/mese",
+    monthlyPriceEur: 0,
+    isFree: true,
     description: "Forecast pubblico Energy Index. Per chi vuole monitorare il mercato.",
     features: [
       "Forecast PUN/PSV/TTF 7/30/90/180 giorni",
@@ -104,8 +94,7 @@ const TIERS: PricingTier[] = [
   },
   {
     name: "Pro",
-    price: "149",
-    period: "€/mese",
+    monthlyPriceEur: 499,
     description: "Per fornitori energy, broker e consulenti che vendono offerte.",
     features: [
       "Tutto del piano Free",
@@ -121,8 +110,7 @@ const TIERS: PricingTier[] = [
   },
   {
     name: "Enterprise",
-    price: "3.500",
-    period: "€/mese",
+    monthlyPriceEur: 3500,
     description: "Per utility, top broker, PMI energivore. White-label e custom.",
     features: [
       "Tutto del piano Pro",
@@ -155,20 +143,39 @@ export default function ProLandingPage() {
               "@type": "ServiceChannel",
               serviceUrl: "https://energyindex.it/it/pro",
             },
-            offers: TIERS.filter((t) => t.name !== "Free").map((t) => ({
-              "@type": "Offer",
-              name: `EIDX Pro ${t.name}`,
-              price: t.price,
-              priceCurrency: "EUR",
-              priceSpecification: {
-                "@type": "UnitPriceSpecification",
-                price: t.price,
-                priceCurrency: "EUR",
-                unitText: "MONTH",
-              },
-              availability: "https://schema.org/PreOrder",
-              url: "https://energyindex.it/it/pro#early-access",
-            })),
+            offers: TIERS.filter((t) => !t.isFree).flatMap((t) => {
+              const annualTotal = Math.round(t.monthlyPriceEur * 12 * (1 - ANNUAL_DISCOUNT_PCT));
+              return [
+                {
+                  "@type": "Offer",
+                  name: `EIDX Pro ${t.name} — mensile`,
+                  price: String(t.monthlyPriceEur),
+                  priceCurrency: "EUR",
+                  priceSpecification: {
+                    "@type": "UnitPriceSpecification",
+                    price: String(t.monthlyPriceEur),
+                    priceCurrency: "EUR",
+                    unitText: "MONTH",
+                  },
+                  availability: "https://schema.org/PreOrder",
+                  url: "https://energyindex.it/it/pro#early-access",
+                },
+                {
+                  "@type": "Offer",
+                  name: `EIDX Pro ${t.name} — annuale (sconto 15%)`,
+                  price: String(annualTotal),
+                  priceCurrency: "EUR",
+                  priceSpecification: {
+                    "@type": "UnitPriceSpecification",
+                    price: String(annualTotal),
+                    priceCurrency: "EUR",
+                    unitText: "YEAR",
+                  },
+                  availability: "https://schema.org/PreOrder",
+                  url: "https://energyindex.it/it/pro#early-access",
+                },
+              ];
+            }),
           }),
         }}
       />
@@ -324,65 +331,7 @@ export default function ProLandingPage() {
       </section>
 
       {/* PRICING */}
-      <section className="space-y-8">
-        <div className="space-y-2 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Pricing trasparente</h2>
-          <p className="text-muted-foreground">
-            Nessun trial gratis ingannevole, nessuna sales call obbligatoria. Vedi cosa paghi prima di
-            comprare.
-          </p>
-        </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          {TIERS.map((t) => (
-            <article
-              key={t.name}
-              className={`rounded-2xl border p-8 space-y-5 transition-all ${
-                t.highlight
-                  ? "border-primary bg-primary/5 shadow-xl shadow-primary/10 lg:-translate-y-2"
-                  : "bg-card hover:border-primary/40"
-              }`}
-            >
-              {t.highlight && (
-                <div className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary-foreground">
-                  Piu&apos; richiesto
-                </div>
-              )}
-              <h3 className="text-2xl font-bold">{t.name}</h3>
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tabular-nums">{t.price}</span>
-                  <span className="text-sm text-muted-foreground">{t.period}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{t.description}</p>
-              </div>
-              <ul className="space-y-2 text-sm">
-                {t.features.map((f) => (
-                  <li key={f} className="flex items-baseline gap-2">
-                    <span className="text-primary mt-0.5" aria-hidden>
-                      ✓
-                    </span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href={t.ctaHref}
-                className={`block w-full text-center rounded-md px-6 py-3 text-sm font-semibold transition-all ${
-                  t.highlight
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:scale-[1.02]"
-                    : "border border-border bg-card hover:bg-accent"
-                }`}
-              >
-                {t.ctaLabel}
-              </a>
-            </article>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground text-center pt-2">
-          Tutti i prezzi sono al netto di IVA. Fatturazione mensile, no contratto annuale obbligatorio.
-          Custom Research disponibile da 5.000€ a 25.000€ a progetto.
-        </p>
-      </section>
+      <PricingSection tiers={TIERS} />
 
       {/* PROOF */}
       <section className="rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card p-8 sm:p-12 space-y-6">
