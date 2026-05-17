@@ -1,10 +1,13 @@
 name: Deploy DB migrations
+# DISABILITATO il trigger automatico on:push. Tutte le migrations
+# vengono applicate via Supabase MCP in real-time durante lo sviluppo,
+# non via CLI. Il workflow fallisce sempre perche' DB e file sono
+# drifted (version timestamp in schema_migrations != prefisso file),
+# accumulato negli ultimi mesi. Re-enable solo se si introduce un
+# flusso CLI-first deliberato e si fa pulizia della tabella
+# schema_migrations.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "supabase/migrations/**"
-      - ".github/workflows/deploy-db.yml"
+  workflow_dispatch:
 
 jobs:
   deploy:
