@@ -30,16 +30,14 @@ interface OfferRow {
 export default async function CustomerSimulatorPage() {
   const supabase = await createServerClient();
 
-  // 1. Carica TUTTE le offerte attive (45 oggi) — sample size piccolo, ok client-side
-  const { data: offersRaw } = await supabase
-    .from("mercato_libero_offers")
-    .select(
-      "offer_code, supplier, supplier_logo_url, offer_name, commodity, price_type, price_value, fixed_cost_monthly, customer_segment, source_url, notes",
-    )
-    .eq("is_active", true)
-    .eq("customer_segment", "domestico")
-    .or("valid_to.is.null,valid_to.gt." + new Date().toISOString().slice(0, 10))
-    .order("supplier");
+  // 1. Carica TUTTE le offerte attive domestico via RPC SECURITY DEFINER.
+  // NB: la tabella mercato_libero_offers ha RLS enabled senza policy public,
+  // quindi una query diretta da client anon torna 0 rows. La RPC bypassa RLS
+  // ed espone solo lo slice "active + segmento richiesto" (gia' filtrato
+  // server-side).
+  const { data: offersRaw } = await supabase.rpc("get_active_mercato_libero_offers", {
+    p_customer_segment: "domestico",
+  });
 
   const offers: OfferRecord[] = ((offersRaw ?? []) as OfferRow[]).map((r) => ({
     offer_code: r.offer_code,

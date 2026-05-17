@@ -16,8 +16,8 @@ export function CustomerSimulator({
   forecast: ForecastAverages;
 }) {
   const [customerType, setCustomerType] = useState<CustomerType>("casa");
-  const [kwhAnno, setKwhAnno] = useState(2700);    // consumo medio famiglia 4 persone
-  const [smcAnno, setSmcAnno] = useState(1400);    // consumo medio gas riscaldamento
+  const [kwhAnno, setKwhAnno] = useState(0);    // utente deve muovere lo slider
+  const [smcAnno, setSmcAnno] = useState(0);    // utente deve muovere lo slider
 
   const rankedLuce = useMemo(
     () => rankOffers(offers, forecast, kwhAnno, "electricity"),
@@ -50,7 +50,7 @@ export function CustomerSimulator({
         <ConsumoSlider
           label="Consumo luce"
           value={kwhAnno}
-          min={1000}
+          min={0}
           max={10000}
           step={100}
           unit="kWh/anno"
@@ -61,7 +61,7 @@ export function CustomerSimulator({
         <ConsumoSlider
           label="Consumo gas"
           value={smcAnno}
-          min={100}
+          min={0}
           max={2500}
           step={50}
           unit="Smc/anno"
@@ -70,7 +70,9 @@ export function CustomerSimulator({
         />
 
         <div className="text-xs text-stone-500 pt-3 border-t border-stone-200">
-          Default: famiglia 4 persone tipica
+          Sposta gli slider per vedere l&apos;offerta migliore.
+          <br />
+          <span className="text-stone-400">Famiglia 4 persone tipica: ~2.700 kWh + ~1.400 Smc/anno.</span>
         </div>
       </div>
 
@@ -91,6 +93,8 @@ export function CustomerSimulator({
         <TotalBolletta
           rankedLuce={rankedLuce}
           rankedGas={rankedGas}
+          kwhAnno={kwhAnno}
+          smcAnno={smcAnno}
         />
       </div>
     </div>
@@ -162,6 +166,17 @@ function BestOfferCard({
     );
   }
 
+  if (volume === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-stone-300 p-6">
+        <h3 className="text-sm font-semibold text-stone-700 mb-2">{title}</h3>
+        <p className="text-sm text-stone-500">
+          Sposta lo slider del consumo per vedere quale offerta tra le {ranked.length} attive costerebbe meno al tuo cliente.
+        </p>
+      </div>
+    );
+  }
+
   const winner = ranked[0];
   const runners = ranked.slice(1, 4);
 
@@ -216,14 +231,23 @@ function BestOfferCard({
 function TotalBolletta({
   rankedLuce,
   rankedGas,
+  kwhAnno,
+  smcAnno,
 }: {
   rankedLuce: OfferRanking[];
   rankedGas: OfferRanking[];
+  kwhAnno: number;
+  smcAnno: number;
 }) {
   const luce = rankedLuce[0];
   const gas = rankedGas[0];
-  const total = (luce?.totalAnnualCostEur ?? 0) + (gas?.totalAnnualCostEur ?? 0);
+  // Solo le voci con consumo > 0 contribuiscono al totale.
+  const luceCost = kwhAnno > 0 ? (luce?.totalAnnualCostEur ?? 0) : 0;
+  const gasCost = smcAnno > 0 ? (gas?.totalAnnualCostEur ?? 0) : 0;
+  const total = luceCost + gasCost;
 
+  // Nascondi finche' l'utente non ha mosso almeno uno slider.
+  if (kwhAnno === 0 && smcAnno === 0) return null;
   if (!luce && !gas) return null;
 
   return (
