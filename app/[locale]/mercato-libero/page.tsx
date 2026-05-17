@@ -40,6 +40,9 @@ interface MercatoLiberoStatsRow {
   median: number | string | null;
   p75: number | string | null;
   best: number | string | null;
+  fixed_cost_p25: number | string | null;
+  fixed_cost_median: number | string | null;
+  fixed_cost_p75: number | string | null;
   unit: string;
   last_updated: string | null;
 }
@@ -67,6 +70,11 @@ interface AggregateRow {
   min: number | null;
   sample_size: number;
   unit: string;
+  /** Mediana costo commercializzazione mensile (EUR/mese). Solo per
+   *  source='libero', null per PLACET. */
+  fixed_cost_median?: number | null;
+  fixed_cost_p25?: number | null;
+  fixed_cost_p75?: number | null;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -166,6 +174,12 @@ export default async function MercatoLiberoPage({
           min: row.best !== null ? Number(row.best) : null,
           sample_size: Number(row.n_total),
           unit: String(row.unit),
+          fixed_cost_median:
+            row.fixed_cost_median !== null ? Number(row.fixed_cost_median) : null,
+          fixed_cost_p25:
+            row.fixed_cost_p25 !== null ? Number(row.fixed_cost_p25) : null,
+          fixed_cost_p75:
+            row.fixed_cost_p75 !== null ? Number(row.fixed_cost_p75) : null,
         });
       }
     }
@@ -377,6 +391,9 @@ export default async function MercatoLiberoPage({
               unit={a.unit}
               isSpread={isSpread}
               referenceLabel={referenceLabel}
+              fixedCostMedian={source === "libero" ? row?.fixed_cost_median ?? null : null}
+              fixedCostP25={source === "libero" ? row?.fixed_cost_p25 ?? null : null}
+              fixedCostP75={source === "libero" ? row?.fixed_cost_p75 ?? null : null}
             />
           );
         })}

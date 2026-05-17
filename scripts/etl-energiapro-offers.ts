@@ -69,6 +69,7 @@ export function mapApiToDbRow(o: EnergiaProOffer, syncedAt: Date): Record<string
     customer_segment: o.customer_segment,
     valid_from: o.valid_from,
     valid_to: o.valid_to,
+    fixed_cost_monthly: o.fixed_cost_monthly ?? null,
     source_url: o.source_url,
     notes: o.notes,
     last_verified_at: lastVerifiedIso,

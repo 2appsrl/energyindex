@@ -19,6 +19,7 @@ const SAMPLE: EnergiaProOffer = {
   customer_segment: "domestico",
   valid_from: "2026-03-06",
   valid_to: null,
+  fixed_cost_monthly: 8.5,
   source_url: null,
   last_verified_at: "2026-05-14 06:17:59",
   notes: null,
@@ -38,6 +39,13 @@ describe("mapApiToDbRow", () => {
     expect(row.price_unit).toBe("€/kWh");
     expect(row.is_active).toBe(true);
     expect(row.synced_at).toBe("2026-05-17T10:00:00.000Z");
+    expect(row.fixed_cost_monthly).toBe(8.5);
+  });
+
+  it("fixed_cost_monthly: null -> null nel row DB", () => {
+    const o: EnergiaProOffer = { ...SAMPLE, fixed_cost_monthly: null };
+    const row = mapApiToDbRow(o, new Date());
+    expect(row.fixed_cost_monthly).toBeNull();
   });
 
   it("parse last_verified_at non-ISO come UTC", () => {

@@ -24,6 +24,7 @@ export interface EnergiaProOffer {
   customer_segment: "domestico" | "business";
   valid_from: string | null;             // YYYY-MM-DD
   valid_to: string | null;
+  fixed_cost_monthly: number | null;     // EUR/mese, puo' essere null per offerte legacy
   source_url: string | null;
   last_verified_at: string | null;       // formato "YYYY-MM-DD HH:MM:SS"
   notes: string | null;
