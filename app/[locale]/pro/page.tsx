@@ -60,6 +60,7 @@ const MODULES: ModuleCard[] = [
     ],
     status: "in arrivo",
     tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/forecast-scenari",
   },
   {
     number: "03",
