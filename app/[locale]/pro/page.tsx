@@ -213,6 +213,68 @@ export default function ProLandingPage() {
         </div>
       </header>
 
+      {/* MEGA CTA — DEMO SIMULATOR */}
+      <Link
+        href="/it/pro/simulator"
+        className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a3d2e] via-[#0f5239] to-[#0a3d2e] p-8 sm:p-12 shadow-2xl shadow-emerald-900/20 transition-all hover:shadow-emerald-900/40 hover:-translate-y-1 ring-1 ring-emerald-400/10"
+      >
+        {/* Decorative glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -bottom-20 h-60 w-60 rounded-full bg-amber-400/10 blur-3xl"
+        />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
+          <div className="flex-1 space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden />
+              Live demo · gratis · zero registrazione
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+              Prova il Margin Simulator <span className="text-emerald-300">adesso</span>
+            </h2>
+            <p className="text-base md:text-lg text-emerald-50/90 max-w-xl">
+              Sposta gli slider e vedi margine, LTV e posizionamento competitor ricalcolarsi
+              in tempo reale. Confronta contratto variabile e fisso. Stressa 4 scenari di mercato.
+              60 secondi di tour guidato dentro.
+            </p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-50/80">
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Forecast PUN 12 mesi con banda 5–95%</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Benchmark su ~500 offerte ARERA live</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Variabile passthrough vs Fisso lock-in</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>What-if custom: volume, costo, churn</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex-shrink-0 flex flex-col items-stretch lg:items-end gap-3">
+            <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-400 px-8 py-5 text-base md:text-lg font-bold text-emerald-950 shadow-xl shadow-emerald-500/30 transition-all group-hover:scale-[1.03] group-hover:shadow-emerald-500/50">
+              <span aria-hidden className="text-xl">▶</span>
+              Apri il simulatore
+              <span aria-hidden className="ml-1">→</span>
+            </span>
+            <p className="text-xs text-emerald-200/70 text-center lg:text-right">
+              Funziona da browser · niente download · niente login
+            </p>
+          </div>
+        </div>
+      </Link>
+
       {/* MODULI */}
       <section className="space-y-8">
         <div className="space-y-2 max-w-2xl">
