@@ -89,15 +89,25 @@ export function MarginSimulator({
     [inputs, forecastBand, whatIfShocks],
   );
 
+  // Spread "effettivo" mostrato nel benchmark:
+  //  - variabile: e' direttamente l'input dell'utente (slider Spread vendita)
+  //  - fisso: lo spread NON e' input; e' derivato come (prezzo_fisso − costo_approv).
+  //    Es. prezzo 147 EUR/MWh con costo 113 -> derived spread 34 EUR/MWh.
+  // Senza questa logica la card mostrava sempre lo slider variabile (8.5) anche
+  // dopo aver switchato a Fisso e cambiato il prezzo, dando un verdict sbagliato.
+  const effectiveSpreadEurPerMwh = inputs.contractType === "fisso"
+    ? inputs.fixedPriceEurPerMwh - kpi.costoApprovvigionamentoEurPerMwh
+    : inputs.spreadEurPerMwh;
+
   const verdict = useMemo(
     () =>
       computeBenchmarkVerdict({
-        yourSpreadEurPerMwh: inputs.spreadEurPerMwh,
+        yourSpreadEurPerMwh: effectiveSpreadEurPerMwh,
         marketMedianEurPerMwh: competitor.medianEurPerMwh,
         marketP25EurPerMwh: competitor.p25EurPerMwh,
         marketP75EurPerMwh: competitor.p75EurPerMwh,
       }),
-    [inputs.spreadEurPerMwh, competitor],
+    [effectiveSpreadEurPerMwh, competitor],
   );
 
   return (
@@ -125,7 +135,7 @@ export function MarginSimulator({
           </div>
           <div data-tour="competitor">
             <CompetitorBenchmark
-              yourSpread={inputs.spreadEurPerMwh}
+              yourSpread={effectiveSpreadEurPerMwh}
               competitor={competitor}
               verdict={verdict}
             />
