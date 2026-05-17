@@ -27,6 +27,7 @@ interface CompetitorRow {
   median_eur_mwh: number | string;
   p75_eur_mwh: number | string;
   n_offerte: number;
+  source: string;
 }
 
 export default async function SimulatorPage() {
@@ -64,8 +65,15 @@ export default async function SimulatorPage() {
         p25EurPerMwh: Number(compRow.p25_eur_mwh),
         p75EurPerMwh: Number(compRow.p75_eur_mwh),
         nOfferte: compRow.n_offerte,
+        source: String(compRow.source ?? "placet_arera"),
       }
-    : { medianEurPerMwh: 60, p25EurPerMwh: 40, p75EurPerMwh: 100, nOfferte: 0 };
+    : {
+        medianEurPerMwh: 60,
+        p25EurPerMwh: 40,
+        p75EurPerMwh: 100,
+        nOfferte: 0,
+        source: "placet_arera",
+      };
 
   const forecastRows = forecastPoints.filter((p) => p.source === "forecast");
   const forecastAvg =

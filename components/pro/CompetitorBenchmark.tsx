@@ -11,7 +11,14 @@ interface CompetitorData {
   p25EurPerMwh: number;
   p75EurPerMwh: number;
   nOfferte: number;
+  source: string;
 }
+
+const SOURCE_LABEL: Record<string, string> = {
+  placet_arera: "Fonte: offerte PLACET ARERA",
+  mercato_libero:
+    "Fonte: offerte commerciali mercato libero (energiapro.biz + scraping brand)",
+};
 
 export function CompetitorBenchmark({
   yourSpread,
@@ -22,6 +29,10 @@ export function CompetitorBenchmark({
   competitor: CompetitorData;
   verdict: BenchmarkVerdict;
 }) {
+  const sourceLabel =
+    SOURCE_LABEL[competitor.source] ?? "Fonte: offerte PLACET ARERA";
+  const sourceShort =
+    competitor.source === "mercato_libero" ? "mercato libero" : "ARERA";
   return (
     <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
       <div className="flex items-baseline justify-between gap-2">
@@ -33,7 +44,7 @@ export function CompetitorBenchmark({
           />
         </h3>
         <span className="text-xs text-stone-500 tabular-nums">
-          {competitor.nOfferte} offerte ARERA
+          {competitor.nOfferte} offerte {sourceShort}
         </span>
       </div>
       <ul className="space-y-2 text-sm">
@@ -59,6 +70,7 @@ export function CompetitorBenchmark({
       <p className="text-xs text-stone-600 italic pt-2 border-t border-stone-200">
         {verdict.label}
       </p>
+      <p className="text-xs text-stone-500">{sourceLabel}</p>
     </div>
   );
 }

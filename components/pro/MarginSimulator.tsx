@@ -25,6 +25,7 @@ interface CompetitorData {
   p25EurPerMwh: number;
   p75EurPerMwh: number;
   nOfferte: number;
+  source: string;
 }
 
 const DEFAULT_INPUTS: SimulatorInputs = {
