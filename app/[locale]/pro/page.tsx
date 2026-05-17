@@ -75,6 +75,7 @@ const MODULES: ModuleCard[] = [
     ],
     status: "in arrivo",
     tier: "Enterprise",
+    tryDemoHref: "/it/pro/report-builder",
   },
   {
     number: "04",
