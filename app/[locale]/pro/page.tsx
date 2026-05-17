@@ -79,7 +79,7 @@ const MODULES: ModuleCard[] = [
     number: "04",
     title: "Customer Simulator",
     description:
-      "Trova in tempo reale l'offerta migliore per ogni profilo cliente del mercato libero. Confronta tutte le offerte considerando prezzo unitario + costo commercializzazione fisso. Real-time mentre sposti il consumo.",
+      "Trova in tempo reale l'offerta migliore per ogni profilo cliente del mercato libero. Confronta tutte le offerte considerando prezzo unitario + costo commercializzazione fisso. Real-time mentre sposti il consumo. + 5 cluster preset con PDF stampabile.",
     features: [
       "Slider consumo luce + gas, ricalcolo istantaneo",
       "Best offer + top alternative ranked",

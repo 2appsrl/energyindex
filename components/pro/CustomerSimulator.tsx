@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { rankOffers, type OfferRecord, type ForecastAverages, type OfferRanking } from "@/lib/pro/customer-math";
 
 const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
@@ -96,6 +97,14 @@ export function CustomerSimulator({
           kwhAnno={kwhAnno}
           smcAnno={smcAnno}
         />
+        <div className="md:col-span-2 mt-2 print:hidden">
+          <Link
+            href="/it/pro/customer-simulator/clusters"
+            className="inline-flex items-center gap-2 text-sm text-emerald-700 hover:text-emerald-900 font-semibold"
+          >
+            Vedi i 5 cluster pre-configurati →
+          </Link>
+        </div>
       </div>
     </div>
   );
