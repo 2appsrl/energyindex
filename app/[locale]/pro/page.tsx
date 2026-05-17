@@ -75,6 +75,21 @@ const MODULES: ModuleCard[] = [
     status: "in arrivo",
     tier: "Enterprise",
   },
+  {
+    number: "04",
+    title: "Customer Simulator",
+    description:
+      "Trova in tempo reale l'offerta migliore per ogni profilo cliente del mercato libero. Confronta tutte le offerte considerando prezzo unitario + costo commercializzazione fisso. Real-time mentre sposti il consumo.",
+    features: [
+      "Slider consumo luce + gas, ricalcolo istantaneo",
+      "Best offer + top alternative ranked",
+      "Variabile: forecast PUN/PSV + spread",
+      "Fisso: prezzo bloccato + commercializzazione",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/customer-simulator",
+  },
 ];
 
 const TIERS: PricingTierData[] = [
@@ -285,7 +300,7 @@ export default function ProLandingPage() {
       {/* MODULI */}
       <section className="space-y-8">
         <div className="space-y-2 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Tre moduli, un singolo workflow</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Quattro moduli, un singolo workflow</h2>
           <p className="text-muted-foreground">
             Pensati per la giornata tipo di chi vende, copre o consuma energia in volumi significativi.
           </p>
