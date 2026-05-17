@@ -116,6 +116,10 @@ export default async function MercatoLiberoPage({
 }) {
   const { src } = await searchParams;
   const source: "placet" | "libero" = src === "libero" ? "libero" : "placet";
+  const tickerHref =
+    source === "libero"
+      ? "/it/mercato-libero/ticker?src=libero"
+      : "/it/mercato-libero/ticker";
   const supabase = await createServerClient();
 
   // 1. Latest per ognuno dei 4 slug
@@ -332,7 +336,7 @@ export default async function MercatoLiberoPage({
 
       {source === "placet" && (
         <a
-          href="/it/mercato-libero/ticker"
+          href={tickerHref}
           className="group relative block overflow-hidden rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/10 via-black/40 to-transparent p-5 sm:p-6 transition-all hover:-translate-y-0.5 hover:border-emerald-400/60 hover:shadow-xl hover:shadow-emerald-500/20"
         >
           <div className="flex items-center justify-between gap-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { Flame, Zap } from "lucide-react";
 
 /**
@@ -245,9 +246,11 @@ function groupOffers(offers: Offer[]): Section[] {
 export function MarketMap({
   offers,
   asOf,
+  source = "placet",
 }: {
   offers: Offer[];
   asOf: string | null;
+  source?: "placet" | "libero";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
@@ -396,7 +399,9 @@ export function MarketMap({
         <div>
           <h1 className="text-2xl mb-2">MARKET MAP</h1>
           <p className="text-emerald-300/60">
-            Dati in arrivo: la prima rilevazione ARERA arriverà al prossimo ETL.
+            {source === "libero"
+              ? "Dati in arrivo: la prima rilevazione dalle offerte commerciali (EnergiaPro + scraping brand) arrivera' al prossimo ciclo ETL."
+              : "Dati in arrivo: la prima rilevazione ARERA arriverà al prossimo ETL."}
           </p>
         </div>
       </div>
@@ -421,7 +426,28 @@ export function MarketMap({
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-emerald-300/70 font-mono text-xs sm:text-sm">
                 <span>{totalOffers} OFFERS</span>
                 <span>·</span>
-                <span>PLACET DOMESTICO</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/it/mercato-libero/ticker"
+                    className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest rounded transition-colors ${
+                      source === "placet"
+                        ? "bg-emerald-300 text-black"
+                        : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
+                    }`}
+                  >
+                    PLACET
+                  </Link>
+                  <Link
+                    href="/it/mercato-libero/ticker?src=libero"
+                    className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest rounded transition-colors ${
+                      source === "libero"
+                        ? "bg-emerald-300 text-black"
+                        : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
+                    }`}
+                  >
+                    MERCATO LIBERO
+                  </Link>
+                </div>
                 <span>·</span>
                 <span>{asOf ?? "—"}</span>
                 {searchActive && (
@@ -667,8 +693,9 @@ export function MarketMap({
 
         <footer className="mt-12 text-center text-emerald-300/40 font-mono text-xs space-y-1">
           <p>
-            ENERGY INDEX · MARKET MAP · DATI ARERA PORTALE OFFERTE PLACET · ULTIMA
-            RILEVAZIONE {asOf ?? "—"}
+            {source === "libero"
+              ? `ENERGY INDEX · MARKET MAP · OFFERTE COMMERCIALI MERCATO LIBERO (NON-PLACET) · ULTIMA RILEVAZIONE ${asOf ?? "—"}`
+              : `ENERGY INDEX · MARKET MAP · DATI ARERA PORTALE OFFERTE PLACET · ULTIMA RILEVAZIONE ${asOf ?? "—"}`}
           </p>
           <p>
             <a href="/it/mercato-libero" className="hover:text-emerald-400">

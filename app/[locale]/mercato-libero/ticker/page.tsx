@@ -2,26 +2,40 @@ import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { MarketMap, type Offer } from "./MarketMap";
 
-export const metadata: Metadata = {
-  title: "Market Map — Tutte le offerte luce e gas in tempo reale",
-  description:
-    "Mappa interattiva di tutte le 1.500+ offerte PLACET pubblicate dal Portale Offerte ARERA. Cerca fornitore, confronta prezzi luce e gas.",
-  openGraph: {
-    title: "Market Map — Tutte le offerte luce e gas",
-    description:
-      "Mappa interattiva di 1.500+ offerte PLACET ARERA. Cerca fornitore, confronta prezzi.",
-    type: "website",
-    locale: "it_IT",
-    url: "/it/mercato-libero/ticker",
-    images: ["/it/mercato-libero/opengraph-image"],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Market Map — Tutte le offerte luce e gas",
-    description: "Mappa interattiva di 1.500+ offerte PLACET ARERA.",
-    images: ["/it/mercato-libero/opengraph-image"],
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ src?: string }>;
+}): Promise<Metadata> {
+  const { src } = await searchParams;
+  const source = src === "libero" ? "libero" : "placet";
+
+  const title = source === "libero"
+    ? "Market Map — Offerte commerciali mercato libero (non-PLACET)"
+    : "Market Map — Tutte le offerte PLACET ARERA";
+  const description = source === "libero"
+    ? "Mappa interattiva delle offerte commerciali mercato libero (non-PLACET): EnergiaPro + scraping brand."
+    : "Mappa interattiva di tutte le 1.500+ offerte PLACET pubblicate dal Portale Offerte ARERA. Cerca fornitore, confronta prezzi luce e gas.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "it_IT",
+      url: source === "libero" ? "/it/mercato-libero/ticker?src=libero" : "/it/mercato-libero/ticker",
+      images: ["/it/mercato-libero/opengraph-image"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/it/mercato-libero/opengraph-image"],
+    },
+  };
+}
 
 interface MarketRow {
   offer_code: string;
@@ -32,14 +46,17 @@ interface MarketRow {
   category_median: number | string;
 }
 
-export default async function MarketMapPage() {
-  const supabase = await createServerClient();
+export default async function MarketMapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ src?: string }>;
+}) {
+  const { src } = await searchParams;
+  const source: "placet" | "libero" = src === "libero" ? "libero" : "placet";
 
-  // RPC: ritorna offerte attive oggi (domestico) + mediana per categoria gia'
-  // pre-calcolata. La RPC esegue il filtro `valid_from <= NOW() AND (valid_to
-  // IS NULL OR valid_to >= NOW())` server-side, evitando i problemi di
-  // serializzazione timestamptz nelle .or() di supabase-js.
-  const { data: rows } = await supabase.rpc("get_market_map");
+  const supabase = await createServerClient();
+  const rpcName = source === "libero" ? "get_market_map_libero" : "get_market_map";
+  const { data: rows } = await supabase.rpc(rpcName);
 
   const offers: Offer[] = ((rows ?? []) as MarketRow[]).map((r) => ({
     codice: r.offer_code,
@@ -51,5 +68,5 @@ export default async function MarketMapPage() {
   }));
 
   const today = new Date().toISOString().slice(0, 10);
-  return <MarketMap offers={offers} asOf={today} />;
+  return <MarketMap offers={offers} asOf={today} source={source} />;
 }
