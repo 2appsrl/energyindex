@@ -213,10 +213,11 @@ export default async function HomeIt() {
           <div className="flex-1 space-y-5">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-200">
               <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden />
-              Per chi vende energia
+              Per fornitori, mandanti, broker
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
-              Pronto a vendere meglio? <span className="text-emerald-300">EIDX Pro</span>
+              Sei un&apos;azienda del settore energy?{" "}
+              <span className="text-emerald-300">EIDX Pro</span> è il tuo tool.
             </h2>
             <p className="text-base md:text-lg text-emerald-50/90 max-w-xl">
               Lo stack analytics per fornitori energy, broker e PMI energivore. 4 tool per
