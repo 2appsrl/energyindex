@@ -33,6 +33,7 @@ interface ModuleCard {
   tryDemoHref?: string;
   icon: LucideIcon;
   accentClass: string;  // gradient sfumatura + glow per la card
+  secondaryLink?: { href: string; label: string };
 }
 
 const MODULES: ModuleCard[] = [
@@ -86,6 +87,10 @@ const MODULES: ModuleCard[] = [
     tryDemoHref: "/it/pro/forecast-scenari",
     icon: LineChart,
     accentClass: "from-amber-50/60 to-card",
+    secondaryLink: {
+      href: "/it/forecast",
+      label: "Vuoi solo i dati pubblici? Forecast gratis (PUN/PSV/TTF 7-180g)",
+    },
   },
   {
     number: "04",
@@ -240,12 +245,12 @@ export default function ProLandingPage() {
           >
             Avvisami al lancio
           </a>
-          <Link
-            href="/it/forecast"
+          <a
+            href="#moduli"
             className="inline-flex items-center justify-center rounded-md border border-border bg-card px-6 py-3 text-sm font-semibold hover:bg-accent transition-colors"
           >
-            Prova il forecast gratis →
-          </Link>
+            Vedi i 4 moduli
+          </a>
         </div>
       </header>
 
@@ -312,7 +317,7 @@ export default function ProLandingPage() {
       </Link>
 
       {/* MODULI */}
-      <section className="space-y-8">
+      <section id="moduli" className="space-y-8 scroll-mt-20">
         <div className="space-y-2 max-w-2xl">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Quattro moduli, un singolo workflow</h2>
           <p className="text-muted-foreground">
@@ -324,11 +329,11 @@ export default function ProLandingPage() {
             const Icon = m.icon;
             const href = m.tryDemoHref ?? "#";
             return (
-              <Link
+              // Wrapper esterno per gestire un secondaryLink come Link "fratello"
+              // (non nested) sotto la card cliccabile principale.
+              <div
                 key={m.number}
-                href={href}
-                aria-label={`Prova la demo: ${m.title}`}
-                className={`group relative flex flex-col rounded-3xl border border-border bg-gradient-to-br ${m.accentClass} p-7 sm:p-9 transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
+                className={`group relative flex flex-col rounded-3xl border border-border bg-gradient-to-br ${m.accentClass} overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15`}
               >
                 {/* Decorative corner glow on hover */}
                 <div
@@ -336,49 +341,73 @@ export default function ProLandingPage() {
                   className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/0 blur-2xl transition-colors duration-500 group-hover:bg-primary/15"
                 />
 
-                {/* Header: icon + status */}
-                <div className="relative flex items-start justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-3">
-                      <Icon className="h-5 w-5" aria-hidden />
+                {/* Main clickable region -> demo */}
+                <Link
+                  href={href}
+                  aria-label={`Prova la demo: ${m.title}`}
+                  className="flex flex-col flex-1 p-7 sm:p-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                >
+                  {/* Header: icon + status */}
+                  <div className="relative flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-3">
+                        <Icon className="h-5 w-5" aria-hidden />
+                      </div>
+                      <span className="text-xs font-mono font-bold text-primary/60 tracking-wider">
+                        {m.number}
+                      </span>
                     </div>
-                    <span className="text-xs font-mono font-bold text-primary/60 tracking-wider">
-                      {m.number}
+                    <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2.5 py-1 font-bold">
+                      {m.status}
                     </span>
                   </div>
-                  <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2.5 py-1 font-bold">
-                    {m.status}
-                  </span>
-                </div>
 
-                {/* Title + description */}
-                <h3 className="text-2xl font-bold tracking-tight mb-2">{m.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                  {m.description}
-                </p>
-
-                {/* Features */}
-                <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60 mb-4">
-                  {m.features.map((f) => (
-                    <li key={f} className="flex items-baseline gap-2">
-                      <span className="text-primary mt-0.5 font-bold" aria-hidden>
-                        ✓
-                      </span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Footer: tier + CTA button */}
-                <div className="mt-auto pt-4 border-t border-border/60 space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Disponibile su: <span className="font-semibold text-foreground">{m.tier}</span>
+                  {/* Title + description */}
+                  <h3 className="text-2xl font-bold tracking-tight mb-2">{m.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    {m.description}
                   </p>
-                  <span className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-[#0a3d2e] text-white text-sm font-semibold shadow-sm transition-all duration-300 group-hover:bg-emerald-500 group-hover:shadow-lg group-hover:shadow-emerald-500/30">
-                    Prova la demo
-                  </span>
-                </div>
-              </Link>
+
+                  {/* Features */}
+                  <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60 mb-4">
+                    {m.features.map((f) => (
+                      <li key={f} className="flex items-baseline gap-2">
+                        <span className="text-primary mt-0.5 font-bold" aria-hidden>
+                          ✓
+                        </span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Footer: tier + CTA button */}
+                  <div className="mt-auto pt-4 border-t border-border/60 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Disponibile su: <span className="font-semibold text-foreground">{m.tier}</span>
+                    </p>
+                    <span className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-[#0a3d2e] text-white text-sm font-semibold shadow-sm transition-all duration-300 group-hover:bg-emerald-500 group-hover:shadow-lg group-hover:shadow-emerald-500/30">
+                      Prova la demo
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Secondary link strip (per Modulo Forecast & Scenari):
+                    Link separato, non nested. Click su questa fascia atterra
+                    sul forecast pubblico free invece che sulla demo Pro. */}
+                {m.secondaryLink && (
+                  <Link
+                    href={m.secondaryLink.href}
+                    className="group/sec relative block border-t border-border/60 bg-card/40 px-7 sm:px-9 py-3 text-xs text-muted-foreground hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-foreground transition-colors"
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span>{m.secondaryLink.label}</span>
+                      <span aria-hidden className="text-emerald-600 font-bold opacity-70 group-hover/sec:opacity-100 group-hover/sec:translate-x-0.5 transition-all">
+                        →
+                      </span>
+                    </span>
+                  </Link>
+                )}
+              </div>
             );
           })}
         </div>
