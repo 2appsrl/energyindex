@@ -69,11 +69,13 @@ export function SiteHeader() {
           {!isProSection && (
             <Link
               href="/it/pro"
-              className="group inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 transition-colors"
+              aria-label="Vai a EIDX Pro"
+              className="group inline-flex items-baseline gap-1.5 text-sm font-bold tracking-tight hover:opacity-80 transition-opacity"
             >
-              <span aria-hidden className="hidden sm:inline">⚡</span>
-              <span>EIDX Pro</span>
-              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+              <span className="text-foreground">EIDX</span>
+              <span className="rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-1.5 py-0.5 text-[10px] sm:text-xs font-black tracking-[0.15em] text-stone-900 shadow-sm ring-1 ring-amber-600/20 transition-transform group-hover:scale-105">
+                PRO
+              </span>
             </Link>
           )}
           <ThemeToggle />
