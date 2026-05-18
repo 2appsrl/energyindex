@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 import { MarketBanner } from "@/components/home/MarketBanner";
@@ -192,6 +193,67 @@ export default async function HomeIt() {
           />
         </div>
       </section>
+
+      {/* MEGA CTA verso EIDX Pro — audience B2B (fornitori/broker/PMI energivore) */}
+      <Link
+        href="/it/pro"
+        className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a3d2e] via-[#0f5239] to-[#0a3d2e] p-8 sm:p-12 shadow-2xl shadow-emerald-900/20 transition-all hover:shadow-emerald-900/40 hover:-translate-y-1 ring-1 ring-emerald-400/10"
+      >
+        {/* Decorative glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -bottom-20 h-60 w-60 rounded-full bg-amber-400/10 blur-3xl"
+        />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
+          <div className="flex-1 space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden />
+              Per chi vende energia
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+              Pronto a vendere meglio? <span className="text-emerald-300">EIDX Pro</span>
+            </h2>
+            <p className="text-base md:text-lg text-emerald-50/90 max-w-xl">
+              Lo stack analytics per fornitori energy, broker e PMI energivore. 4 tool per
+              simulare margini, modellare scenari di mercato, generare report brandizzati e
+              trovare l&apos;offerta migliore per ogni cliente.
+            </p>
+            <ul className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-50/80">
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Margin Simulator (P&amp;L cliente)</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Forecast &amp; Scenari what-if</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Report PDF brandizzato</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Customer Simulator (best offer)</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex-shrink-0 flex flex-col items-stretch lg:items-end gap-3">
+            <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-400 px-8 py-5 text-base md:text-lg font-bold text-emerald-950 shadow-xl shadow-emerald-500/30 transition-all group-hover:scale-[1.03] group-hover:shadow-emerald-500/50">
+              <span aria-hidden className="text-xl">→</span>
+              Scopri EIDX Pro
+            </span>
+            <p className="text-xs text-emerald-200/70 text-center lg:text-right">
+              Demo gratuite · niente registrazione · lancio Q3 2026
+            </p>
+          </div>
+        </div>
+      </Link>
 
       <MarketBanner
         luceVariabileMedian={market.luceVariabileMedian}
