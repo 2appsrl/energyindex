@@ -194,7 +194,16 @@ export default async function HomeIt() {
         </div>
       </section>
 
-      {/* MEGA CTA verso EIDX Pro — audience B2B (fornitori/broker/PMI energivore) */}
+      {/* MARKET BANNER (consumer-end: confronto offerte mercato libero) */}
+      <MarketBanner
+        luceVariabileMedian={market.luceVariabileMedian}
+        totalOffers={market.totalOffers}
+      />
+
+      {/* MEGA CTA verso EIDX Pro — audience B2B (fornitori/mandanti/broker)
+          posizionata SOTTO il banner consumer, cosi' chi cerca offerte trova
+          subito il banner mercato libero; chi e' azienda scrolla un po'
+          piu' giu' e trova il CTA Pro. */}
       <Link
         href="/it/pro"
         className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a3d2e] via-[#0f5239] to-[#0a3d2e] p-8 sm:p-12 shadow-2xl shadow-emerald-900/20 transition-all hover:shadow-emerald-900/40 hover:-translate-y-1 ring-1 ring-emerald-400/10"
@@ -255,11 +264,6 @@ export default async function HomeIt() {
           </div>
         </div>
       </Link>
-
-      <MarketBanner
-        luceVariabileMedian={market.luceVariabileMedian}
-        totalOffers={market.totalOffers}
-      />
     </div>
   );
 }

@@ -36,9 +36,12 @@ export function SiteHeader() {
     );
   }
 
+  // Su /it/pro il link "EIDX Pro" e' superfluo (utente gia' li').
+  const isProSection = pathname.includes("/pro");
+
   return (
     <header className="border-b">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+      <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4">
         <Link
           href="/it"
           aria-label="Energy Index — home"
@@ -62,7 +65,19 @@ export function SiteHeader() {
             className="hidden h-9 w-auto dark:block"
           />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2 sm:gap-3">
+          {!isProSection && (
+            <Link
+              href="/it/pro"
+              className="group inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 transition-colors"
+            >
+              <span aria-hidden className="hidden sm:inline">⚡</span>
+              <span>EIDX Pro</span>
+              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+            </Link>
+          )}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
