@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TrendingUp, Users, LineChart, FileText } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
 import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData } from "@/components/pro/PricingSection";
 import { breadcrumbList, jsonLdString, organization } from "@/lib/seo/jsonld";
@@ -29,6 +31,8 @@ interface ModuleCard {
   status: "in arrivo" | "beta" | "live";
   tier: "Pro" | "Enterprise" | "Pro / Enterprise";
   tryDemoHref?: string;
+  icon: LucideIcon;
+  accentClass: string;  // gradient sfumatura + glow per la card
 }
 
 const MODULES: ModuleCard[] = [
@@ -46,39 +50,11 @@ const MODULES: ModuleCard[] = [
     status: "in arrivo",
     tier: "Pro / Enterprise",
     tryDemoHref: "/it/pro/simulator",
+    icon: TrendingUp,
+    accentClass: "from-emerald-50/60 to-card",
   },
   {
     number: "02",
-    title: "Forecast & Scenario",
-    description:
-      "Forecast PUN/PSV/TTF a 24 mesi (vs 180 giorni del tier free) con scenari what-if interattivi. Modifica una variabile (es. temperatura, prezzo gas) e vedi l'impatto sul forecast in tempo reale.",
-    features: [
-      "Orizzonti fino a 24 mesi",
-      "Scenari custom: cambia gli input, ricalcola la previsione",
-      "Confidence band a 95%/99% calibrata",
-      "API access programmatico (REST + webhook)",
-    ],
-    status: "in arrivo",
-    tier: "Pro / Enterprise",
-    tryDemoHref: "/it/pro/forecast-scenari",
-  },
-  {
-    number: "03",
-    title: "Report Builder",
-    description:
-      "Genera report PDF brandizzati con i tuoi colori e logo: monthly outlook, ad-hoc su singolo cliente, pitch deck per direzione. Tutti i dati di Energy Index pre-confezionati in tabelle e grafici professionali.",
-    features: [
-      "Template white-label (logo + palette cliente)",
-      "Schedulazione automatica (monthly/weekly)",
-      "Distribuzione lista email integrata",
-      "Custom research on-demand (Enterprise)",
-    ],
-    status: "in arrivo",
-    tier: "Enterprise",
-    tryDemoHref: "/it/pro/report-builder",
-  },
-  {
-    number: "04",
     title: "Customer Simulator",
     description:
       "Trova in tempo reale l'offerta migliore per ogni profilo cliente del mercato libero. Confronta tutte le offerte considerando prezzo unitario + costo commercializzazione fisso. Real-time mentre sposti il consumo. + 5 cluster preset con PDF stampabile.",
@@ -91,6 +67,42 @@ const MODULES: ModuleCard[] = [
     status: "in arrivo",
     tier: "Pro / Enterprise",
     tryDemoHref: "/it/pro/customer-simulator",
+    icon: Users,
+    accentClass: "from-sky-50/60 to-card",
+  },
+  {
+    number: "03",
+    title: "Forecast & Scenario",
+    description:
+      "Forecast PUN/PSV/TTF a 24 mesi (vs 180 giorni del tier free) con scenari what-if interattivi. Modifica una variabile (es. temperatura, prezzo gas) e vedi l'impatto sul forecast in tempo reale.",
+    features: [
+      "Orizzonti fino a 24 mesi",
+      "Scenari custom: cambia gli input, ricalcola la previsione",
+      "Confidence band a 95%/99% calibrata",
+      "API access programmatico (REST + webhook)",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/forecast-scenari",
+    icon: LineChart,
+    accentClass: "from-amber-50/60 to-card",
+  },
+  {
+    number: "04",
+    title: "Report Builder",
+    description:
+      "Genera report PDF brandizzati con i tuoi colori e logo: monthly outlook, ad-hoc su singolo cliente, pitch deck per direzione. Tutti i dati di Energy Index pre-confezionati in tabelle e grafici professionali.",
+    features: [
+      "Template white-label (logo + palette cliente)",
+      "Schedulazione automatica (monthly/weekly)",
+      "Distribuzione lista email integrata",
+      "Custom research on-demand (Enterprise)",
+    ],
+    status: "in arrivo",
+    tier: "Enterprise",
+    tryDemoHref: "/it/pro/report-builder",
+    icon: FileText,
+    accentClass: "from-rose-50/60 to-card",
   },
 ];
 
@@ -307,43 +319,68 @@ export default function ProLandingPage() {
             Pensati per la giornata tipo di chi vende, copre o consuma energia in volumi significativi.
           </p>
         </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          {MODULES.map((m) => (
-            <article
-              key={m.number}
-              className="rounded-2xl border bg-card p-6 sm:p-8 space-y-4 transition-all hover:border-primary/40 hover:shadow-lg"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-semibold text-primary/70">{m.number}</span>
-                <span className="text-xs uppercase tracking-widest rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-1">
-                  {m.status}
-                </span>
-              </div>
-              <h3 className="text-xl font-bold">{m.title}</h3>
-              <p className="text-sm text-muted-foreground">{m.description}</p>
-              <ul className="space-y-1.5 text-sm pt-2 border-t">
-                {m.features.map((f) => (
-                  <li key={f} className="flex items-baseline gap-2">
-                    <span className="text-primary mt-0.5" aria-hidden>
-                      ✓
+        <div className="grid gap-6 md:grid-cols-2">
+          {MODULES.map((m) => {
+            const Icon = m.icon;
+            const href = m.tryDemoHref ?? "#";
+            return (
+              <Link
+                key={m.number}
+                href={href}
+                aria-label={`Prova la demo: ${m.title}`}
+                className={`group relative flex flex-col rounded-3xl border border-border bg-gradient-to-br ${m.accentClass} p-7 sm:p-9 transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
+              >
+                {/* Decorative corner glow on hover */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/0 blur-2xl transition-colors duration-500 group-hover:bg-primary/15"
+                />
+
+                {/* Header: icon + status */}
+                <div className="relative flex items-start justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-3">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </div>
+                    <span className="text-xs font-mono font-bold text-primary/60 tracking-wider">
+                      {m.number}
                     </span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted-foreground pt-2 border-t">
-                Disponibile su: <span className="font-semibold">{m.tier}</span>
-              </p>
-              {m.tryDemoHref && (
-                <Link
-                  href={m.tryDemoHref}
-                  className="inline-flex items-center justify-center w-full mt-2 px-4 py-2 rounded-md bg-[#0a3d2e] text-white text-sm font-semibold hover:bg-[#0a3d2e]/90 transition-colors"
-                >
-                  Prova la demo &rarr;
-                </Link>
-              )}
-            </article>
-          ))}
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2.5 py-1 font-bold">
+                    {m.status}
+                  </span>
+                </div>
+
+                {/* Title + description */}
+                <h3 className="text-2xl font-bold tracking-tight mb-2">{m.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  {m.description}
+                </p>
+
+                {/* Features */}
+                <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60 mb-4">
+                  {m.features.map((f) => (
+                    <li key={f} className="flex items-baseline gap-2">
+                      <span className="text-primary mt-0.5 font-bold" aria-hidden>
+                        ✓
+                      </span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Footer: tier + CTA button */}
+                <div className="mt-auto pt-4 border-t border-border/60 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Disponibile su: <span className="font-semibold text-foreground">{m.tier}</span>
+                  </p>
+                  <span className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-[#0a3d2e] text-white text-sm font-semibold shadow-sm transition-all duration-300 group-hover:bg-emerald-500 group-hover:shadow-lg group-hover:shadow-emerald-500/30">
+                    Prova la demo
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
