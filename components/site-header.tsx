@@ -36,16 +36,19 @@ export function SiteHeader() {
     );
   }
 
-  // Su /it/pro il link "EIDX Pro" e' superfluo (utente gia' li').
+  // Su /it/pro:
+  //  - il link "EIDX Pro" a destra e' superfluo (utente gia' li')
+  //  - il logo a sinistra acquisisce un chip "PRO" inline cosi' l'utente
+  //    capisce subito che e' nella sezione professionale.
   const isProSection = pathname.includes("/pro");
 
   return (
     <header className="border-b">
       <div className="container mx-auto flex h-14 items-center justify-between gap-2 px-4">
         <Link
-          href="/it"
-          aria-label="Energy Index — home"
-          className="inline-flex items-center"
+          href={isProSection ? "/it/pro" : "/it"}
+          aria-label={isProSection ? "EIDX Pro — home Pro" : "Energy Index — home"}
+          className="inline-flex items-center gap-2 group"
         >
           {/* Brand badge: variante chiara per light theme, variante scura per dark theme. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,6 +67,14 @@ export function SiteHeader() {
             height={36}
             className="hidden h-9 w-auto dark:block"
           />
+          {isProSection && (
+            <span
+              aria-hidden
+              className="inline-flex items-center rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-2 py-0.5 text-[11px] font-black tracking-[0.18em] text-stone-900 shadow-sm ring-1 ring-amber-600/20 transition-transform group-hover:scale-105"
+            >
+              PRO
+            </span>
+          )}
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           {!isProSection && (
