@@ -279,118 +279,52 @@ export default function ProLandingPage() {
         </div>
       </header>
 
-      {/* MEGA CTA — DEMO SIMULATOR */}
-      <Link
-        href="/it/pro/simulator"
-        className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a3d2e] via-[#0f5239] to-[#0a3d2e] p-8 sm:p-12 shadow-2xl shadow-emerald-900/20 transition-all hover:shadow-emerald-900/40 hover:-translate-y-1 ring-1 ring-emerald-400/10"
-      >
-        {/* Decorative glow */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-16 -bottom-20 h-60 w-60 rounded-full bg-amber-400/10 blur-3xl"
-        />
-
-        <div className="relative flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
-          <div className="flex-1 space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden />
-              Live demo · gratis · zero registrazione
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
-              Prova il Margin Simulator <span className="text-emerald-300">adesso</span>
-            </h2>
-            <p className="text-base md:text-lg text-emerald-50/90 max-w-xl">
-              Sposta gli slider e vedi margine, LTV e posizionamento competitor ricalcolarsi
-              in tempo reale. Confronta contratto variabile e fisso. Stressa 4 scenari di mercato.
-              60 secondi di tour guidato dentro.
-            </p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-50/80">
-              <li className="flex items-baseline gap-2">
-                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
-                <span>Forecast PUN 12 mesi con banda 5–95%</span>
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
-                <span>Benchmark su ~500 offerte ARERA live</span>
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
-                <span>Variabile passthrough vs Fisso lock-in</span>
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
-                <span>What-if custom: volume, costo, churn</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="flex-shrink-0 flex flex-col items-stretch lg:items-end gap-3">
-            <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-400 px-8 py-5 text-base md:text-lg font-bold text-emerald-950 shadow-xl shadow-emerald-500/30 transition-all group-hover:scale-[1.03] group-hover:shadow-emerald-500/50">
-              <span aria-hidden className="text-xl">▶</span>
-              Apri il simulatore
-              <span aria-hidden className="ml-1">→</span>
-            </span>
-            <p className="text-xs text-emerald-200/70 text-center lg:text-right">
-              Funziona da browser · niente download · niente login
-            </p>
-          </div>
-        </div>
-      </Link>
-
       {/* MEGA-CARD TRADING */}
       <section id="trading" className="scroll-mt-20">
-        <article className="relative overflow-hidden rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/60 via-card to-card p-8 sm:p-10 space-y-6">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-emerald-400/10 blur-3xl"
-          />
+        <Link href="/it/pro/trading" className="group block">
+          <article className="relative overflow-hidden rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/60 via-card to-card p-8 sm:p-10 space-y-6 transition-all group-hover:border-emerald-500/60 group-hover:shadow-xl group-hover:shadow-emerald-500/20 group-hover:-translate-y-0.5">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-emerald-400/10 blur-3xl"
+            />
 
-          <header className="relative space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
-              Per trader e risk manager
+            <header className="relative space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                Per trader e risk manager
+              </div>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Trading</h2>
+                <span className="inline-flex items-center rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-2 py-0.5 text-[11px] font-black tracking-[0.18em] text-stone-900 shadow-sm ring-1 ring-amber-600/20">
+                  PRO
+                </span>
+              </div>
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+                Dashboard purpose-built per chi tradera&apos; PUN/PSV/TTF: spark spread italiano, cross
+                spreads, volatility ATR, correlation matrix, portfolio mark-to-market, VaR e stress
+                test. Niente Bloomberg da 22k€/anno.
+              </p>
+            </header>
+
+            <div className="relative grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <MiniToolTile icon={Activity} label="Trading Vitals" status="live" wave="Wave 1" />
+              <MiniToolTile icon={Shield} label="Risk & Hedging" status="live" wave="Wave 2" />
+              <MiniToolTile icon={FlaskConical} label="Backtest engine" status="locked" wave="Wave 3" />
+              <MiniToolTile icon={BellRing} label="Alert & API" status="locked" wave="Wave 3" />
             </div>
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Trading</h2>
-              <span className="inline-flex items-center rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-2 py-0.5 text-[11px] font-black tracking-[0.18em] text-stone-900 shadow-sm ring-1 ring-amber-600/20">
-                PRO
+
+            <div className="relative pt-2">
+              <span className="inline-flex items-center justify-center px-10 py-5 rounded-2xl bg-emerald-600 text-white text-lg md:text-xl font-bold shadow-xl shadow-emerald-600/30 transition-all group-hover:bg-emerald-500 group-hover:shadow-emerald-500/50 group-hover:scale-[1.03]">
+                Apri Trading Desk
               </span>
+              <p className="text-xs text-muted-foreground mt-3">
+                Disponibile su:{" "}
+                <span className="font-semibold text-foreground">
+                  Trading 999€/mese · Enterprise
+                </span>
+              </p>
             </div>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
-              Dashboard purpose-built per chi tradera&apos; PUN/PSV/TTF: spark spread italiano, cross
-              spreads, volatility ATR, correlation matrix, portfolio mark-to-market, VaR e stress
-              test. Niente Bloomberg da 22k€/anno.
-            </p>
-          </header>
-
-          <div className="relative grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <MiniToolTile icon={Activity} label="Trading Vitals" status="live" wave="Wave 1" />
-            <MiniToolTile icon={Shield} label="Risk & Hedging" status="live" wave="Wave 2" />
-            <MiniToolTile icon={FlaskConical} label="Backtest engine" status="locked" wave="Wave 3" />
-            <MiniToolTile icon={BellRing} label="Alert & API" status="locked" wave="Wave 3" />
-          </div>
-
-          <div className="relative pt-2">
-            <Link
-              href="/it/pro/trading"
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 hover:shadow-emerald-500/40 hover:scale-[1.02] transition-all"
-            >
-              Apri Trading Desk
-              <span aria-hidden className="transition-transform group-hover:translate-x-1">
-                →
-              </span>
-            </Link>
-            <p className="text-xs text-muted-foreground mt-3">
-              Disponibile su:{" "}
-              <span className="font-semibold text-foreground">
-                Trading 999€/mese · Enterprise
-              </span>
-            </p>
-          </div>
-        </article>
+          </article>
+        </Link>
       </section>
 
       {/* MEGA-CARD MARKETING */}
@@ -455,6 +389,68 @@ export default function ProLandingPage() {
           </p>
         </article>
       </section>
+
+      {/* MEGA CTA — DEMO SIMULATOR */}
+      <Link
+        href="/it/pro/simulator"
+        className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a3d2e] via-[#0f5239] to-[#0a3d2e] p-8 sm:p-12 shadow-2xl shadow-emerald-900/20 transition-all hover:shadow-emerald-900/40 hover:-translate-y-1 ring-1 ring-emerald-400/10"
+      >
+        {/* Decorative glow */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -bottom-20 h-60 w-60 rounded-full bg-amber-400/10 blur-3xl"
+        />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-12">
+          <div className="flex-1 space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" aria-hidden />
+              Live demo · gratis · zero registrazione
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+              Prova il Margin Simulator <span className="text-emerald-300">adesso</span>
+            </h2>
+            <p className="text-base md:text-lg text-emerald-50/90 max-w-xl">
+              Sposta gli slider e vedi margine, LTV e posizionamento competitor ricalcolarsi
+              in tempo reale. Confronta contratto variabile e fisso. Stressa 4 scenari di mercato.
+              60 secondi di tour guidato dentro.
+            </p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-50/80">
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Forecast PUN 12 mesi con banda 5–95%</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Benchmark su ~500 offerte ARERA live</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>Variabile passthrough vs Fisso lock-in</span>
+              </li>
+              <li className="flex items-baseline gap-2">
+                <span className="text-emerald-300 mt-0.5" aria-hidden>✓</span>
+                <span>What-if custom: volume, costo, churn</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex-shrink-0 flex flex-col items-stretch lg:items-end gap-3">
+            <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-400 px-8 py-5 text-base md:text-lg font-bold text-emerald-950 shadow-xl shadow-emerald-500/30 transition-all group-hover:scale-[1.03] group-hover:shadow-emerald-500/50">
+              <span aria-hidden className="text-xl">▶</span>
+              Apri il simulatore
+              <span aria-hidden className="ml-1">→</span>
+            </span>
+            <p className="text-xs text-emerald-200/70 text-center lg:text-right">
+              Funziona da browser · niente download · niente login
+            </p>
+          </div>
+        </div>
+      </Link>
 
       {/* PROOF */}
       <section className="rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card p-8 sm:p-12 space-y-6">
