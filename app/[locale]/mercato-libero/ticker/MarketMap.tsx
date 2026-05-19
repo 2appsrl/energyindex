@@ -698,9 +698,9 @@ export function MarketMap({
               : `ENERGY INDEX · MARKET MAP · DATI ARERA PORTALE OFFERTE PLACET · ULTIMA RILEVAZIONE ${asOf ?? "—"}`}
           </p>
           <p>
-            <a href="/it/mercato-libero" className="hover:text-emerald-400">
+            <Link href="/it/mercato-libero" className="hover:text-emerald-400">
               ← Torna all&apos;osservatorio
-            </a>
+            </Link>
           </p>
         </footer>
       </div>

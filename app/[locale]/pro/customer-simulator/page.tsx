@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { EidxProHeader } from "@/components/pro/EidxProHeader";
 import { CustomerSimulator } from "@/components/pro/CustomerSimulator";
@@ -88,7 +89,7 @@ export default async function CustomerSimulatorPage() {
         <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500 flex justify-between flex-wrap gap-2">
           <span>
             {offers.length} offerte mercato libero attive · forecast PUN/PSV 90g · per offerte variabili usa proxy{" "}
-            <a href="/it/forecast/metodologia" className="underline">Ridge v1.0</a>
+            <Link href="/it/forecast/metodologia" className="underline">Ridge v1.0</Link>
           </span>
           <span className="text-stone-400">EIDX demo pubblica · funzioni Pro a pagamento</span>
         </footer>

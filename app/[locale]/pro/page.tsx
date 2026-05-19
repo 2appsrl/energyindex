@@ -295,16 +295,10 @@ export default function ProLandingPage() {
             <div className="relative flex items-baseline gap-2">
               <TrendingUp className="h-6 w-6 text-emerald-700" aria-hidden />
               <span className="text-3xl md:text-4xl font-black tracking-tight">Trading</span>
-              <span className="ml-auto text-2xl text-emerald-700 transition-transform group-hover:translate-x-1" aria-hidden>
-                ↓
-              </span>
             </div>
             <p className="relative text-sm text-muted-foreground">
               Trader, risk manager, asset manager. Spark spread, ATR, VaR, backtest engine.
             </p>
-            <span className="relative text-xs font-bold uppercase tracking-widest text-emerald-700 pt-1">
-              Tier Trading 999€/mese
-            </span>
           </a>
 
           <a
@@ -318,16 +312,10 @@ export default function ProLandingPage() {
             <div className="relative flex items-baseline gap-2">
               <Users className="h-6 w-6 text-sky-700" aria-hidden />
               <span className="text-3xl md:text-4xl font-black tracking-tight">Marketing</span>
-              <span className="ml-auto text-2xl text-sky-700 transition-transform group-hover:translate-x-1" aria-hidden>
-                ↓
-              </span>
             </div>
             <p className="relative text-sm text-muted-foreground">
               Fornitori, broker, team commerciali. Margin simulator, customer simulator, forecast, report.
             </p>
-            <span className="relative text-xs font-bold uppercase tracking-widest text-sky-700 pt-1">
-              Tier Pro 499€/mese
-            </span>
           </a>
         </div>
       </section>
