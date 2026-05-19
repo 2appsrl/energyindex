@@ -10,6 +10,7 @@ import {
   FlaskConical,
   BellRing,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
@@ -118,6 +119,23 @@ const MARKETING_MODULES: ModuleCard[] = [
     tryDemoHref: "/it/pro/report-builder",
     icon: FileText,
     accentClass: "from-rose-50/60 to-card",
+  },
+  {
+    number: "05",
+    title: "Churn Predictor",
+    description:
+      "Predice la probabilita' di abbandono cliente nei prossimi 90 giorni dato profilo + offerta + market reference. Output con driver explanation + azioni consigliate per retention. Wave 5.",
+    features: [
+      "Gauge probabilita' + 4 risk level (low/med/high/critical)",
+      "Top 5 driver con contribution share",
+      "Azioni consigliate ranked per ROI (lift/cost)",
+      "Batch upload CSV portfolio (Pro)",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/marketing?tab=churn",
+    icon: AlertTriangle,
+    accentClass: "from-orange-50/60 to-card",
   },
 ];
 

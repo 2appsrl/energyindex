@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, Users, LineChart, FileText } from "lucide-react";
+import { TrendingUp, Users, LineChart, FileText, AlertTriangle } from "lucide-react";
 import type { ComponentProps } from "react";
 import { MarginSimulator } from "./MarginSimulator";
 import { CustomerSimulator } from "./CustomerSimulator";
 import { ForecastScenariView } from "./ForecastScenariView";
 import { ReportBuilderView } from "./ReportBuilderView";
+import { ChurnPredictorView } from "./ChurnPredictorView";
 
-type Tab = "margin" | "customer" | "forecast" | "report";
+type Tab = "margin" | "customer" | "forecast" | "report" | "churn";
 
 interface TabDef {
   id: Tab;
@@ -43,12 +44,19 @@ const TABS: TabDef[] = [
     icon: FileText,
     caption: "Genera report PDF brandizzati con dati snapshot + forecast",
   },
+  {
+    id: "churn",
+    label: "Churn Predictor",
+    icon: AlertTriangle,
+    caption: "Predice probabilita' di abbandono cliente nei prossimi 90 giorni",
+  },
 ];
 
 type MarginProps = ComponentProps<typeof MarginSimulator>;
 type CustomerProps = ComponentProps<typeof CustomerSimulator>;
 type ForecastProps = ComponentProps<typeof ForecastScenariView>;
 type ReportProps = ComponentProps<typeof ReportBuilderView>;
+type ChurnProps = ComponentProps<typeof ChurnPredictorView>;
 
 export function MarketingDashboardView({
   activeTab,
@@ -56,12 +64,14 @@ export function MarketingDashboardView({
   customer,
   forecast,
   report,
+  churn,
 }: {
   activeTab: Tab;
   margin: MarginProps;
   customer: CustomerProps;
   forecast: ForecastProps;
   report: ReportProps;
+  churn: ChurnProps;
 }) {
   const pathname = usePathname() ?? "/it/pro/marketing";
   const activeMeta = TABS.find((t) => t.id === activeTab) ?? TABS[0];
@@ -109,6 +119,7 @@ export function MarketingDashboardView({
         {activeTab === "customer" && <CustomerSimulator {...customer} />}
         {activeTab === "forecast" && <ForecastScenariView {...forecast} />}
         {activeTab === "report" && <ReportBuilderView {...report} />}
+        {activeTab === "churn" && <ChurnPredictorView {...churn} />}
       </div>
 
       <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500">

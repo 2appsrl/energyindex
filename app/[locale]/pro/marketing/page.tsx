@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-type Tab = "margin" | "customer" | "forecast" | "report";
+type Tab = "margin" | "customer" | "forecast" | "report" | "churn";
 
 interface ForecastChartRow {
   date: string;
@@ -67,7 +67,7 @@ export default async function MarketingDashboardPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab: tabParam } = await searchParams;
-  const allowedTabs: Tab[] = ["margin", "customer", "forecast", "report"];
+  const allowedTabs: Tab[] = ["margin", "customer", "forecast", "report", "churn"];
   const tab: Tab = allowedTabs.includes(tabParam as Tab) ? (tabParam as Tab) : "margin";
 
   const supabase = await createServerClient();
@@ -172,6 +172,11 @@ export default async function MarketingDashboardPage({
   const marginForecastAvg =
     fcRows.length > 0 ? fcRows.reduce((s, p) => s + p.value, 0) / fcRows.length : 100;
 
+  // PUN spot per Churn Predictor: ultimo punto storico disponibile
+  const historyRows = marginForecastPoints.filter((p) => p.source === "history");
+  const latestPunSpot =
+    historyRows.length > 0 ? historyRows[historyRows.length - 1].value : marginForecastAvg;
+
   // ============================================================
   // SHAPE CUSTOMER
   // ============================================================
@@ -263,6 +268,9 @@ export default async function MarketingDashboardPage({
         }}
         report={{
           snapshot,
+        }}
+        churn={{
+          marketPunEurPerMwh: latestPunSpot,
         }}
       />
     </>
