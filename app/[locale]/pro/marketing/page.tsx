@@ -15,7 +15,15 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-type Tab = "margin" | "customer" | "forecast" | "report" | "churn";
+type Tab =
+  | "margin"
+  | "customer"
+  | "forecast"
+  | "report"
+  | "churn"
+  | "winback"
+  | "pricing"
+  | "quote";
 
 interface ForecastChartRow {
   date: string;
@@ -67,7 +75,16 @@ export default async function MarketingDashboardPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab: tabParam } = await searchParams;
-  const allowedTabs: Tab[] = ["margin", "customer", "forecast", "report", "churn"];
+  const allowedTabs: Tab[] = [
+    "margin",
+    "customer",
+    "forecast",
+    "report",
+    "churn",
+    "winback",
+    "pricing",
+    "quote",
+  ];
   const tab: Tab = allowedTabs.includes(tabParam as Tab) ? (tabParam as Tab) : "margin";
 
   const supabase = await createServerClient();
@@ -271,6 +288,15 @@ export default async function MarketingDashboardPage({
         }}
         churn={{
           marketPunEurPerMwh: latestPunSpot,
+        }}
+        pricing={{
+          benchmark: {
+            p25: competitor.p25EurPerMwh,
+            median: competitor.medianEurPerMwh,
+            p75: competitor.p75EurPerMwh,
+            nOfferte: competitor.nOfferte,
+          },
+          costoApprovvigionamentoEurPerMwh: marginForecastAvg,
         }}
       />
     </>

@@ -2,15 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, Users, LineChart, FileText, AlertTriangle } from "lucide-react";
+import {
+  TrendingUp,
+  Users,
+  LineChart,
+  FileText,
+  AlertTriangle,
+  Heart,
+  Sliders,
+  ClipboardSignature,
+} from "lucide-react";
 import type { ComponentProps } from "react";
 import { MarginSimulator } from "./MarginSimulator";
 import { CustomerSimulator } from "./CustomerSimulator";
 import { ForecastScenariView } from "./ForecastScenariView";
 import { ReportBuilderView } from "./ReportBuilderView";
 import { ChurnPredictorView } from "./ChurnPredictorView";
+import { WinbackOptimizerView } from "./WinbackOptimizerView";
+import { DynamicPricingView } from "./DynamicPricingView";
+import { QuoteBuilderView } from "./QuoteBuilderView";
 
-type Tab = "margin" | "customer" | "forecast" | "report" | "churn";
+type Tab =
+  | "margin"
+  | "customer"
+  | "forecast"
+  | "report"
+  | "churn"
+  | "winback"
+  | "pricing"
+  | "quote";
 
 interface TabDef {
   id: Tab;
@@ -50,6 +70,24 @@ const TABS: TabDef[] = [
     icon: AlertTriangle,
     caption: "Predice probabilita' di abbandono cliente nei prossimi 90 giorni",
   },
+  {
+    id: "winback",
+    label: "Win-back",
+    icon: Heart,
+    caption: "Strategie ranked per riconquistare ex-clienti dopo perdita",
+  },
+  {
+    id: "pricing",
+    label: "Dynamic Pricing",
+    icon: Sliders,
+    caption: "Price ladder ottimale per cluster cliente dato competitor benchmark live",
+  },
+  {
+    id: "quote",
+    label: "Quote Builder",
+    icon: ClipboardSignature,
+    caption: "Quote PDF pronti in 30 secondi da template pre-configurati + forecast live",
+  },
 ];
 
 type MarginProps = ComponentProps<typeof MarginSimulator>;
@@ -57,6 +95,7 @@ type CustomerProps = ComponentProps<typeof CustomerSimulator>;
 type ForecastProps = ComponentProps<typeof ForecastScenariView>;
 type ReportProps = ComponentProps<typeof ReportBuilderView>;
 type ChurnProps = ComponentProps<typeof ChurnPredictorView>;
+type PricingProps = ComponentProps<typeof DynamicPricingView>;
 
 export function MarketingDashboardView({
   activeTab,
@@ -65,6 +104,7 @@ export function MarketingDashboardView({
   forecast,
   report,
   churn,
+  pricing,
 }: {
   activeTab: Tab;
   margin: MarginProps;
@@ -72,6 +112,7 @@ export function MarketingDashboardView({
   forecast: ForecastProps;
   report: ReportProps;
   churn: ChurnProps;
+  pricing: PricingProps;
 }) {
   const pathname = usePathname() ?? "/it/pro/marketing";
   const activeMeta = TABS.find((t) => t.id === activeTab) ?? TABS[0];
@@ -120,6 +161,9 @@ export function MarketingDashboardView({
         {activeTab === "forecast" && <ForecastScenariView {...forecast} />}
         {activeTab === "report" && <ReportBuilderView {...report} />}
         {activeTab === "churn" && <ChurnPredictorView {...churn} />}
+        {activeTab === "winback" && <WinbackOptimizerView />}
+        {activeTab === "pricing" && <DynamicPricingView {...pricing} />}
+        {activeTab === "quote" && <QuoteBuilderView />}
       </div>
 
       <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500">

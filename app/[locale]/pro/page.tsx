@@ -11,6 +11,9 @@ import {
   BellRing,
   Lock,
   AlertTriangle,
+  Heart,
+  Sliders,
+  ClipboardSignature,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
@@ -136,6 +139,57 @@ const MARKETING_MODULES: ModuleCard[] = [
     tryDemoHref: "/it/pro/marketing?tab=churn",
     icon: AlertTriangle,
     accentClass: "from-orange-50/60 to-card",
+  },
+  {
+    number: "06",
+    title: "Win-back Optimizer",
+    description:
+      "Strategie ranked per riconquistare ex-clienti persi: 3 offerte (discount, lock fisso, bundle) con acceptance probability + LTV atteso + payback months. ROI-driven, demo 1 strategia unlocked.",
+    features: [
+      "3 strategie con probabilita' di accettazione",
+      "LTV atteso 36 mesi + payback months",
+      "Time decay: minor accept se piu' di 12 mesi",
+      "A/B test offerte + email sequences (Pro)",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/marketing?tab=winback",
+    icon: Heart,
+    accentClass: "from-pink-50/60 to-card",
+  },
+  {
+    number: "07",
+    title: "Dynamic Pricing",
+    description:
+      "Price ladder ottimale per cluster cliente dato competitor benchmark live. Output: 3 punti (aggressive/balanced/premium) con take-rate + margine atteso. Demo 1 cluster (PMI), altri 4 lockati.",
+    features: [
+      "5 cluster preset (PMI, domestico, industriale, vulnerabili, HORECA)",
+      "Take-rate model elasticita'-aware",
+      "Optimal point highlight per max margine",
+      "Scheduling settimanale + A/B test (Pro)",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/marketing?tab=pricing",
+    icon: Sliders,
+    accentClass: "from-indigo-50/60 to-card",
+  },
+  {
+    number: "08",
+    title: "Quote Builder",
+    description:
+      "Quote PDF pronto in 30 secondi: scegli template (PMI fisso, domestico variabile, industriale fisso 24m), inserisci cliente + consumo, click stampa. Per sales in chiamata. Demo: 1 template, watermark DEMO.",
+    features: [
+      "3 template preset (PMI / Domestico / Industriale)",
+      "Auto-fill da forecast PUN + spread per categoria",
+      "Branding custom logo + colore (Pro)",
+      "Salvataggio per cliente + distribuzione email (Pro)",
+    ],
+    status: "in arrivo",
+    tier: "Pro / Enterprise",
+    tryDemoHref: "/it/pro/marketing?tab=quote",
+    icon: ClipboardSignature,
+    accentClass: "from-teal-50/60 to-card",
   },
 ];
 
