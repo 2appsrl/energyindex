@@ -14,6 +14,7 @@ import {
   Target,
   Send,
   Globe,
+  FileCheck2,
 } from "lucide-react";
 import type { ComponentProps } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +27,7 @@ import { WinbackOptimizerView } from "./WinbackOptimizerView";
 import { DynamicPricingView } from "./DynamicPricingView";
 import { QuoteBuilderView } from "./QuoteBuilderView";
 import { MarketOffersView } from "./MarketOffersView";
+import { CTEBuilderView } from "./CTEBuilderView";
 
 // ============================================================
 // TYPES
@@ -40,7 +42,8 @@ type Tab =
   | "winback"
   | "pricing"
   | "quote"
-  | "market-offers";
+  | "market-offers"
+  | "cte-builder";
 
 type Group = "acquisition" | "retention" | "pricing-strategy" | "output";
 
@@ -118,6 +121,12 @@ const TABS: TabDef[] = [
     icon: Globe,
     caption: "Mappa interattiva di tutte le offerte mercato libero italiano (PLACET + commerciali)",
   },
+  {
+    id: "cte-builder",
+    label: "CTE Builder",
+    icon: FileCheck2,
+    caption: "Genera Condizioni Tecnico Economiche ARERA-compliant in pochi minuti",
+  },
 ];
 
 const GROUPS: GroupDef[] = [
@@ -143,7 +152,7 @@ const GROUPS: GroupDef[] = [
     id: "output",
     label: "Output",
     icon: Send,
-    tools: ["report"],
+    tools: ["report", "cte-builder"],
   },
 ];
 
@@ -168,6 +177,7 @@ type ForecastProps = ComponentProps<typeof ForecastScenariView>;
 type ReportProps = ComponentProps<typeof ReportBuilderView>;
 type ChurnProps = ComponentProps<typeof ChurnPredictorView>;
 type PricingProps = ComponentProps<typeof DynamicPricingView>;
+type CteBuilderProps = ComponentProps<typeof CTEBuilderView>;
 
 export function MarketingDashboardView({
   activeTab,
@@ -177,6 +187,7 @@ export function MarketingDashboardView({
   report,
   churn,
   pricing,
+  cteBuilder,
 }: {
   activeTab: Tab;
   margin: MarginProps;
@@ -185,6 +196,7 @@ export function MarketingDashboardView({
   report: ReportProps;
   churn: ChurnProps;
   pricing: PricingProps;
+  cteBuilder: CteBuilderProps;
 }) {
   const pathname = usePathname() ?? "/it/pro/marketing";
   const activeGroup = getGroupFromTab(activeTab);
@@ -282,6 +294,7 @@ export function MarketingDashboardView({
         {activeTab === "pricing" && <DynamicPricingView {...pricing} />}
         {activeTab === "quote" && <QuoteBuilderView />}
         {activeTab === "market-offers" && <MarketOffersView />}
+        {activeTab === "cte-builder" && <CTEBuilderView {...cteBuilder} />}
       </div>
 
       <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500">

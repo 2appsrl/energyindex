@@ -24,7 +24,8 @@ type Tab =
   | "winback"
   | "pricing"
   | "quote"
-  | "market-offers";
+  | "market-offers"
+  | "cte-builder";
 
 interface ForecastChartRow {
   date: string;
@@ -86,6 +87,7 @@ export default async function MarketingDashboardPage({
     "pricing",
     "quote",
     "market-offers",
+    "cte-builder",
   ];
   const tab: Tab = allowedTabs.includes(tabParam as Tab) ? (tabParam as Tab) : "margin";
 
@@ -299,6 +301,9 @@ export default async function MarketingDashboardPage({
             nOfferte: competitor.nOfferte,
           },
           costoApprovvigionamentoEurPerMwh: marginForecastAvg,
+        }}
+        cteBuilder={{
+          punForecastEurPerMwh: marginForecastAvg,
         }}
       />
     </>

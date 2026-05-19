@@ -14,6 +14,7 @@ import {
   Heart,
   Sliders,
   ClipboardSignature,
+  FileCheck2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
@@ -191,6 +192,23 @@ const MARKETING_MODULES: ModuleCard[] = [
     tryDemoHref: "/it/pro/marketing?tab=quote",
     icon: ClipboardSignature,
     accentClass: "from-teal-50/60 to-card",
+  },
+  {
+    number: "09",
+    title: "CTE Builder",
+    description:
+      "Genera Condizioni Tecnico Economiche conformi ARERA in pochi minuti. Wizard 8 step + validazione real-time su 23 check ARERA + auto-calcolo Scheda Confrontabilità su 8 profili tipo + PDF stampabile multi-sezione. Demo: 1 template Luce variabile, watermark DEMO, no branding custom.",
+    features: [
+      "Validazione 23 check ARERA (Del. 302/2016, 569/2019, 25/2025)",
+      "Scheda Sintetica + Scheda Confrontabilità auto-generate",
+      "Calcolo spesa stimata su 8 profili tipo standard ARERA",
+      "Submission Portale Offerte ARERA (Enterprise)",
+    ],
+    status: "in arrivo",
+    tier: "Enterprise",
+    tryDemoHref: "/it/pro/marketing?tab=cte-builder",
+    icon: FileCheck2,
+    accentClass: "from-violet-50/60 to-card",
   },
 ];
 
