@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { TradingVitalsView } from "./TradingVitalsView";
 import { RiskHedgingView } from "./RiskHedgingView";
 import { BacktestView } from "./BacktestView";
+import { AlertApiView } from "./AlertApiView";
 import { Activity, Shield, FlaskConical, BellRing, Lock } from "lucide-react";
 import type { ComponentProps } from "react";
 
@@ -21,23 +22,26 @@ const TABS: TabDef[] = [
   { id: "vitals", label: "Trading Vitals", icon: Activity },
   { id: "risk", label: "Risk & Hedging", icon: Shield },
   { id: "backtest", label: "Backtest engine", icon: FlaskConical },
-  { id: "alert", label: "Alert & API", icon: BellRing, locked: true },
+  { id: "alert", label: "Alert & API", icon: BellRing },
 ];
 
 type VitalsProps = ComponentProps<typeof TradingVitalsView>;
 type RiskProps = ComponentProps<typeof RiskHedgingView>;
 type BacktestProps = ComponentProps<typeof BacktestView>;
+type AlertProps = ComponentProps<typeof AlertApiView>;
 
 export function TradingDashboardView({
   activeTab,
   vitals,
   risk,
   backtest,
+  alert,
 }: {
   activeTab: Tab;
   vitals: VitalsProps;
   risk: RiskProps;
   backtest: BacktestProps;
+  alert: AlertProps;
 }) {
   const pathname = usePathname() ?? "/it/pro/trading";
 
@@ -81,13 +85,7 @@ export function TradingDashboardView({
         {activeTab === "vitals" && <TradingVitalsView {...vitals} />}
         {activeTab === "risk" && <RiskHedgingView {...risk} />}
         {activeTab === "backtest" && <BacktestView {...backtest} />}
-        {activeTab === "alert" && (
-          <LockedTab
-            label="Alert & API"
-            eta="2027"
-            description="Trigger su soglie prezzo/spread/percentile + REST API per Excel proprietary models + plugin XLOOKUP."
-          />
-        )}
+        {activeTab === "alert" && <AlertApiView {...alert} />}
       </div>
 
       <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500">
@@ -95,32 +93,5 @@ export function TradingDashboardView({
         3.500€/mese.
       </footer>
     </div>
-  );
-}
-
-function LockedTab({
-  label,
-  eta,
-  description,
-}: {
-  label: string;
-  eta: string;
-  description: string;
-}) {
-  return (
-    <section className="rounded-2xl border border-amber-300/40 bg-amber-50/40 p-12 text-center space-y-3 max-w-2xl mx-auto">
-      <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 text-amber-700 px-3 py-1 text-xs font-bold uppercase tracking-widest">
-        <Lock className="h-3 w-3" aria-hidden />
-        In arrivo {eta}
-      </div>
-      <h2 className="text-2xl font-bold">{label}</h2>
-      <p className="text-sm text-stone-600 max-w-md mx-auto">{description}</p>
-      <p className="text-xs text-stone-500 pt-2">
-        Per accesso anticipato:{" "}
-        <Link href="/it/pro#early-access" className="underline font-medium">
-          registrati al lancio
-        </Link>
-      </p>
-    </section>
   );
 }

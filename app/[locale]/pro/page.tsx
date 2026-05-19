@@ -362,7 +362,7 @@ export default function ProLandingPage() {
               <MiniToolTile icon={Activity} label="Trading Vitals" status="live" wave="Wave 1" />
               <MiniToolTile icon={Shield} label="Risk & Hedging" status="live" wave="Wave 2" />
               <MiniToolTile icon={FlaskConical} label="Backtest engine" status="live" wave="Wave 3" />
-              <MiniToolTile icon={BellRing} label="Alert & API" status="locked" wave="Wave 3" />
+              <MiniToolTile icon={BellRing} label="Alert & API" status="live" wave="Wave 4" />
             </div>
 
             <div className="relative pt-2">

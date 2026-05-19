@@ -232,6 +232,9 @@ export default async function TradingDashboardPage({
           co2Series: backtestCo2Series,
           historyMonths: 3,
         }}
+        alert={{
+          spot: { pun, psv, ttf, spark: sparkLatest },
+        }}
       />
     </>
   );
