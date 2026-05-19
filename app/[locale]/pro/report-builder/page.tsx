@@ -31,7 +31,7 @@ export default async function ReportBuilderPage() {
   // Snapshot mercato corrente: ultimo PUN, PSV, TTF
   const { data: latestPrices } = await supabase
     .from("mv_latest_price_per_asset")
-    .select("asset_slug, display_name_it, unit, latest_value, latest_observed_at")
+    .select("asset_slug, display_name_it, unit, value, observed_at")
     .in("asset_slug", ["pun", "psv", "ttf", "brent", "co2"]);
 
   // Forecast 30g + 90g per i 3 main
@@ -67,12 +67,12 @@ export default async function ReportBuilderPage() {
   }));
 
   const snapshot: ReportSnapshot = {
-    latestPrices: ((latestPrices ?? []) as Array<{ asset_slug: string; display_name_it: string; unit: string; latest_value: number | string; latest_observed_at: string }>).map((r) => ({
+    latestPrices: ((latestPrices ?? []) as Array<{ asset_slug: string; display_name_it: string; unit: string; value: number | string; observed_at: string }>).map((r) => ({
       slug: r.asset_slug,
       name: r.display_name_it,
       unit: r.unit,
-      value: Number(r.latest_value),
-      observedAt: r.latest_observed_at,
+      value: Number(r.value),
+      observedAt: r.observed_at,
     })),
     fc30,
     fc90,
