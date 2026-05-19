@@ -260,8 +260,10 @@ export default function ProLandingPage() {
           EIDX Pro — analytics professionali per il mercato energy
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground">
-          Margin simulator, forecast a 24 mesi con scenari, report PDF brandizzati. Lo stack analytics
-          per fornitori, broker e PMI energivore — costruito sui dati e sui modelli di Energy Index.
+          Trading vitals, risk &amp; hedging, backtest engine + margin simulator, forecast a 24 mesi con
+          scenari, report PDF brandizzati. Lo stack analytics per <strong className="text-foreground">trader</strong>,{" "}
+          <strong className="text-foreground">fornitori</strong>, broker e PMI energivore — costruito sui dati e sui
+          modelli di Energy Index.
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <a
@@ -270,14 +272,65 @@ export default function ProLandingPage() {
           >
             Avvisami al lancio
           </a>
-          <a
-            href="#trading"
-            className="inline-flex items-center justify-center rounded-md border border-border bg-card px-6 py-3 text-sm font-semibold hover:bg-accent transition-colors"
-          >
-            Scopri i tool
-          </a>
         </div>
       </header>
+
+      {/* DEPARTMENT SELECTOR — porta l'utente alla mega-card giusta */}
+      <section className="space-y-5">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-center">
+          Qual e&apos; il tuo dipartimento in azienda?
+        </h2>
+        <p className="text-sm text-muted-foreground text-center max-w-xl mx-auto">
+          Scegli il percorso giusto: ti portiamo direttamente ai tool che servono al tuo team.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2 max-w-4xl mx-auto">
+          <a
+            href="#trading"
+            className="group relative overflow-hidden rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/60 via-card to-card p-6 sm:p-8 flex flex-col gap-2 transition-all hover:border-emerald-500 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-400/15 blur-3xl"
+            />
+            <div className="relative flex items-baseline gap-2">
+              <TrendingUp className="h-6 w-6 text-emerald-700" aria-hidden />
+              <span className="text-3xl md:text-4xl font-black tracking-tight">Trading</span>
+              <span className="ml-auto text-2xl text-emerald-700 transition-transform group-hover:translate-x-1" aria-hidden>
+                ↓
+              </span>
+            </div>
+            <p className="relative text-sm text-muted-foreground">
+              Trader, risk manager, asset manager. Spark spread, ATR, VaR, backtest engine.
+            </p>
+            <span className="relative text-xs font-bold uppercase tracking-widest text-emerald-700 pt-1">
+              Tier Trading 999€/mese
+            </span>
+          </a>
+
+          <a
+            href="#marketing"
+            className="group relative overflow-hidden rounded-3xl border-2 border-sky-500/40 bg-gradient-to-br from-sky-50/60 via-card to-card p-6 sm:p-8 flex flex-col gap-2 transition-all hover:border-sky-500 hover:shadow-xl hover:shadow-sky-500/20 hover:-translate-y-0.5"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-400/15 blur-3xl"
+            />
+            <div className="relative flex items-baseline gap-2">
+              <Users className="h-6 w-6 text-sky-700" aria-hidden />
+              <span className="text-3xl md:text-4xl font-black tracking-tight">Marketing</span>
+              <span className="ml-auto text-2xl text-sky-700 transition-transform group-hover:translate-x-1" aria-hidden>
+                ↓
+              </span>
+            </div>
+            <p className="relative text-sm text-muted-foreground">
+              Fornitori, broker, team commerciali. Margin simulator, customer simulator, forecast, report.
+            </p>
+            <span className="relative text-xs font-bold uppercase tracking-widest text-sky-700 pt-1">
+              Tier Pro 499€/mese
+            </span>
+          </a>
+        </div>
+      </section>
 
       {/* MEGA-CARD TRADING */}
       <section id="trading" className="scroll-mt-20">
@@ -329,65 +382,64 @@ export default function ProLandingPage() {
 
       {/* MEGA-CARD MARKETING */}
       <section id="marketing" className="scroll-mt-20">
-        <article className="relative overflow-hidden rounded-3xl border-2 border-sky-500/30 bg-gradient-to-br from-sky-50/60 via-card to-card p-8 sm:p-10 space-y-6">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-sky-400/10 blur-3xl"
-          />
+        <Link href="/it/pro/marketing" className="group block">
+          <article className="relative overflow-hidden rounded-3xl border-2 border-sky-500/30 bg-gradient-to-br from-sky-50/60 via-card to-card p-8 sm:p-10 space-y-6 transition-all group-hover:border-sky-500/60 group-hover:shadow-xl group-hover:shadow-sky-500/20 group-hover:-translate-y-0.5">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-sky-400/10 blur-3xl"
+            />
 
-          <header className="relative space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sky-700 dark:text-sky-300">
-              Per fornitori e team commerciali
-            </div>
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Marketing</h2>
-              <span className="inline-flex items-center rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-2 py-0.5 text-[11px] font-black tracking-[0.18em] text-stone-900 shadow-sm ring-1 ring-amber-600/20">
-                PRO
-              </span>
-            </div>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
-              Tool per chi vende energia: simula il margine di un&apos;offerta, trova quale offerta
-              del mercato libero costerebbe meno al cliente, modella scenari sul forecast, genera
-              report PDF brandizzati per i clienti.
-            </p>
-          </header>
+            <header className="relative space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sky-700 dark:text-sky-300">
+                Per fornitori e team commerciali
+              </div>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Marketing</h2>
+                <span className="inline-flex items-center rounded-md bg-gradient-to-br from-amber-300 to-amber-500 px-2 py-0.5 text-[11px] font-black tracking-[0.18em] text-stone-900 shadow-sm ring-1 ring-amber-600/20">
+                  PRO
+                </span>
+              </div>
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+                Tool per chi vende energia: simula il margine di un&apos;offerta, trova quale offerta
+                del mercato libero costerebbe meno al cliente, modella scenari sul forecast, genera
+                report PDF brandizzati per i clienti.
+              </p>
+            </header>
 
-          <div className="relative grid gap-4 md:grid-cols-2">
-            {MARKETING_MODULES.map((m) => {
-              const Icon = m.icon;
-              return (
-                <Link
-                  key={m.number}
-                  href={m.tryDemoHref ?? "#"}
-                  className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-5 hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 hover:-translate-y-0.5 transition-all"
-                >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-700 group-hover:bg-sky-600 group-hover:text-white group-hover:scale-110 transition-all">
-                    <Icon className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-xs font-mono font-bold text-sky-700/60">{m.number}</span>
-                      <h3 className="text-base font-bold truncate">{m.title}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{m.description}</p>
-                  </div>
-                  <span
-                    aria-hidden
-                    className="text-sky-600 self-center transition-transform group-hover:translate-x-1"
+            <div className="relative grid gap-4 md:grid-cols-2">
+              {MARKETING_MODULES.map((m) => {
+                const Icon = m.icon;
+                return (
+                  <div
+                    key={m.number}
+                    className="flex items-start gap-3 rounded-2xl border border-border bg-card p-5 transition-all group-hover:border-sky-500/30"
                   >
-                    →
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-700">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xs font-mono font-bold text-sky-700/60">{m.number}</span>
+                        <h3 className="text-base font-bold truncate">{m.title}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{m.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-          <p className="relative text-xs text-muted-foreground pt-2">
-            Disponibile su:{" "}
-            <span className="font-semibold text-foreground">Pro 499€/mese · Enterprise</span> ·
-            click su ogni tool per la demo
-          </p>
-        </article>
+            <div className="relative pt-2">
+              <span className="inline-flex items-center justify-center px-10 py-5 rounded-2xl bg-sky-600 text-white text-lg md:text-xl font-bold shadow-xl shadow-sky-600/30 transition-all group-hover:bg-sky-500 group-hover:shadow-sky-500/50 group-hover:scale-[1.03]">
+                Apri Marketing Desk
+              </span>
+              <p className="text-xs text-muted-foreground mt-3">
+                Disponibile su:{" "}
+                <span className="font-semibold text-foreground">Pro 499€/mese · Enterprise</span>
+              </p>
+            </div>
+          </article>
+        </Link>
       </section>
 
       {/* MEGA CTA — DEMO SIMULATOR */}
