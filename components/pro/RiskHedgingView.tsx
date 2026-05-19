@@ -244,56 +244,81 @@ function PositionList({
 
       <form
         onSubmit={handleAdd}
-        className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"
+        className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] sm:items-end"
       >
-        <select
-          value={asset}
-          onChange={(e) => handleAssetChange(e.target.value as AssetSlug)}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
-          aria-label="Asset"
-        >
-          <option value="pun">PUN</option>
-          <option value="psv">PSV</option>
-          <option value="ttf">TTF</option>
-        </select>
-        <select
-          value={side}
-          onChange={(e) => setSide(e.target.value as Side)}
-          className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
-          aria-label="Side"
-        >
-          <option value="BUY">BUY (long)</option>
-          <option value="SELL">SELL (short)</option>
-        </select>
-        <input
-          type="number"
-          min="1"
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          placeholder="MWh"
-          aria-label="Volume MWh"
-          className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
-        />
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
-          placeholder="€/MWh"
-          aria-label="Prezzo eseguito"
-          className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
-        />
-        <input
-          type="month"
-          value={deliveryMonth}
-          onChange={(e) => setDeliveryMonth(e.target.value)}
-          aria-label="Delivery month"
-          className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
-        />
+        <div className="space-y-1">
+          <label htmlFor="pos-asset" className="block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+            Asset
+          </label>
+          <select
+            id="pos-asset"
+            value={asset}
+            onChange={(e) => handleAssetChange(e.target.value as AssetSlug)}
+            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
+          >
+            <option value="pun">PUN</option>
+            <option value="psv">PSV</option>
+            <option value="ttf">TTF</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="pos-side" className="block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+            Side
+          </label>
+          <select
+            id="pos-side"
+            value={side}
+            onChange={(e) => setSide(e.target.value as Side)}
+            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
+          >
+            <option value="BUY">BUY (long)</option>
+            <option value="SELL">SELL (short)</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="pos-volume" className="block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+            Volume (MWh)
+          </label>
+          <input
+            id="pos-volume"
+            type="number"
+            min="1"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            placeholder="100"
+            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="pos-price" className="block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+            Prezzo eseguito (€/MWh)
+          </label>
+          <input
+            id="pos-price"
+            type="number"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            placeholder="105.00"
+            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="pos-delivery" className="block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+            Delivery month
+          </label>
+          <input
+            id="pos-delivery"
+            type="month"
+            value={deliveryMonth}
+            onChange={(e) => setDeliveryMonth(e.target.value)}
+            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm"
+          />
+        </div>
         <button
           type="submit"
-          className="px-4 py-1.5 rounded-md bg-[#0a3d2e] text-white text-sm font-semibold"
+          className="px-4 py-1.5 rounded-md bg-[#0a3d2e] text-white text-sm font-semibold h-[34px]"
         >
           + Aggiungi
         </button>
