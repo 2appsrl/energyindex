@@ -380,28 +380,40 @@ export default function ProLandingPage() {
             </div>
           </Link>
 
-          {/* CARD 2 COMING SOON — Risk & Hedging (Wave 2) */}
-          <div className="relative flex flex-col rounded-3xl border border-border bg-gradient-to-br from-sky-50/40 to-card p-7 sm:p-9 opacity-90">
+          {/* CARD 2 LIVE — Risk & Hedging (Wave 2) */}
+          <Link
+            href="/it/pro/trading/risk"
+            className="group relative flex flex-col rounded-3xl border border-sky-500/30 bg-gradient-to-br from-sky-50/60 to-card p-7 sm:p-9 transition-all duration-300 hover:-translate-y-1.5 hover:border-sky-500/60 hover:shadow-2xl hover:shadow-sky-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            aria-label="Prova la demo: Risk & Hedging"
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-700 shadow-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-700 shadow-sm transition-all duration-300 group-hover:bg-sky-600 group-hover:text-white group-hover:scale-110">
                   <Shield className="h-5 w-5" />
                 </div>
                 <span className="text-xs font-mono font-bold text-sky-700/60 tracking-wider">WAVE 2</span>
               </div>
-              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 px-2.5 py-1 font-bold">In arrivo Q4</span>
+              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-emerald-500/15 text-emerald-700 px-2.5 py-1 font-bold">
+                Live demo
+              </span>
             </div>
             <h3 className="text-2xl font-bold tracking-tight mb-2">Risk &amp; Hedging</h3>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
               Mark-to-market portafoglio open positions, VaR 1g/10g parametrico, hedge ratio calculator, stress scenari sul P&amp;L.
             </p>
-            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60">
+            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60 mb-4">
               <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Position tracker (input manuale o CSV)</li>
               <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Mark-to-market vs spot / forecast</li>
               <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> VaR 1g / 10g a 95% e 99%</li>
               <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Stress: TTF+30%, recessione, freddo</li>
             </ul>
-          </div>
+            <div className="mt-auto pt-4 border-t border-border/60 space-y-3">
+              <p className="text-xs text-muted-foreground">Disponibile su: <span className="font-semibold text-foreground">Trading / Enterprise</span></p>
+              <span className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-sky-600 text-white text-sm font-semibold shadow-sm transition-all duration-300 group-hover:bg-sky-500 group-hover:shadow-lg group-hover:shadow-sky-500/30">
+                Prova la demo
+              </span>
+            </div>
+          </Link>
 
           {/* CARD 3 COMING SOON — Backtest engine (Wave 3) */}
           <div className="relative flex flex-col rounded-3xl border border-border bg-gradient-to-br from-amber-50/40 to-card p-7 sm:p-9 opacity-90">
