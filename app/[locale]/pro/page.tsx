@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TrendingUp, Users, LineChart, FileText } from "lucide-react";
+import { TrendingUp, Users, LineChart, FileText, Activity, Shield, FlaskConical, BellRing } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
 import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData } from "@/components/pro/PricingSection";
@@ -141,6 +141,21 @@ const TIERS: PricingTierData[] = [
     ctaLabel: "Avvisami al lancio",
     ctaHref: "#early-access",
     highlight: true,
+  },
+  {
+    name: "Trading",
+    monthlyPriceEur: 999,
+    description: "Per trader desk, risk manager, asset manager italiani.",
+    features: [
+      "Tutto del piano Pro",
+      "Trading Vitals (Spark Spread, cross spreads, ATR)",
+      "Correlation matrix rolling 30g",
+      "Risk & Hedging (in arrivo Wave 2)",
+      "Backtest engine (Wave 3)",
+      "API access dedicato",
+    ],
+    ctaLabel: "Avvisami al lancio",
+    ctaHref: "#early-access",
   },
   {
     name: "Enterprise",
@@ -316,10 +331,130 @@ export default function ProLandingPage() {
         </div>
       </Link>
 
+      {/* SEZIONE TRADER */}
+      <section className="space-y-6">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
+            Per trader e risk manager
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">EIDX Trading Desk</h2>
+          <p className="text-muted-foreground">
+            Strumenti purpose-built per chi tradera&apos; PUN/PSV ogni giorno: spark spread italiano, volatility, correlation matrix, risk metrics. Niente Bloomberg da 22k€/anno.
+          </p>
+        </div>
+
+        {/* Featured card live + 3 placeholder coming soon */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* CARD 1 LIVE — Trading Vitals */}
+          <Link
+            href="/it/pro/trading/vitals"
+            className="group relative flex flex-col rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-50/60 to-card p-7 sm:p-9 transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-500/60 hover:shadow-2xl hover:shadow-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            aria-label="Prova la demo: Trading Vitals"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-700 shadow-sm transition-all duration-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:scale-110">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-700/60 tracking-wider">WAVE 1</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-emerald-500/15 text-emerald-700 px-2.5 py-1 font-bold">
+                Live demo
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight mb-2">Trading Vitals</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Dashboard live con i 4 indicatori critici del trader desk italiano: Spark Spread CCGT, cross spreads gas-power, ATR volatility e correlation matrix tra PUN/PSV/TTF/Brent/CO2.
+            </p>
+            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60 mb-4">
+              <li className="flex items-baseline gap-2"><span className="text-emerald-700 font-bold">✓</span> Spark spread con percentili 1Y</li>
+              <li className="flex items-baseline gap-2"><span className="text-emerald-700 font-bold">✓</span> Cross spreads PUN-PSV / PSV-TTF</li>
+              <li className="flex items-baseline gap-2"><span className="text-emerald-700 font-bold">✓</span> ATR 14g per asset</li>
+              <li className="flex items-baseline gap-2"><span className="text-emerald-700 font-bold">✓</span> Correlation heatmap rolling 30g</li>
+            </ul>
+            <div className="mt-auto pt-4 border-t border-border/60 space-y-3">
+              <p className="text-xs text-muted-foreground">Disponibile su: <span className="font-semibold text-foreground">Trading / Enterprise</span></p>
+              <span className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold shadow-sm transition-all duration-300 group-hover:bg-emerald-500 group-hover:shadow-lg group-hover:shadow-emerald-500/30">
+                Prova la demo
+              </span>
+            </div>
+          </Link>
+
+          {/* CARD 2 COMING SOON — Risk & Hedging (Wave 2) */}
+          <div className="relative flex flex-col rounded-3xl border border-border bg-gradient-to-br from-sky-50/40 to-card p-7 sm:p-9 opacity-90">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-700 shadow-sm">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-mono font-bold text-sky-700/60 tracking-wider">WAVE 2</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 px-2.5 py-1 font-bold">In arrivo Q4</span>
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight mb-2">Risk &amp; Hedging</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Mark-to-market portafoglio open positions, VaR 1g/10g parametrico, hedge ratio calculator, stress scenari sul P&amp;L.
+            </p>
+            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60">
+              <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Position tracker (input manuale o CSV)</li>
+              <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Mark-to-market vs spot / forecast</li>
+              <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> VaR 1g / 10g a 95% e 99%</li>
+              <li className="flex items-baseline gap-2"><span className="text-sky-700 font-bold">✓</span> Stress: TTF+30%, recessione, freddo</li>
+            </ul>
+          </div>
+
+          {/* CARD 3 COMING SOON — Backtest engine (Wave 3) */}
+          <div className="relative flex flex-col rounded-3xl border border-border bg-gradient-to-br from-amber-50/40 to-card p-7 sm:p-9 opacity-90">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700 shadow-sm">
+                  <FlaskConical className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-mono font-bold text-amber-700/60 tracking-wider">WAVE 3</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 px-2.5 py-1 font-bold">In arrivo 2027</span>
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight mb-2">Backtest engine</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Editor di strategie con DSL semplice. Run su 5 anni di storico PUN/PSV. Output: P&amp;L cumulato, max drawdown, Sharpe, hit ratio.
+            </p>
+            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60">
+              <li className="flex items-baseline gap-2"><span className="text-amber-700 font-bold">✓</span> Editor DSL (SE/ALLORA su indicatori)</li>
+              <li className="flex items-baseline gap-2"><span className="text-amber-700 font-bold">✓</span> Backtest su 5y di dati daily</li>
+              <li className="flex items-baseline gap-2"><span className="text-amber-700 font-bold">✓</span> Metriche standard quant (Sharpe, DD)</li>
+              <li className="flex items-baseline gap-2"><span className="text-amber-700 font-bold">✓</span> Salvataggio strategie + share link</li>
+            </ul>
+          </div>
+
+          {/* CARD 4 COMING SOON — Alert & API (Wave 3) */}
+          <div className="relative flex flex-col rounded-3xl border border-border bg-gradient-to-br from-rose-50/40 to-card p-7 sm:p-9 opacity-90">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-700 shadow-sm">
+                  <BellRing className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-mono font-bold text-rose-700/60 tracking-wider">WAVE 3</span>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.15em] rounded-full bg-amber-500/15 text-amber-700 px-2.5 py-1 font-bold">In arrivo 2027</span>
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight mb-2">Alert &amp; API</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Trigger su soglie prezzo / spread / percentile + REST API per Excel proprietary models.
+            </p>
+            <ul className="space-y-1.5 text-sm pt-4 border-t border-border/60">
+              <li className="flex items-baseline gap-2"><span className="text-rose-700 font-bold">✓</span> Alert email + webhook per soglie</li>
+              <li className="flex items-baseline gap-2"><span className="text-rose-700 font-bold">✓</span> REST API endpoint per integration</li>
+              <li className="flex items-baseline gap-2"><span className="text-rose-700 font-bold">✓</span> Plugin Excel (XLOOKUP function)</li>
+              <li className="flex items-baseline gap-2"><span className="text-rose-700 font-bold">✓</span> Track record signals storici</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* MODULI */}
       <section id="moduli" className="space-y-8 scroll-mt-20">
         <div className="space-y-2 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Quattro moduli, un singolo workflow</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Tool generalisti — funzionano per fornitori, broker e PMI</h2>
           <p className="text-muted-foreground">
             Pensati per la giornata tipo di chi vende, copre o consuma energia in volumi significativi.
           </p>

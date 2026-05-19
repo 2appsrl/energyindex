@@ -69,7 +69,7 @@ export function PricingSection({ tiers }: { tiers: PricingTierData[] }) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {tiers.map((t) => {
           const isFree = t.isFree ?? t.monthlyPriceEur === 0;
           const annualTotal = t.monthlyPriceEur * 12 * (1 - ANNUAL_DISCOUNT_PCT);
