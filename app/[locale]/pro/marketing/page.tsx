@@ -23,7 +23,8 @@ type Tab =
   | "churn"
   | "winback"
   | "pricing"
-  | "quote";
+  | "quote"
+  | "market-offers";
 
 interface ForecastChartRow {
   date: string;
@@ -84,6 +85,7 @@ export default async function MarketingDashboardPage({
     "winback",
     "pricing",
     "quote",
+    "market-offers",
   ];
   const tab: Tab = allowedTabs.includes(tabParam as Tab) ? (tabParam as Tab) : "margin";
 

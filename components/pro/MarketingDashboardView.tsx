@@ -13,6 +13,7 @@ import {
   ClipboardSignature,
   Target,
   Send,
+  Globe,
 } from "lucide-react";
 import type { ComponentProps } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -24,6 +25,7 @@ import { ChurnPredictorView } from "./ChurnPredictorView";
 import { WinbackOptimizerView } from "./WinbackOptimizerView";
 import { DynamicPricingView } from "./DynamicPricingView";
 import { QuoteBuilderView } from "./QuoteBuilderView";
+import { MarketOffersView } from "./MarketOffersView";
 
 // ============================================================
 // TYPES
@@ -37,7 +39,8 @@ type Tab =
   | "churn"
   | "winback"
   | "pricing"
-  | "quote";
+  | "quote"
+  | "market-offers";
 
 type Group = "acquisition" | "retention" | "pricing-strategy" | "output";
 
@@ -109,6 +112,12 @@ const TABS: TabDef[] = [
     icon: FileText,
     caption: "Genera report PDF brandizzati con dati snapshot + forecast",
   },
+  {
+    id: "market-offers",
+    label: "Market Offers",
+    icon: Globe,
+    caption: "Mappa interattiva di tutte le offerte mercato libero italiano (PLACET + commerciali)",
+  },
 ];
 
 const GROUPS: GroupDef[] = [
@@ -128,7 +137,7 @@ const GROUPS: GroupDef[] = [
     id: "pricing-strategy",
     label: "Pricing & Strategy",
     icon: Sliders,
-    tools: ["pricing", "forecast"],
+    tools: ["pricing", "forecast", "market-offers"],
   },
   {
     id: "output",
@@ -272,6 +281,7 @@ export function MarketingDashboardView({
         {activeTab === "winback" && <WinbackOptimizerView />}
         {activeTab === "pricing" && <DynamicPricingView {...pricing} />}
         {activeTab === "quote" && <QuoteBuilderView />}
+        {activeTab === "market-offers" && <MarketOffersView />}
       </div>
 
       <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500">
