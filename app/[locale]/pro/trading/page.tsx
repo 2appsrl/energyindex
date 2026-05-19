@@ -180,6 +180,22 @@ export default async function TradingDashboardPage({
     ttf: ttf > 0 && atrLatest.ttf !== null ? atrLatest.ttf / ttf : 0.04,
   };
 
+  // ===== BACKTEST DATA =====
+  // Demo: 3 mesi di storia (~90 giorni di calendar). Paid: 12-24 mesi.
+  const DEMO_BACKTEST_DAYS = 90;
+  const backtestPunSeries = punSeries.slice(-DEMO_BACKTEST_DAYS).map((p) => ({
+    date: p.date,
+    close: p.value,
+  }));
+  const backtestPsvSeries = psvSeries.slice(-DEMO_BACKTEST_DAYS).map((p) => ({
+    date: p.date,
+    close: p.value,
+  }));
+  const backtestCo2Series = co2Series.slice(-DEMO_BACKTEST_DAYS).map((p) => ({
+    date: p.date,
+    close: p.value,
+  }));
+
   return (
     <>
       <EidxProHeader section="Trading Desk" />
@@ -209,6 +225,12 @@ export default async function TradingDashboardPage({
           forecastsByHorizon,
           atrPct,
           spot: { pun, psv, ttf },
+        }}
+        backtest={{
+          punSeries: backtestPunSeries,
+          psvSeries: backtestPsvSeries,
+          co2Series: backtestCo2Series,
+          historyMonths: 3,
         }}
       />
     </>

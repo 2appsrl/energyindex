@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TradingVitalsView } from "./TradingVitalsView";
 import { RiskHedgingView } from "./RiskHedgingView";
+import { BacktestView } from "./BacktestView";
 import { Activity, Shield, FlaskConical, BellRing, Lock } from "lucide-react";
 import type { ComponentProps } from "react";
 
@@ -19,21 +20,24 @@ interface TabDef {
 const TABS: TabDef[] = [
   { id: "vitals", label: "Trading Vitals", icon: Activity },
   { id: "risk", label: "Risk & Hedging", icon: Shield },
-  { id: "backtest", label: "Backtest engine", icon: FlaskConical, locked: true },
+  { id: "backtest", label: "Backtest engine", icon: FlaskConical },
   { id: "alert", label: "Alert & API", icon: BellRing, locked: true },
 ];
 
 type VitalsProps = ComponentProps<typeof TradingVitalsView>;
 type RiskProps = ComponentProps<typeof RiskHedgingView>;
+type BacktestProps = ComponentProps<typeof BacktestView>;
 
 export function TradingDashboardView({
   activeTab,
   vitals,
   risk,
+  backtest,
 }: {
   activeTab: Tab;
   vitals: VitalsProps;
   risk: RiskProps;
+  backtest: BacktestProps;
 }) {
   const pathname = usePathname() ?? "/it/pro/trading";
 
@@ -76,13 +80,7 @@ export function TradingDashboardView({
       <div className="pt-2">
         {activeTab === "vitals" && <TradingVitalsView {...vitals} />}
         {activeTab === "risk" && <RiskHedgingView {...risk} />}
-        {activeTab === "backtest" && (
-          <LockedTab
-            label="Backtest engine"
-            eta="2027"
-            description="Editor di strategie con DSL semplice, run su 5 anni di storico, output P&L cumulato + max drawdown + Sharpe ratio."
-          />
-        )}
+        {activeTab === "backtest" && <BacktestView {...backtest} />}
         {activeTab === "alert" && (
           <LockedTab
             label="Alert & API"

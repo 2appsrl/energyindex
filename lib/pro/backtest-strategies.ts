@@ -208,7 +208,9 @@ function sparkSpreadSignals(
  */
 function seasonalitySignals(
   series: PricePoint[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _extras: Record<string, PricePoint[]>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _params: Record<string, number>,
 ): Position[] {
   return series.map((p) => {

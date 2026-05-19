@@ -308,7 +308,7 @@ export default function ProLandingPage() {
             <div className="relative grid gap-3 grid-cols-2 lg:grid-cols-4">
               <MiniToolTile icon={Activity} label="Trading Vitals" status="live" wave="Wave 1" />
               <MiniToolTile icon={Shield} label="Risk & Hedging" status="live" wave="Wave 2" />
-              <MiniToolTile icon={FlaskConical} label="Backtest engine" status="locked" wave="Wave 3" />
+              <MiniToolTile icon={FlaskConical} label="Backtest engine" status="live" wave="Wave 3" />
               <MiniToolTile icon={BellRing} label="Alert & API" status="locked" wave="Wave 3" />
             </div>
 
