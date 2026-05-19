@@ -20,6 +20,7 @@ import { ScenarioStress } from "./ScenarioStress";
 import { CompetitorBenchmark } from "./CompetitorBenchmark";
 import { SimulatorChart } from "./SimulatorChart";
 import { SimulatorActions } from "./SimulatorActions";
+import { SimulatorTour } from "./SimulatorTour";
 import { DemoLockBanner } from "./DemoLockBanner";
 
 interface CompetitorData {
@@ -119,6 +120,10 @@ export function MarginSimulator({
         title="Demo: alcuni scenari + what-if slider sono lockati, salva e PDF disabilitati."
         description="Tier Pro 499€/mese: tutti gli scenari, what-if completo, save scenario, export PDF brandizzato, API access."
       />
+
+      <div className="flex justify-end print:hidden">
+        <SimulatorTour />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <SimulatorInputsPanel inputs={inputs} onChange={setInputs} />
