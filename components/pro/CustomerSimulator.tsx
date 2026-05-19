@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { Users, Lock } from "lucide-react";
 import { rankOffers, type OfferRecord, type ForecastAverages, type OfferRanking } from "@/lib/pro/customer-math";
+import { DemoLockBanner } from "./DemoLockBanner";
 
 const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const NUM = new Intl.NumberFormat("it-IT");
@@ -30,9 +32,16 @@ export function CustomerSimulator({
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      {/* INPUT PANEL */}
-      <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit">
+    <div className="space-y-4">
+      <DemoLockBanner
+        icon={Users}
+        title="Demo: vedi solo l'offerta migliore. Top alternative lockate."
+        description="Tier Pro 499€/mese: ranking completo, esportazione CSV, salva profilo cliente, alert su variazioni offerta."
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        {/* INPUT PANEL */}
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit">
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
             Profilo cliente
@@ -105,6 +114,7 @@ export function CustomerSimulator({
             Vedi i 5 cluster pre-configurati →
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -217,9 +227,23 @@ function BestOfferCard({
       </div>
 
       {runners.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Top alternative</p>
-          <ul className="space-y-1 text-sm">
+        <div className="space-y-1 relative">
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide inline-flex items-center gap-1.5">
+              <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+              Top alternative
+            </p>
+            <Link
+              href="/it/pro#early-access"
+              className="text-[10px] font-bold uppercase text-amber-700 hover:text-amber-900 underline"
+            >
+              Sblocca Pro 499€
+            </Link>
+          </div>
+          <ul
+            className="space-y-1 text-sm select-none blur-[3px] pointer-events-none"
+            aria-hidden
+          >
             {runners.map((r, i) => (
               <li key={r.offer.offer_code} className="flex items-baseline justify-between text-xs">
                 <span className="text-stone-600">{i + 2}° {r.offer.supplier}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TrendingUp } from "lucide-react";
 import {
   computeKpi,
   applyScenario,
@@ -19,6 +20,7 @@ import { ScenarioStress } from "./ScenarioStress";
 import { CompetitorBenchmark } from "./CompetitorBenchmark";
 import { SimulatorChart } from "./SimulatorChart";
 import { SimulatorActions } from "./SimulatorActions";
+import { DemoLockBanner } from "./DemoLockBanner";
 
 interface CompetitorData {
   medianEurPerMwh: number;
@@ -111,38 +113,46 @@ export function MarginSimulator({
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      <SimulatorInputsPanel inputs={inputs} onChange={setInputs} />
-      <div className="space-y-6 min-w-0">
-        <div data-tour="kpi">
-          <KpiCards kpi={kpi} />
-        </div>
-        <div data-tour="chart">
-          <SimulatorChart
-            points={forecastPoints}
-            contractMonths={inputs.contractMonths}
-          />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div data-tour="scenarios">
-            <ScenarioStress
-              rows={scenarioRows}
-              baseMargineAnno={kpi.margineAnnoEur}
-              whatIfShocks={whatIfShocks}
-              onWhatIfChange={setWhatIfShocks}
-              whatIfKpi={whatIfKpi}
+    <div className="space-y-4">
+      <DemoLockBanner
+        icon={TrendingUp}
+        title="Demo: alcuni scenari + what-if slider sono lockati, salva e PDF disabilitati."
+        description="Tier Pro 499€/mese: tutti gli scenari, what-if completo, save scenario, export PDF brandizzato, API access."
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <SimulatorInputsPanel inputs={inputs} onChange={setInputs} />
+        <div className="space-y-6 min-w-0">
+          <div data-tour="kpi">
+            <KpiCards kpi={kpi} />
+          </div>
+          <div data-tour="chart">
+            <SimulatorChart
+              points={forecastPoints}
+              contractMonths={inputs.contractMonths}
             />
           </div>
-          <div data-tour="competitor">
-            <CompetitorBenchmark
-              yourSpread={effectiveSpreadEurPerMwh}
-              competitor={competitor}
-              verdict={verdict}
-            />
+          <div className="grid gap-6 md:grid-cols-2">
+            <div data-tour="scenarios">
+              <ScenarioStress
+                rows={scenarioRows}
+                baseMargineAnno={kpi.margineAnnoEur}
+                whatIfShocks={whatIfShocks}
+                onWhatIfChange={setWhatIfShocks}
+                whatIfKpi={whatIfKpi}
+              />
+            </div>
+            <div data-tour="competitor">
+              <CompetitorBenchmark
+                yourSpread={effectiveSpreadEurPerMwh}
+                competitor={competitor}
+                verdict={verdict}
+              />
+            </div>
           </div>
-        </div>
-        <div data-tour="actions">
-          <SimulatorActions />
+          <div data-tour="actions">
+            <SimulatorActions />
+          </div>
         </div>
       </div>
     </div>

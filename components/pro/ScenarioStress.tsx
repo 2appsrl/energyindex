@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import type {
   KpiResult,
   ScenarioModifier,
@@ -5,6 +6,12 @@ import type {
 } from "@/lib/pro/margin-math";
 import { NO_SHOCKS } from "@/lib/pro/margin-math";
 import { InfoTooltip } from "./InfoTooltip";
+
+/**
+ * Scenari lockati nel demo (visibili come blur con Lock icon).
+ * Nomi interni dal SCENARIOS array in lib/pro/margin-math.
+ */
+const LOCKED_SCENARIOS = new Set<string>(["ttf_spike", "recessione_domanda"]);
 
 const EUR_INT = new Intl.NumberFormat("it-IT", {
   style: "currency",
@@ -26,12 +33,6 @@ function formatPctSigned(decimal: number): string {
 function formatEurSigned(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${NUM_1DP.format(value)} €/MWh`;
-}
-
-function formatPpSigned(decimal: number): string {
-  const pp = decimal * 100;
-  const sign = pp > 0 ? "+" : "";
-  return `${sign}${NUM_1DP.format(pp)} pp`;
 }
 
 export function ScenarioStress({
@@ -68,11 +69,27 @@ export function ScenarioStress({
         {rows.map((r) => {
           const delta = r.kpi.margineAnnoEur - baseMargineAnno;
           const isBase = r.scenario.name === "base";
+          const isLocked = LOCKED_SCENARIOS.has(r.scenario.name);
           const valueClass = isBase
             ? "text-stone-900"
             : delta >= 0
               ? "text-emerald-700"
               : "text-rose-600";
+          if (isLocked) {
+            return (
+              <li
+                key={r.scenario.name}
+                className="flex items-baseline justify-between gap-3 opacity-60"
+                title="Scenario disponibile su tier Pro 499€/mese"
+              >
+                <span className="text-stone-500 inline-flex items-center gap-1.5">
+                  <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+                  {r.scenario.label}
+                </span>
+                <span className="text-xs font-bold text-amber-700">Pro 499€</span>
+              </li>
+            );
+          }
           return (
             <li
               key={r.scenario.name}
@@ -141,17 +158,30 @@ export function ScenarioStress({
           maxLabel="+20 €/MWh"
         />
 
-        <WhatIfSlider
-          label="Shock churn"
-          min={-0.1}
-          max={0.1}
-          step={0.005}
-          value={whatIfShocks.churnShockPct}
-          format={formatPpSigned}
-          onChange={(v) => onWhatIfChange({ ...whatIfShocks, churnShockPct: v })}
-          minLabel="-10 pp"
-          maxLabel="+10 pp"
-        />
+        {/* Shock churn lockato in demo — slider visibile ma disabilitato */}
+        <div className="opacity-50 cursor-not-allowed" title="What-if churn disponibile su tier Pro 499€/mese">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-semibold text-stone-700 inline-flex items-center gap-1.5">
+              <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+              Shock churn
+            </span>
+            <span className="text-[10px] font-bold uppercase text-amber-700">Pro 499€</span>
+          </div>
+          <input
+            type="range"
+            min={-0.1}
+            max={0.1}
+            step={0.005}
+            value={0}
+            disabled
+            aria-label="Shock churn (locked)"
+            className="w-full mt-2 accent-stone-400"
+          />
+          <div className="flex justify-between text-[10px] text-stone-400 tabular-nums">
+            <span>-10 pp</span>
+            <span>+10 pp</span>
+          </div>
+        </div>
 
         <div className="pt-2 text-sm flex items-baseline justify-between gap-3">
           <span className="text-stone-600">

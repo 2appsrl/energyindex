@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { FileText, Lock } from "lucide-react";
+import { DemoLockBanner } from "./DemoLockBanner";
 
 const EUR2 = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const PCT1 = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Default brand color enforced in demo (no custom branding) */
+const DEMO_BRAND_COLOR = "#0a3d2e";
 
 export interface ReportSnapshot {
   latestPrices: Array<{ slug: string; name: string; unit: string; value: number; observedAt: string }>;
@@ -21,8 +26,9 @@ function handlePrint() {
 export function ReportBuilderView({ snapshot }: { snapshot: ReportSnapshot }) {
   const [companyName, setCompanyName] = useState("La Tua Azienda Energy S.r.l.");
   const [clientName, setClientName] = useState("Cliente Esempio S.p.A.");
-  const [brandColor, setBrandColor] = useState("#0a3d2e");
-  const [logoUrl, setLogoUrl] = useState("");
+  // Brand color e logo lockati nel demo — forzati a default EIDX, niente custom branding
+  const brandColor = DEMO_BRAND_COLOR;
+  const logoUrl = "";
 
   const reportDate = new Date(snapshot.generatedAt).toLocaleDateString("it-IT", {
     year: "numeric", month: "long", day: "numeric",
@@ -32,9 +38,17 @@ export function ReportBuilderView({ snapshot }: { snapshot: ReportSnapshot }) {
   });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      {/* CONFIGURATORE */}
-      <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit print:hidden">
+    <div className="space-y-4">
+      <DemoLockBanner
+        icon={FileText}
+        title="Demo: PDF stampabile con watermark 'DEMO', branding custom (logo + colore) lockato."
+        description="Tier Enterprise 3.500€/mese: white-label completo (logo + palette cliente), schedulazione automatica monthly/weekly, distribuzione mailing list, custom research on-demand."
+        ctaLabel="Sblocca Enterprise"
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        {/* CONFIGURATORE */}
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit print:hidden">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Personalizza</h2>
 
         <div className="space-y-1">
@@ -59,33 +73,41 @@ export function ReportBuilderView({ snapshot }: { snapshot: ReportSnapshot }) {
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-stone-700">Colore brand (header)</label>
+        {/* LOCKED: colore brand */}
+        <div className="space-y-1 opacity-60" title="Branding custom su tier Enterprise 3.500€/mese">
+          <label className="block text-xs font-medium text-stone-700 inline-flex items-center gap-1.5">
+            <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+            Colore brand (header)
+            <span className="ml-auto text-[10px] font-bold uppercase text-amber-700">Enterprise</span>
+          </label>
           <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={brandColor}
-              onChange={(e) => setBrandColor(e.target.value)}
-              className="h-9 w-12 rounded border border-stone-300 cursor-pointer"
+            <div
+              className="h-9 w-12 rounded border border-stone-300"
+              style={{ backgroundColor: DEMO_BRAND_COLOR }}
+              aria-label="Colore brand fisso (demo)"
             />
             <input
               type="text"
-              value={brandColor}
-              onChange={(e) => setBrandColor(e.target.value)}
-              className="flex-1 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-mono"
-              placeholder="#0a3d2e"
+              value={DEMO_BRAND_COLOR}
+              disabled
+              className="flex-1 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-mono text-stone-500 cursor-not-allowed"
             />
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="block text-xs font-medium text-stone-700">URL logo (opzionale)</label>
+        {/* LOCKED: URL logo */}
+        <div className="space-y-1 opacity-60" title="Logo custom su tier Enterprise 3.500€/mese">
+          <label className="block text-xs font-medium text-stone-700 inline-flex items-center gap-1.5">
+            <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+            URL logo
+            <span className="ml-auto text-[10px] font-bold uppercase text-amber-700">Enterprise</span>
+          </label>
           <input
             type="url"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
-            placeholder="https://..."
+            value=""
+            disabled
+            className="w-full rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-500 cursor-not-allowed"
+            placeholder="https://logo.cliente.it/logo.svg"
           />
           <p className="text-xs text-stone-500">PNG/SVG, max 200x60px consigliato</p>
         </div>
@@ -98,6 +120,9 @@ export function ReportBuilderView({ snapshot }: { snapshot: ReportSnapshot }) {
           <span aria-hidden>🖨️</span>
           Stampa / Salva PDF
         </button>
+        <p className="text-[11px] text-amber-700 font-medium text-center">
+          ⚠ La stampa includera&apos; watermark &quot;DEMO&quot;
+        </p>
       </div>
 
       {/* PREVIEW REPORT */}
@@ -234,8 +259,25 @@ export function ReportBuilderView({ snapshot }: { snapshot: ReportSnapshot }) {
           body { background: white !important; color: black !important; }
           .container { padding: 0 !important; max-width: 100% !important; }
           @page { margin: 1cm; }
+          /* Watermark "DEMO" diagonale su ogni pagina stampata.
+             Deterrente per evitare che utenti gratis usino il PDF in produzione. */
+          body::before {
+            content: "DEMO";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 200px;
+            font-weight: 900;
+            color: rgba(220, 38, 38, 0.18);
+            letter-spacing: 0.15em;
+            pointer-events: none;
+            z-index: 9999;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
         }
       `}</style>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { LineChart, Lock } from "lucide-react";
 import { ForecastChart } from "@/components/forecast/ForecastChart";
 import {
   applyScenarioToForecast,
@@ -9,6 +11,7 @@ import {
   type ForecastPoint,
   type ScenarioInputs,
 } from "@/lib/pro/forecast-scenari-math";
+import { DemoLockBanner } from "./DemoLockBanner";
 
 const PCT = new Intl.NumberFormat("it-IT", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -27,9 +30,16 @@ export function ForecastScenariView({ baseline }: { baseline: ForecastPoint[] })
   const scenarioAvg = baselineAvg * multiplier;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      {/* INPUT */}
-      <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit">
+    <div className="space-y-4">
+      <DemoLockBanner
+        icon={LineChart}
+        title="Demo: TTF + Brent attivi, CO2 + temperatura lockati. Save scenario disabilitato."
+        description="Tier Pro 499€/mese: tutti i 4 driver, scenari salvati ricaricabili, orizzonti 24 mesi, scenari multipli paralleli."
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        {/* INPUT */}
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-5 h-fit">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Shock driver</h2>
 
         <ScenarioSlider
@@ -50,32 +60,27 @@ export function ForecastScenariView({ baseline }: { baseline: ForecastPoint[] })
           unit="%"
           onChange={(v) => setShocks({ ...shocks, brentShockPct: v })}
         />
-        <ScenarioSlider
-          label="CO2 EU ETS"
-          value={shocks.co2ShockPct}
-          min={-30}
-          max={50}
-          step={5}
-          unit="%"
-          onChange={(v) => setShocks({ ...shocks, co2ShockPct: v })}
-        />
-        <ScenarioSlider
-          label="Anomalia temperatura"
-          value={shocks.tempAnomalyC}
-          min={-5}
-          max={5}
-          step={0.5}
-          unit="°C"
-          onChange={(v) => setShocks({ ...shocks, tempAnomalyC: v })}
-        />
+        <LockedScenarioSlider label="CO2 EU ETS" minLabel="-30%" maxLabel="+50%" />
+        <LockedScenarioSlider label="Anomalia temperatura" minLabel="-5°C" maxLabel="+5°C" />
 
-        <button
-          type="button"
-          onClick={() => setShocks(NO_SCENARIO_SHOCKS)}
-          className="text-xs text-stone-500 underline"
-        >
-          Reset scenario
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setShocks(NO_SCENARIO_SHOCKS)}
+            className="text-xs text-stone-500 underline"
+          >
+            Reset scenario
+          </button>
+          <button
+            type="button"
+            disabled
+            title="Salva scenario disponibile su tier Pro 499€/mese"
+            className="inline-flex items-center gap-1 text-xs text-stone-400 cursor-not-allowed"
+          >
+            <Lock className="h-3 w-3" aria-hidden />
+            Salva
+          </button>
+        </div>
 
         <div className="pt-3 border-t border-stone-200 text-xs text-stone-500">
           Sensitivity stimate dal modello Ridge: TTF dominante (0.5x), Brent (0.2x), CO2 (0.1x), temperatura -1&deg;C → +2% PUN.
@@ -125,6 +130,48 @@ export function ForecastScenariView({ baseline }: { baseline: ForecastPoint[] })
           </div>
           <ForecastChart points={scenarioPoints} unit="€/MWh" forceTheme="light" />
         </div>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function LockedScenarioSlider({
+  label,
+  minLabel,
+  maxLabel,
+}: {
+  label: string;
+  minLabel: string;
+  maxLabel: string;
+}) {
+  return (
+    <div className="space-y-2 opacity-50" title="Driver disponibile su tier Pro 499€/mese">
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-medium text-stone-700 inline-flex items-center gap-1.5">
+          <Lock className="h-3 w-3 text-amber-600" aria-hidden />
+          {label}
+        </span>
+        <Link
+          href="/it/pro#early-access"
+          className="text-[10px] font-bold uppercase text-amber-700 hover:text-amber-900 underline"
+        >
+          Pro 499€
+        </Link>
+      </div>
+      <input
+        type="range"
+        min={-30}
+        max={50}
+        value={0}
+        disabled
+        aria-label={`${label} (locked)`}
+        className="w-full accent-stone-400 cursor-not-allowed"
+      />
+      <div className="flex justify-between text-xs text-stone-400">
+        <span>{minLabel}</span>
+        <span>0</span>
+        <span>{maxLabel}</span>
       </div>
     </div>
   );
