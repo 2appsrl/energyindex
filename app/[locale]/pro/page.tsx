@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
+import { ContactForm } from "@/components/pro/ContactForm";
 import { MegaCTACarousel } from "@/components/pro/MegaCTACarousel";
 import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData } from "@/components/pro/PricingSection";
 import { breadcrumbList, jsonLdString, organization } from "@/lib/seo/jsonld";
@@ -363,7 +364,22 @@ export default function ProLandingPage() {
           >
             Avvisami al lancio
           </a>
+          <a
+            href="#contatti"
+            className="inline-flex items-center justify-center rounded-md border border-border bg-card px-6 py-3 text-sm font-semibold hover:bg-accent transition-colors"
+          >
+            Contatti
+          </a>
         </div>
+        <p className="text-sm text-muted-foreground pt-2">
+          Scrivici direttamente a{" "}
+          <a
+            href="mailto:pro@energyindex.pro"
+            className="font-mono font-semibold text-primary hover:underline"
+          >
+            pro@energyindex.pro
+          </a>
+        </p>
       </header>
 
       {/* DEPARTMENT SELECTOR — porta l'utente alla mega-card giusta */}
@@ -570,6 +586,31 @@ export default function ProLandingPage() {
           </p>
         </div>
         <LeadCaptureForm />
+      </section>
+
+      {/* CONTATTI */}
+      <section id="contatti" className="rounded-2xl border bg-card p-8 sm:p-12 space-y-6 max-w-3xl mx-auto scroll-mt-20">
+        <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-baseline">
+          <div className="space-y-2">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Contatti</h2>
+            <p className="text-muted-foreground">
+              Hai domande sui tool, vuoi una demo personalizzata, ti serve un quote Enterprise
+              o un&apos;integrazione custom? Scrivici, rispondiamo entro 2 giorni lavorativi.
+            </p>
+          </div>
+          <div className="text-left md:text-right space-y-1 md:pl-6 md:border-l md:border-border">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">
+              Scrivi a
+            </p>
+            <a
+              href="mailto:pro@energyindex.pro"
+              className="block text-lg md:text-xl font-mono font-bold text-primary hover:underline"
+            >
+              pro@energyindex.pro
+            </a>
+          </div>
+        </div>
+        <ContactForm />
       </section>
 
       <footer className="text-center text-xs text-muted-foreground pt-8 border-t">
