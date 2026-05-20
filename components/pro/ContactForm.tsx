@@ -1,20 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { sendContactEmail } from "@/app/actions/send-contact-email";
 
 /**
- * Form di contatto diretto verso il team EIDX Pro.
- * Stesso pattern del LeadCaptureForm (mailto, no backend) — il messaggio
- * pre-compilato viene aperto nel client email dell'utente verso
- * pro@energyindex.pro.
+ * Form di contatto verso il team EIDX Pro.
  *
- * Differenza dal LeadCaptureForm: cattura piu' campi (oggetto + messaggio
- * libero + azienda) ed e' pensato per richieste specifiche (demo, quote
- * enterprise, integrazioni, supporto tecnico, partnership).
+ * Pipeline reale (non piu' mailto):
+ *  1. Submit chiama la Server Action sendContactEmail
+ *  2. Server invia email via Resend verso pro@energyindex.pro
+ *  3. Risposta: {ok: true} -> success state | {ok: false, fallbackMailto?} -> errore + fallback
  *
- * Quando i volumi superano ~10/giorno o serve auto-reply, migrare a
- * Server Action + tabella eidx_pro_contacts + email transactional.
+ * Setup richiesto:
+ *  - RESEND_API_KEY nelle env vars (Netlify dashboard)
+ *  - Dominio mittente verificato su Resend (o usa onboarding@resend.dev per test)
+ *
+ * Fallback: se il server ritorna fallbackMailto, mostriamo un link cliccabile
+ * cosi' l'utente puo' comunque mandare il messaggio dal suo client email.
  */
 export function ContactForm() {
   const [nome, setNome] = useState("");
@@ -22,7 +25,12 @@ export function ContactForm() {
   const [azienda, setAzienda] = useState("");
   const [oggetto, setOggetto] = useState("Richiesta informazioni EIDX Pro");
   const [messaggio, setMessaggio] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<
+    | { type: "success" }
+    | { type: "error"; message: string; mailtoFallback?: string }
+    | null
+  >(null);
 
   const isValid =
     nome.trim().length >= 2 &&
@@ -32,44 +40,54 @@ export function ContactForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || pending) return;
 
-    trackEvent("eidx_pro_contact_submit", {
-      oggetto: oggetto.slice(0, 60),
-      hasAzienda: azienda.trim().length > 0 ? "yes" : "no",
+    startTransition(async () => {
+      trackEvent("eidx_pro_contact_submit", {
+        oggetto: oggetto.slice(0, 60),
+        hasAzienda: azienda.trim().length > 0 ? "yes" : "no",
+      });
+
+      const response = await sendContactEmail({
+        nome: nome.trim(),
+        email: email.trim(),
+        azienda: azienda.trim() || undefined,
+        oggetto,
+        messaggio: messaggio.trim(),
+      });
+
+      if (response.ok) {
+        setResult({ type: "success" });
+        // Reset il form così se l'utente clicca "Invia un altro" è già pulito
+        setMessaggio("");
+      } else {
+        setResult({
+          type: "error",
+          message: response.error,
+          mailtoFallback: response.fallbackMailto,
+        });
+      }
     });
-
-    const subject = encodeURIComponent(oggetto);
-    const body = encodeURIComponent(
-      `Nome: ${nome}\nEmail: ${email}\nAzienda: ${azienda || "(non indicata)"}\n\n` +
-        `Messaggio:\n${messaggio}\n\n` +
-        `---\nInviato dal form di contatto su energyindex.it/it/pro`,
-    );
-    window.location.href = `mailto:pro@energyindex.pro?subject=${subject}&body=${body}`;
-    setSubmitted(true);
   }
 
-  if (submitted) {
+  if (result?.type === "success") {
     return (
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center space-y-2">
-        <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-          Grazie! Si e&apos; aperto il tuo client email.
+      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-center space-y-3">
+        <div className="text-3xl" aria-hidden>
+          ✅
+        </div>
+        <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-300">
+          Messaggio inviato!
         </h3>
         <p className="text-sm text-muted-foreground">
-          Invia il messaggio per completare la richiesta. Ti risponderemo entro 2 giorni
-          lavorativi all&apos;indirizzo{" "}
-          <a
-            href="mailto:pro@energyindex.pro"
-            className="font-mono text-primary hover:underline"
-          >
-            pro@energyindex.pro
-          </a>
-          .
+          Grazie {nome.split(" ")[0]}, abbiamo ricevuto la tua richiesta. Ti risponderemo
+          entro 2 giorni lavorativi all&apos;indirizzo{" "}
+          <strong className="text-foreground font-mono text-xs">{email}</strong>.
         </p>
         <button
           type="button"
           onClick={() => {
-            setSubmitted(false);
+            setResult(null);
             setMessaggio("");
           }}
           className="text-xs text-muted-foreground underline hover:text-foreground"
@@ -94,7 +112,8 @@ export function ContactForm() {
             placeholder="Mario Rossi"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            disabled={pending}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           />
         </div>
         <div className="space-y-1">
@@ -108,7 +127,8 @@ export function ContactForm() {
             placeholder="nome@azienda.it"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            disabled={pending}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           />
         </div>
       </div>
@@ -124,7 +144,8 @@ export function ContactForm() {
             placeholder="Es. Energia Verde S.p.A."
             value={azienda}
             onChange={(e) => setAzienda(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            disabled={pending}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           />
         </div>
         <div className="space-y-1">
@@ -135,7 +156,8 @@ export function ContactForm() {
             id="contact-oggetto"
             value={oggetto}
             onChange={(e) => setOggetto(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            disabled={pending}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           >
             <option>Richiesta informazioni EIDX Pro</option>
             <option>Richiesta demo personalizzata</option>
@@ -159,24 +181,41 @@ export function ContactForm() {
           placeholder="Raccontaci la tua esigenza: che tool ti interessano, che volumi gestisci, che integrazioni servono..."
           value={messaggio}
           onChange={(e) => setMessaggio(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-y"
+          disabled={pending}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary resize-y disabled:opacity-50"
         />
         <p className="text-xs text-muted-foreground">
           Minimo 10 caratteri ({messaggio.trim().length}/10)
         </p>
       </div>
 
+      {result?.type === "error" && (
+        <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900 space-y-2">
+          <p>
+            <strong>Errore invio:</strong> {result.message}
+          </p>
+          {result.mailtoFallback && (
+            <p className="text-xs">
+              In alternativa,{" "}
+              <a href={result.mailtoFallback} className="underline font-semibold">
+                inviaci direttamente dal tuo client email
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={!isValid}
+        disabled={!isValid || pending}
         className="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.01] hover:shadow-primary/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
       >
-        Invia messaggio →
+        {pending ? "Invio in corso…" : "Invia messaggio →"}
       </button>
 
       <p className="text-xs text-muted-foreground">
-        Premendo &quot;Invia&quot; si aprira&apos; il tuo client email con il messaggio
-        precompilato verso{" "}
+        Il tuo messaggio verra&apos; inviato direttamente a{" "}
         <strong className="font-mono text-foreground">pro@energyindex.pro</strong>. Risposta
         garantita entro 2 giorni lavorativi.
       </p>
