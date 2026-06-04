@@ -62,7 +62,7 @@ export function MarketOffersView() {
               { label: "Fornitori", value: "100+" },
               { label: "Fonte", value: "ARERA open data" },
             ]}
-            href="/it/mercato-libero/ticker"
+            href="/it/mercato-libero/ticker?src=placet"
             accent="amber"
           />
         </div>

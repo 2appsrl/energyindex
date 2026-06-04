@@ -268,11 +268,11 @@ function groupOffers(offers: Offer[]): Section[] {
 export function MarketMap({
   offers,
   asOf,
-  source = "placet",
+  source = "all",
 }: {
   offers: Offer[];
   asOf: string | null;
-  source?: "placet" | "libero";
+  source?: "all" | "placet" | "libero";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
@@ -471,6 +471,18 @@ export function MarketMap({
                 <div className="flex items-center gap-2">
                   <Link
                     href="/it/mercato-libero/ticker"
+                    aria-current={source === "all" ? "page" : undefined}
+                    className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest rounded transition-colors ${
+                      source === "all"
+                        ? "bg-emerald-300 text-black"
+                        : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
+                    }`}
+                  >
+                    Tutte
+                  </Link>
+                  <Link
+                    href="/it/mercato-libero/ticker?src=placet"
+                    aria-current={source === "placet" ? "page" : undefined}
                     className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest rounded transition-colors ${
                       source === "placet"
                         ? "bg-emerald-300 text-black"
@@ -481,13 +493,14 @@ export function MarketMap({
                   </Link>
                   <Link
                     href="/it/mercato-libero/ticker?src=libero"
+                    aria-current={source === "libero" ? "page" : undefined}
                     className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest rounded transition-colors ${
                       source === "libero"
                         ? "bg-emerald-300 text-black"
                         : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
                     }`}
                   >
-                    MERCATO LIBERO
+                    Mercato libero
                   </Link>
                 </div>
                 <span>·</span>
@@ -505,7 +518,7 @@ export function MarketMap({
               {/* Filtro Certificate / Non certificate
                   Visibile solo nella vista MERCATO LIBERO (PLACET sono
                   sempre certificate by ARERA, il filtro sarebbe inutile). */}
-              {source === "libero" && nonCertCount > 0 && (
+              {(source === "libero" || source === "all") && nonCertCount > 0 && (
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <span className="text-[10px] uppercase tracking-widest text-emerald-300/50 font-mono">
                     Filtra:
@@ -809,7 +822,9 @@ export function MarketMap({
           <p>
             {source === "libero"
               ? `ENERGY INDEX · MARKET MAP · OFFERTE COMMERCIALI MERCATO LIBERO (NON-PLACET) · ULTIMA RILEVAZIONE ${asOf ?? "—"}`
-              : `ENERGY INDEX · MARKET MAP · DATI ARERA PORTALE OFFERTE PLACET · ULTIMA RILEVAZIONE ${asOf ?? "—"}`}
+              : source === "placet"
+                ? `ENERGY INDEX · MARKET MAP · DATI ARERA PORTALE OFFERTE PLACET · ULTIMA RILEVAZIONE ${asOf ?? "—"}`
+                : `ENERGY INDEX · MARKET MAP · TUTTE LE OFFERTE (PLACET ARERA + MERCATO LIBERO) · ULTIMA RILEVAZIONE ${asOf ?? "—"}`}
           </p>
           <p>
             <Link href="/it/mercato-libero" className="hover:text-emerald-400">
