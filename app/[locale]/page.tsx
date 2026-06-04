@@ -5,15 +5,33 @@ import { PriceShowcaseCard } from "@/components/home/PriceShowcaseCard";
 import { MarketBanner } from "@/components/home/MarketBanner";
 import { DriverCard } from "@/components/home/DriverCard";
 import { Droplets, Flame as FlameIcon, Leaf, Thermometer } from "lucide-react";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
-  title: "Energy Index — Prezzi luce e gas in tempo reale",
+  // SEO target: "PUN energia", "PUN oggi", "prezzo PUN", "PUN GME"
+  title: "PUN oggi — Prezzo PUN energia elettrica in tempo reale | Energy Index",
   description:
-    "Osservatorio gratuito su PUN (luce), PSV (gas) e offerte ARERA mercato libero. Confronta tariffe luce e gas in pochi click.",
+    "PUN oggi: prezzo energia elettrica all'ingrosso in tempo reale (GME). Forecast PUN/PSV/TTF a 7/30/90/180 giorni con track record verificabile. Offerte mercato libero ARERA. Gratis.",
+  keywords: [
+    "PUN",
+    "PUN oggi",
+    "prezzo PUN",
+    "PUN energia",
+    "PUN GME",
+    "prezzo energia elettrica",
+    "PSV gas",
+    "TTF",
+    "mercato libero energia",
+    "forecast PUN",
+    "energy index",
+  ],
+  alternates: {
+    canonical: "https://energyindex.it/it",
+  },
   openGraph: {
-    title: "Energy Index — Prezzi luce e gas in tempo reale",
+    title: "PUN oggi — Prezzo energia elettrica in tempo reale | Energy Index",
     description:
-      "Osservatorio gratuito su PUN, PSV e offerte ARERA mercato libero.",
+      "PUN, PSV, TTF in tempo reale dal GME + forecast a 180 giorni + offerte mercato libero ARERA. Gratis, no registrazione.",
     type: "website",
     locale: "it_IT",
     url: "/it",
@@ -21,8 +39,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Energy Index — Prezzi luce e gas in tempo reale",
-    description: "Osservatorio gratuito su PUN, PSV e offerte ARERA mercato libero.",
+    title: "PUN oggi — Prezzo energia elettrica in tempo reale",
+    description: "PUN GME + forecast + offerte ARERA, gratis su energyindex.it",
     images: ["/opengraph-image"],
   },
 };
@@ -117,12 +135,72 @@ export default async function HomeIt() {
     getDriverLatest(supabase, "ttf"),
   ]);
 
+  // SEO: FAQ JSON-LD per ranking "PUN energia" (rich snippets su Google)
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Cos'è il PUN energia?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Il PUN (Prezzo Unico Nazionale) è il prezzo all'ingrosso dell'energia elettrica in Italia, calcolato giornalmente dal GME (Gestore dei Mercati Energetici) sulla base degli scambi nel mercato del giorno prima (MGP). È espresso in €/MWh ed è il riferimento per le offerte luce indicizzate del mercato libero.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Qual è il PUN oggi?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: pun.value
+            ? `Il PUN oggi è ${pun.value.toFixed(2)} ${pun.unit}. Aggiornato in tempo reale su energyindex.it dalle pubblicazioni ufficiali del GME.`
+            : "Il valore PUN più recente è visualizzato in tempo reale sul nostro sito, aggiornato dalle pubblicazioni ufficiali del GME.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Come si calcola il PUN?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Il PUN è la media ponderata dei prezzi zonali (Nord, Centro-Nord, Centro-Sud, Sud, Calabria, Sicilia, Sardegna) sui volumi di acquisto effettivi nel mercato del giorno prima. Viene pubblicato ogni giorno dal GME dopo la chiusura della sessione MGP.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Cosa significa PSV nel mercato gas?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Il PSV (Punto di Scambio Virtuale) è il prezzo all'ingrosso del gas naturale in Italia, riferimento per le offerte gas variabili del mercato libero. È espresso in €/MWh o €/Smc.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Posso prevedere il PUN futuro?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Su Energy Index pubblichiamo forecast PUN giornalieri a 7, 30, 90 e 180 giorni, generati con modello Ridge regression calibrato via conformal prediction. Tracciamo l'accuratezza in modo trasparente nella pagina Track Record.",
+        },
+      },
+    ],
+  };
+
   return (
     <div className="container mx-auto py-12 sm:py-16 px-4 space-y-8 sm:space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }}
+      />
+
       <header className="space-y-3">
-        <h1 className="text-4xl sm:text-5xl font-bold">Energy Index</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">
-          Osservatorio prezzi luce e gas in tempo reale.
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+          PUN oggi: prezzo energia elettrica e gas in tempo reale
+        </h1>
+        <p className="text-muted-foreground text-base sm:text-lg max-w-3xl">
+          Osservatorio gratuito su <strong>PUN</strong> (mercato elettrico GME),{" "}
+          <strong>PSV</strong> (gas naturale), <strong>TTF</strong>, Brent e CO₂. Forecast
+          giornaliero a 7, 30, 90 e 180 giorni + mappa di tutte le offerte del mercato
+          libero ARERA.
         </p>
       </header>
 
@@ -199,6 +277,103 @@ export default async function HomeIt() {
         luceVariabileMedian={market.luceVariabileMedian}
         totalOffers={market.totalOffers}
       />
+
+      {/* MEGA-CARD MARKET MAP — visualizza ~500 offerte ARERA + brand commerciali
+          live in una mappa interattiva stile borsa. Tema dark/Matrix per richiamare
+          l'estetica del ticker. */}
+      <Link
+        href="/it/mercato-libero/ticker"
+        className="group relative block overflow-hidden rounded-3xl bg-black ring-1 ring-emerald-400/30 shadow-2xl shadow-emerald-900/40 transition-all hover:shadow-emerald-900/60 hover:-translate-y-1"
+      >
+        {/* Decorative grid (CSS background) — richiama il look ticker */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(16, 185, 129, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.15) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -bottom-32 h-72 w-72 rounded-full bg-emerald-400/15 blur-3xl"
+        />
+
+        <div className="relative p-8 sm:p-12 lg:p-16">
+          {/* Top label */}
+          <div className="flex items-center gap-2 mb-6">
+            <span
+              className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse"
+              aria-hidden
+            />
+            <span className="text-xs font-mono uppercase tracking-widest text-emerald-300">
+              Live · ~500 offerte attive · ARERA open data
+            </span>
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="space-y-5">
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.05]">
+                Market Map
+                <br />
+                <span className="text-emerald-300 font-mono">offerte luce e gas</span>
+              </h2>
+              <p className="text-base sm:text-lg text-emerald-100/80 max-w-2xl">
+                Visualizza in una mappa interattiva tutte le offerte commerciali
+                del mercato libero italiano: filtra per fornitore, regione, prezzo,
+                tipologia. Aggiornata giornalmente dal Portale Offerte ARERA e
+                scraping diretto dei top 5 brand.
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-emerald-100/70 max-w-2xl">
+                <li className="flex items-baseline gap-2">
+                  <span className="text-emerald-400 mt-0.5" aria-hidden>
+                    ▸
+                  </span>
+                  <span>1.500+ offerte PLACET ARERA</span>
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="text-emerald-400 mt-0.5" aria-hidden>
+                    ▸
+                  </span>
+                  <span>5 brand commerciali (Enel/Eni/Edison/Acea/Engie)</span>
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="text-emerald-400 mt-0.5" aria-hidden>
+                    ▸
+                  </span>
+                  <span>Filtri per regione + cluster consumo</span>
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="text-emerald-400 mt-0.5" aria-hidden>
+                    ▸
+                  </span>
+                  <span>Confronto prezzo €/MWh real-time</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col items-stretch lg:items-end gap-3 shrink-0">
+              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-400 px-8 py-5 text-base lg:text-lg font-bold text-emerald-950 shadow-xl shadow-emerald-500/40 transition-all group-hover:scale-[1.03] group-hover:shadow-emerald-500/60">
+                <span aria-hidden className="text-xl font-mono">
+                  ⊞
+                </span>
+                Apri Market Map
+                <span aria-hidden className="ml-1 transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+              </span>
+              <p className="text-xs text-emerald-300/60 text-center lg:text-right font-mono">
+                Vista borsa · dark theme · niente login
+              </p>
+            </div>
+          </div>
+        </div>
+      </Link>
 
       {/* MEGA CTA verso EIDX Pro — audience B2B (fornitori/mandanti/broker)
           posizionata SOTTO il banner consumer, cosi' chi cerca offerte trova

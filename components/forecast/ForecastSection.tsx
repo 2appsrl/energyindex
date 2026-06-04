@@ -47,13 +47,24 @@ export async function ForecastSection({
     p_horizon_days: horizonDays,
   });
 
-  const points = ((chartData ?? []) as ChartRow[]).map((r) => ({
+  const allPoints = ((chartData ?? []) as ChartRow[]).map((r) => ({
     date: String(r.date),
     source: r.source,
     value: Number(r.value),
     value_lower: r.value_lower === null ? null : Number(r.value_lower),
     value_upper: r.value_upper === null ? null : Number(r.value_upper),
   }));
+
+  // Limita la storia mostrata: la RPC ne ritorna 365 giorni (per backfill /
+  // analisi), ma per il chart "Previsione a X giorni" vogliamo che il forecast
+  // futuro domini visivamente. Mostra solo gli ultimi 14 giorni di storia +
+  // tutto il forecast (che gia' copre p_horizon_days giorni).
+  const HISTORY_DAYS_SHOWN = 14;
+  const cutoffMs = Date.now() - HISTORY_DAYS_SHOWN * 86400000;
+  const points = allPoints.filter((p) => {
+    if (p.source === "forecast") return true;
+    return new Date(p.date).getTime() >= cutoffMs;
+  });
 
   const { data: latest } = await supabase.rpc("get_forecast_latest", {
     p_asset_slugs: [assetSlug],

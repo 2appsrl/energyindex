@@ -32,10 +32,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: jsonLdString(website()) }}
         />
         {children}
+        {/* Umami analytics — privacy-first, GDPR-friendly (no cookies),
+            free tier 100k events/mese. Sostituisce Plausible. Dashboard:
+            https://cloud.umami.is */}
         <Script
           defer
-          data-domain="energyindex.it"
-          src="https://plausible.io/js/script.js"
+          src="https://cloud.umami.is/script.js"
+          data-website-id="e5cfcd7e-d356-4fd9-aef3-ba28d492292e"
           strategy="afterInteractive"
         />
       </body>
