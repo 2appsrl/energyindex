@@ -159,6 +159,13 @@ export interface Offer {
   price: number;
   median: number;
   /**
+   * PCV annuale (Prezzo per la Commercializzazione della Vendita), EUR/anno.
+   * E' la quota fissa €/POD (luce) o €/PdR (gas) che si paga indipendentemente
+   * dal consumo. Per calcolo bolletta totale: pcvEurAnno + price × consumo.
+   * 0 se non disponibile (la RPC fa COALESCE su NULL).
+   */
+  pcvEurAnno: number;
+  /**
    * Ruolo del creator su energiapro.biz (solo per source 'energiapro_commerciali').
    * NULL/undefined per PLACET (sempre certificate via ARERA) e per offerte legacy.
    */
@@ -269,10 +276,17 @@ export function MarketMap({
   offers,
   asOf,
   source = "all",
+  highlightedCodes,
 }: {
   offers: Offer[];
   asOf: string | null;
   source?: "all" | "placet" | "libero";
+  /**
+   * Codici di offerte da evidenziare visivamente con glow extra (winner
+   * del MarketMapSimulator sotto la mappa). Pass-by-value via array di
+   * stringhe — viene convertito in Set internamente per O(1) lookup.
+   */
+  highlightedCodes?: string[];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
@@ -341,6 +355,13 @@ export function MarketMap({
   }, [offers, certFilter]);
 
   const sections = useMemo(() => groupOffers(filteredOffers), [filteredOffers]);
+
+  // Set lookup O(1) per il tile-rendering. useMemo evita di ricreare il
+  // Set ad ogni render se l'array highlightedCodes e' stabile.
+  const highlightSet = useMemo(
+    () => new Set(highlightedCodes ?? []),
+    [highlightedCodes],
+  );
 
   const distinctVendors = useMemo(() => {
     const set = new Set<string>();
@@ -771,18 +792,25 @@ export function MarketMap({
                     const isMatch = matchesSearch(o.vendor);
                     const isDimmed = searchActive && !isMatch;
                     const isNonCert = !isCertificateOffer(o);
+                    const isWinner = highlightSet.has(o.codice);
                     const cls = [
                       "aspect-square rounded-[3px] cursor-pointer relative tile-fall focus:outline-none focus:ring-2 focus:ring-emerald-400",
                       isMatch ? "tile-pulse" : "",
                       isDimmed ? "tile-dim" : "",
-                      // Outline amber-200 + small ⚠ corner per Non certificate
-                      // (le Certificate restano "pulite" — è l'opzione di default sicura).
                       isNonCert ? "ring-1 ring-inset ring-amber-200/70" : "",
+                      // Winner del Simulator sotto la mappa: scale-up + ring extra
+                      // pulse + z-elevation per "saltare fuori" dal grid.
+                      isWinner
+                        ? "tile-winner ring-2 ring-emerald-200 z-10 scale-[1.6]"
+                        : "",
                     ]
                       .filter(Boolean)
                       .join(" ");
                     const certLabel = isNonCert
                       ? " · NON CERTIFICATE (creata da agenzia)"
+                      : "";
+                    const winnerLabel = isWinner
+                      ? " · MIGLIORE OFFERTA per il tuo consumo"
                       : "";
                     return (
                       <button
@@ -791,7 +819,9 @@ export function MarketMap({
                         className={cls}
                         style={{
                           background: fill,
-                          boxShadow: `0 0 6px ${glow}`,
+                          boxShadow: isWinner
+                            ? `0 0 24px 4px ${glow}, 0 0 8px ${glow}`
+                            : `0 0 6px ${glow}`,
                           animationDelay: `${idx * 3}ms`,
                           ["--glow" as string]: glow,
                         }}
@@ -799,7 +829,7 @@ export function MarketMap({
                         onMouseLeave={() => setHovered(null)}
                         onFocus={() => setHovered({ offer: o, section })}
                         onBlur={() => setHovered(null)}
-                        aria-label={`${o.vendor} ${NUMBER_4DP.format(o.price)} ${section.unit}${certLabel}`}
+                        aria-label={`${o.vendor} ${NUMBER_4DP.format(o.price)} ${section.unit}${certLabel}${winnerLabel}`}
                       >
                         {isNonCert && (
                           <span
@@ -807,6 +837,14 @@ export function MarketMap({
                             className="absolute -top-0.5 -right-0.5 text-[7px] leading-none text-amber-900 font-bold drop-shadow-[0_0_2px_rgba(0,0,0,0.6)]"
                           >
                             ⚠
+                          </span>
+                        )}
+                        {isWinner && (
+                          <span
+                            aria-hidden
+                            className="absolute -top-1 -left-1 text-[9px] leading-none drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]"
+                          >
+                            🏆
                           </span>
                         )}
                       </button>
@@ -927,6 +965,21 @@ export function MarketMap({
               opacity: 1;
               transform: scale(2.5);
               z-index: 20;
+            }
+            @keyframes tilewinner {
+              0%, 100% {
+                transform: scale(1.6);
+                box-shadow: 0 0 16px var(--glow), 0 0 32px rgba(20, 217, 122, 0.6);
+              }
+              50% {
+                transform: scale(1.95);
+                box-shadow: 0 0 24px var(--glow), 0 0 56px rgba(20, 217, 122, 0.95);
+              }
+            }
+            .tile-winner {
+              animation: tilewinner 1.5s ease-in-out infinite !important;
+              z-index: 15 !important;
+              opacity: 1 !important;
             }
           `,
         }}

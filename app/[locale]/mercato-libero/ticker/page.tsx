@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
-import { MarketMap, type Offer } from "./MarketMap";
+import type { Offer } from "./MarketMap";
+import { MarketMapWithSimulator } from "./MarketMapWithSimulator";
 
 type Source = "all" | "placet" | "libero";
 
@@ -65,6 +66,10 @@ interface MarketRow {
   price_type: string;
   price_value: number | string;
   category_median: number | string;
+  // PCV (Prezzo per la Commercializzazione della Vendita) annuale = quota
+  // fissa €/POD o €/PdR. PLACET: da raw->>'quota_fissa_eur_anno'.
+  // Libero: fixed_cost_monthly × 12.
+  pcv_eur_anno: number | string | null;
   // Solo per get_market_map_libero (la RPC PLACET non li ha — undefined OK)
   creator_role?: string | null;
   source?: string | null;
@@ -82,6 +87,7 @@ function mapRowToOffer(r: MarketRow, fallbackSource: string): Offer {
     priceType: r.price_type as "fisso" | "variabile",
     price: Number(r.price_value),
     median: Number(r.category_median),
+    pcvEurAnno: r.pcv_eur_anno === null ? 0 : Number(r.pcv_eur_anno),
     // Certificate logic:
     //  - PLACET = sempre certificate (open data ARERA, validate dal Portale)
     //  - energiapro + creator_role='superadmin' = certificate
@@ -155,5 +161,5 @@ export default async function MarketMapPage({
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  return <MarketMap offers={offers} asOf={today} source={source} />;
+  return <MarketMapWithSimulator offers={offers} asOf={today} source={source} />;
 }
