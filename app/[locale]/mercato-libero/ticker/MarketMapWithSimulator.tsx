@@ -14,9 +14,11 @@ import { MarketMapSimulator } from "./MarketMapSimulator";
  * Il wrapping client e' minimo (solo state lifting) cosi' non rinuncia ai
  * benefici dello streaming Next.js.
  *
- * Default consumi (2700 kWh / 1400 Smc) = profilo famiglia 4 persone:
- * cosi' sia il "Migliore offerta" del simulator che la modalita' di sort
- * "Consumo Cliente" partono gia' su dati sensati.
+ * Default consumi = 0: l'utente vede il simulator "vuoto" e deve
+ * muovere gli slider per ottenere la "Migliore offerta". Cosi' evitiamo
+ * di mostrare un winner basato su consumi presunti che potrebbero non
+ * essere i suoi. Quando consumi=0, sortMode="consumo" collassa su PCV
+ * (perche' price*0 = 0, resta solo la quota fissa).
  */
 export function MarketMapWithSimulator({
   offers,
@@ -29,8 +31,8 @@ export function MarketMapWithSimulator({
 }) {
   const [highlightedCodes, setHighlightedCodes] = useState<string[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>("price");
-  const [kwhAnno, setKwhAnno] = useState(2700);
-  const [smcAnno, setSmcAnno] = useState(1400);
+  const [kwhAnno, setKwhAnno] = useState(0);
+  const [smcAnno, setSmcAnno] = useState(0);
 
   const handleWinnersChange = useCallback((codes: string[]) => {
     // setState in callback — evita ri-render circolari con useMemo nel child

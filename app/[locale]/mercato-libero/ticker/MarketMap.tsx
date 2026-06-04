@@ -746,7 +746,9 @@ export function MarketMap({
                     ? "Tile ordinati e colorati per €/kWh o €/Smc"
                     : sortMode === "pcv"
                       ? "Tile ordinati e colorati per quota fissa annua (€/anno)"
-                      : `Tile ordinati e colorati per bolletta annua stimata su ${NUM_IT.format(kwhAnno)} kWh + ${NUM_IT.format(smcAnno)} Smc`}
+                      : kwhAnno === 0 && smcAnno === 0
+                        ? "Imposta il tuo consumo nel simulator sotto per ordinare per bolletta annua"
+                        : `Tile ordinati e colorati per bolletta annua stimata su ${NUM_IT.format(kwhAnno)} kWh + ${NUM_IT.format(smcAnno)} Smc`}
                 </span>
               </div>
 
