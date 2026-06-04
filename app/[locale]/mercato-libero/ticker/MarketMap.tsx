@@ -1212,23 +1212,45 @@ export function MarketMap({
                 </span>
               </div>
             )}
-            {/* Sempre visibile: il prezzo unitario "originale" anche
-                quando la metrica attiva e' un'altra — cosi' chi confronta
-                via tooltip ha tutti i dati a colpo d'occhio. */}
-            {sortMode !== "price" && (
-              <div className="text-[10px] text-emerald-300/40 mt-1">
-                Prezzo: {hovered.offer.priceType === "variabile" ? "+" : ""}
-                {NUMBER_4DP.format(hovered.offer.price)}{" "}
-                {hovered.offer.commodity === "electricity" ? "€/kWh" : "€/Smc"}
-                {hovered.offer.pcvEurAnno > 0 && (
-                  <>
-                    {" "}
-                    · PCV: {EUR_INT_HEADER.format(hovered.offer.pcvEurAnno)}{" "}
-                    €/anno
-                  </>
-                )}
-              </div>
-            )}
+            {/* Dettagli aggiuntivi: mostriamo le componenti di costo NON
+                gia' presenti nel numero grande sopra. Cosi' l'utente vede
+                sempre sia il costo materia/spread sia la PCV (quando
+                disponibile, PCV>0). In modalita' "consumo" mostriamo
+                entrambi perche' il numero grande e' la bolletta combinata.
+                Niente ridondanza, dati base sempre accessibili. */}
+            {(() => {
+              const showPrice = sortMode !== "price";
+              const showPcv =
+                sortMode !== "pcv" && hovered.offer.pcvEurAnno > 0;
+              if (!showPrice && !showPcv) return null;
+              const priceLabel =
+                hovered.offer.priceType === "variabile"
+                  ? "Spread"
+                  : "Prezzo materia";
+              const priceUnit =
+                hovered.offer.commodity === "electricity" ? "€/kWh" : "€/Smc";
+              return (
+                <div className="border-t border-emerald-400/15 mt-2 pt-1.5 space-y-0.5 text-[10px] text-emerald-300/55 tabular-nums">
+                  {showPrice && (
+                    <div>
+                      <span className="text-emerald-300/40 uppercase tracking-wider">
+                        {priceLabel}:
+                      </span>{" "}
+                      {hovered.offer.priceType === "variabile" ? "+" : ""}
+                      {NUMBER_4DP.format(hovered.offer.price)} {priceUnit}
+                    </div>
+                  )}
+                  {showPcv && (
+                    <div>
+                      <span className="text-emerald-300/40 uppercase tracking-wider">
+                        PCV (costo annuo):
+                      </span>{" "}
+                      {EUR_INT_HEADER.format(hovered.offer.pcvEurAnno)} €/anno
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
