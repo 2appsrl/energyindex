@@ -82,6 +82,7 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
   // Audio handle: ambient casino + click reel-stop. Niente autoplay:
   // l'AudioContext si crea solo dopo il primo SPIN (gesto utente OK).
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const ambientHandleRef = useRef<{ stop: () => void } | null>(null);
   const [audioOn, setAudioOn] = useState(true);
 
   // Pool di offerte filtrate per commodity selezionata.
@@ -101,13 +102,13 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
   const canSpin = !spinning && volume > 0 && pool.length > 0;
 
   const playSound = useCallback(
-    (type: "tick" | "stop" | "win") => {
+    (type: "tick" | "stop" | "win" | "coin" | "lever") => {
       if (!audioOn || !audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
       const t0 = ctx.currentTime;
       if (type === "tick") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = "square";
         osc.frequency.value = 600 + Math.random() * 400;
         gain.gain.setValueAtTime(0, t0);
@@ -117,7 +118,9 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
         osc.start(t0);
         osc.stop(t0 + 0.06);
       } else if (type === "stop") {
-        // Suono "ka-chunk" reel stop: lower-pitched click
+        // "Ka-chunk" reel-stop: triangle 180→60 Hz envelope decrescente
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = "triangle";
         osc.frequency.setValueAtTime(180, t0);
         osc.frequency.exponentialRampToValueAtTime(60, t0 + 0.15);
@@ -127,8 +130,27 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
         osc.connect(gain).connect(ctx.destination);
         osc.start(t0);
         osc.stop(t0 + 0.25);
+      } else if (type === "lever") {
+        // Cric-crac leva: noise burst + slide down
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(900, t0);
+        filter.frequency.exponentialRampToValueAtTime(200, t0 + 0.25);
+        filter.Q.value = 4;
+        const g = ctx.createGain();
+        g.gain.value = 0.22;
+        src.connect(filter).connect(g).connect(ctx.destination);
+        src.start(t0);
+        src.stop(t0 + 0.3);
       } else if (type === "win") {
-        // Fanfara: 3 note ascendenti pentatoniche Do maggiore
+        // Fanfara jackpot: 4 note pentatoniche Do maggiore ascendenti
         const notes = [523.25, 659.25, 783.99, 1046.5];
         notes.forEach((freq, i) => {
           const n = ctx.createOscillator();
@@ -137,20 +159,182 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
           n.frequency.value = freq;
           const start = t0 + i * 0.12;
           g.gain.setValueAtTime(0, start);
-          g.gain.linearRampToValueAtTime(0.18, start + 0.02);
+          g.gain.linearRampToValueAtTime(0.22, start + 0.02);
           g.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
           n.connect(g).connect(ctx.destination);
           n.start(start);
           n.stop(start + 0.6);
         });
+      } else if (type === "coin") {
+        // Coin shower: 14 ding bell metallici scaglionati (frequenze
+        // random alte 1.8-3.5 kHz con armonica per timbro "metallo").
+        // Crea l'illusione delle monete che cadono nel pozzo metallico.
+        for (let i = 0; i < 14; i++) {
+          const start = t0 + i * 0.07 + Math.random() * 0.05;
+          const baseFreq = 1800 + Math.random() * 1700;
+          // Fondamentale
+          const f = ctx.createOscillator();
+          const gF = ctx.createGain();
+          f.type = "triangle";
+          f.frequency.value = baseFreq;
+          gF.gain.setValueAtTime(0, start);
+          gF.gain.linearRampToValueAtTime(0.09, start + 0.005);
+          gF.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+          f.connect(gF).connect(ctx.destination);
+          f.start(start);
+          f.stop(start + 0.2);
+          // Armonica superiore per "tintinnio" metallico
+          const h = ctx.createOscillator();
+          const gH = ctx.createGain();
+          h.type = "sine";
+          h.frequency.value = baseFreq * 2.4;
+          gH.gain.setValueAtTime(0, start);
+          gH.gain.linearRampToValueAtTime(0.04, start + 0.005);
+          gH.gain.exponentialRampToValueAtTime(0.0001, start + 0.12);
+          h.connect(gH).connect(ctx.destination);
+          h.start(start);
+          h.stop(start + 0.15);
+        }
       }
     },
     [audioOn],
   );
 
+  /**
+   * Casino ambient: drone di fondo continuo (Do2 sawtooth attraverso
+   * lowpass + LFO) + bell ding casuali ogni 5-12 sec (illusione di
+   * jackpot in fondo alla sala) + chip rustle leggero. Volume basso
+   * (-30 dB rispetto al main) per non coprire i tick dello spin.
+   * Ritorna handle con stop() che fa fade-out 0.3 s + cleanup.
+   */
+  const startCasinoAmbient = useCallback(() => {
+    if (!audioCtxRef.current) return null;
+    const ctx = audioCtxRef.current;
+    const master = ctx.createGain();
+    master.gain.value = 0;
+    master.connect(ctx.destination);
+    master.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2.5);
+
+    // Drone Do2 + Sol2 (interval di quinta, "tappeto casino")
+    const droneFilter = ctx.createBiquadFilter();
+    droneFilter.type = "lowpass";
+    droneFilter.frequency.value = 600;
+    droneFilter.Q.value = 3;
+    droneFilter.connect(master);
+    const droneOscs: OscillatorNode[] = [];
+    [65.41, 98.0].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.value = 0.05;
+      osc.connect(g).connect(droneFilter);
+      osc.start();
+      droneOscs.push(osc);
+    });
+    // LFO sul filtro per "respiro"
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.08;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 300;
+    lfo.connect(lfoGain).connect(droneFilter.frequency);
+    lfo.start();
+
+    // Distant bell dings random ogni 5-12s — "qualcuno ha vinto in fondo alla sala"
+    let bellTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleBell = () => {
+      bellTimer = setTimeout(
+        () => {
+          if (!audioCtxRef.current) return;
+          const bell = ctx.createOscillator();
+          const bg = ctx.createGain();
+          bell.type = "sine";
+          bell.frequency.value = 1200 + Math.random() * 800;
+          const bt = ctx.currentTime;
+          bg.gain.setValueAtTime(0, bt);
+          bg.gain.linearRampToValueAtTime(0.04, bt + 0.02);
+          bg.gain.exponentialRampToValueAtTime(0.0001, bt + 1.5);
+          bell.connect(bg).connect(master);
+          bell.start(bt);
+          bell.stop(bt + 1.6);
+          scheduleBell();
+        },
+        5000 + Math.random() * 7000,
+      );
+    };
+    scheduleBell();
+
+    // Chip rustle random ogni 3-8s (noise burst lowpass, "fiches sul tappeto")
+    let chipTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleChip = () => {
+      chipTimer = setTimeout(
+        () => {
+          if (!audioCtxRef.current) return;
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.18, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) {
+            d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) * 0.6;
+          }
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          const f = ctx.createBiquadFilter();
+          f.type = "lowpass";
+          f.frequency.value = 1800;
+          const g = ctx.createGain();
+          g.gain.value = 0.06;
+          src.connect(f).connect(g).connect(master);
+          src.start();
+          src.stop(ctx.currentTime + 0.2);
+          scheduleChip();
+        },
+        3000 + Math.random() * 5000,
+      );
+    };
+    scheduleChip();
+
+    return {
+      stop: () => {
+        if (bellTimer) clearTimeout(bellTimer);
+        if (chipTimer) clearTimeout(chipTimer);
+        const t = ctx.currentTime;
+        master.gain.cancelScheduledValues(t);
+        master.gain.setValueAtTime(master.gain.value, t);
+        master.gain.linearRampToValueAtTime(0, t + 0.3);
+        setTimeout(() => {
+          try {
+            for (const osc of droneOscs) osc.stop();
+            lfo.stop();
+          } catch {
+            /* oscillators may have already stopped */
+          }
+        }, 400);
+      },
+    };
+  }, []);
+
+  // Sync ambient con audioOn: parte/stoppa quando l'utente cambia toggle.
+  // L'AudioContext viene inizializzato pigro al primo SPIN; finche' non
+  // esiste, l'ambient non parte (e' OK — l'utente non l'ha ancora
+  // attivato con un gesto).
+  useEffect(() => {
+    if (audioOn && audioCtxRef.current && !ambientHandleRef.current) {
+      ambientHandleRef.current = startCasinoAmbient();
+    } else if (!audioOn && ambientHandleRef.current) {
+      ambientHandleRef.current.stop();
+      ambientHandleRef.current = null;
+    }
+    return () => {
+      if (ambientHandleRef.current) {
+        ambientHandleRef.current.stop();
+        ambientHandleRef.current = null;
+      }
+    };
+  }, [audioOn, startCasinoAmbient]);
+
   const handleSpin = useCallback(() => {
     if (!canSpin) return;
     // Init AudioContext al primo gesto utente (autoplay policy).
+    // Subito dopo: starta l'ambient casino (drone + bells + chip rustle).
     if (audioOn && !audioCtxRef.current) {
       const AC =
         window.AudioContext ||
@@ -158,7 +342,10 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
           .webkitAudioContext;
       audioCtxRef.current = new AC();
       void audioCtxRef.current.resume();
+      ambientHandleRef.current = startCasinoAmbient();
     }
+    // Cric-crac leva: suona PRIMA dello spin, come tirare il braccio
+    playSound("lever");
 
     // Calcola il vero vincitore lato logica.
     let bestIdx = 0;
@@ -214,7 +401,7 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
       }, dur);
     });
 
-    // Spin completo
+    // Spin completo: fanfara jackpot + cascata monete
     setTimeout(() => {
       clearInterval(tickHandle);
       setSpinning(false);
@@ -224,8 +411,10 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
         totalEurAnno: bestCost,
       });
       playSound("win");
+      // Cascata di monete dopo la fanfara, sovrapposta per "shower" effect
+      setTimeout(() => playSound("coin"), 350);
     }, REEL_DURATIONS[2] + 50);
-  }, [canSpin, pool, volume, audioOn, playSound]);
+  }, [canSpin, pool, volume, audioOn, playSound, startCasinoAmbient]);
 
   // Reset risultato quando cambia commodity o volume
   useEffect(() => {
@@ -236,11 +425,14 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
     <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-[#1a0508] via-[#2a0a0e] to-[#1a0508] text-white font-mono">
       <CasinoBackground />
 
+      <FloatingSuits />
+
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 py-10 sm:py-16">
-        {/* HEADER: neon CTE Machine */}
-        <header className="text-center mb-10 sm:mb-14">
+        {/* HEADER: marquee 777 + neon CTE MACHINE + carte */}
+        <header className="text-center mb-10 sm:mb-14 relative">
+          <MarqueeMarquee />
           <div className="text-[10px] sm:text-xs uppercase tracking-[0.4em] text-amber-200/70 mb-2">
-            Energy Index Presents
+            ♠ Energy Index Presents ♣
           </div>
           <h1
             className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight neon-title leading-none"
@@ -249,13 +441,19 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
             <span className="text-rose-400">CTE</span>{" "}
             <span className="text-amber-300">MACHINE</span>
           </h1>
-          <p className="mt-3 text-amber-100/60 text-xs sm:text-sm tracking-widest uppercase">
+          <p className="mt-3 text-amber-100/70 text-xs sm:text-sm tracking-widest uppercase">
             🎰 La slot machine delle offerte luce e gas 🎰
+          </p>
+          <p className="mt-2 text-rose-300/70 text-[10px] tracking-[0.3em] uppercase italic">
+            ♦ Place your bet · Let Lady Luck pick your bill ♥
           </p>
         </header>
 
         {/* CONTROL PANEL */}
         <section className="bg-black/40 backdrop-blur-sm border-2 border-amber-500/30 rounded-2xl p-5 sm:p-7 shadow-[0_0_40px_rgba(245,158,11,0.15)] mb-8">
+          <div className="text-center text-[10px] uppercase tracking-[0.3em] text-rose-300/70 mb-4">
+            ♠♥♦♣ Place Your Bet ♣♦♥♠
+          </div>
           {/* Commodity toggle */}
           <div className="grid grid-cols-2 gap-3 mb-5">
             <CommodityButton
@@ -332,6 +530,20 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
           {/* Luci decorative angoli */}
           <CornerLights />
 
+          {/* Banner classico slot symbols */}
+          <div className="flex items-center justify-center gap-2 sm:gap-4 text-xl sm:text-2xl mb-3 text-amber-300/80 select-none">
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "0s" }}>🍒</span>
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "0.2s" }}>🍋</span>
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "0.4s" }}>🔔</span>
+            <span aria-hidden className="text-amber-200 font-black tracking-tighter neon-777">7 7 7</span>
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "0.6s" }}>💎</span>
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "0.8s" }}>🎲</span>
+            <span aria-hidden className="symbol-blink" style={{ animationDelay: "1.0s" }}>💰</span>
+          </div>
+
+          {/* Pull lever decorativo a destra */}
+          <PullLever spinning={spinning} />
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <SlotReel
               label="BRAND"
@@ -371,7 +583,10 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
           </div>
 
           {/* SPIN BUTTON */}
-          <div className="mt-7 flex justify-center">
+          <div className="mt-7 flex flex-col items-center">
+            <div className="text-[10px] uppercase tracking-[0.4em] text-amber-200/40 mb-2">
+              🎲 Roll The Dice On Your Bill 🎲
+            </div>
             <button
               type="button"
               onClick={handleSpin}
@@ -381,14 +596,17 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
             >
               <span className="spin-button-inner">
                 {spinning
-                  ? "🎰 SPINNING…"
+                  ? "🎰 SPINNING… 🎰"
                   : volume === 0
                     ? "Inserisci il tuo consumo"
                     : pool.length === 0
                       ? "Nessuna offerta disponibile"
-                      : "🎰 SPIN THAT WHEEL"}
+                      : "🎰 SPIN THAT WHEEL 🎰"}
               </span>
             </button>
+            <div className="text-[9px] uppercase tracking-[0.4em] text-rose-300/40 mt-2">
+              {spinning ? "✦ Lady Luck is dancing ✦" : "✦ All in or fold? ✦"}
+            </div>
           </div>
 
           {!spinning && pool.length > 0 && volume > 0 && !result && (
@@ -396,6 +614,10 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
               La ruota analizzerà {pool.length} offerte{" "}
               {commodity === "electricity" ? "luce" : "gas"} per trovare quella
               più conveniente per il tuo consumo.
+              <br />
+              <span className="text-rose-300/60 text-[10px] uppercase tracking-widest not-italic">
+                Odds: 1 vincente · {pool.length - 1} perdenti
+              </span>
             </p>
           )}
         </section>
@@ -411,7 +633,10 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
           />
         )}
 
-        <footer className="mt-12 text-center text-amber-200/40 text-[10px] uppercase tracking-widest">
+        <footer className="mt-12 text-center text-amber-200/40 text-[10px] uppercase tracking-widest space-y-1.5">
+          <p className="text-rose-300/40 italic tracking-[0.3em]">
+            ♠♥♦♣ The house always wins · unless you spin smart ♣♦♥♠
+          </p>
           <p>
             Energy Index · CTE Machine · Dati Market Map (PLACET ARERA +
             Mercato Libero)
@@ -421,8 +646,14 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
               href="/it/mercato-libero/ticker"
               className="hover:text-amber-200 underline"
             >
-              ← Esplora tutte le offerte in Market Map
+              ← Cash out · Esplora tutte le offerte in Market Map
             </Link>
+          </p>
+          <p className="text-amber-200/30 text-[9px] mt-3 not-italic">
+            Disclaimer: questo non e&apos; gioco d&apos;azzardo. E&apos; un
+            tool di scelta dell&apos;offerta energetica con grafica casino.
+            Nessuna scommessa, nessuna perdita — solo la migliore offerta sul
+            mercato.
           </p>
         </footer>
       </div>
@@ -525,6 +756,64 @@ export function CteMachine({ offers }: { offers: CteOffer[] }) {
             @keyframes reelscan {
               from { transform: translateY(-100px); }
               to { transform: translateY(100px); }
+            }
+            @keyframes marqueeblink {
+              0%, 100% { opacity: 1; text-shadow: 0 0 8px currentColor, 0 0 18px currentColor; }
+              50% { opacity: 0.55; text-shadow: 0 0 4px currentColor; }
+            }
+            .marquee-blink {
+              animation: marqueeblink 0.9s ease-in-out infinite;
+            }
+            @keyframes symbolblink {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.5; transform: scale(0.9); }
+            }
+            .symbol-blink {
+              animation: symbolblink 1.4s ease-in-out infinite;
+            }
+            @keyframes neon777 {
+              0%, 100% {
+                text-shadow:
+                  0 0 8px rgba(252, 211, 77, 1),
+                  0 0 16px rgba(252, 211, 77, 0.8),
+                  0 0 32px rgba(248, 113, 113, 0.6);
+              }
+              50% {
+                text-shadow:
+                  0 0 4px rgba(252, 211, 77, 0.6),
+                  0 0 8px rgba(252, 211, 77, 0.4);
+              }
+            }
+            .neon-777 {
+              animation: neon777 0.7s ease-in-out infinite;
+              font-size: 1.2em;
+            }
+            @keyframes floatingsuit {
+              0%, 100% { transform: translateY(0) rotate(-3deg); }
+              50% { transform: translateY(-14px) rotate(3deg); }
+            }
+            .floating-suit {
+              animation: floatingsuit 6s ease-in-out infinite;
+            }
+            @keyframes leverpull {
+              0% { transform: rotate(0deg); }
+              35% { transform: rotate(45deg); }
+              70% { transform: rotate(40deg); }
+              100% { transform: rotate(0deg); }
+            }
+            .lever-pull {
+              animation: leverpull 0.8s cubic-bezier(0.5, 0.1, 0.3, 1);
+            }
+            @keyframes jackpotbounce {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.06); }
+            }
+            .jackpot-bounce {
+              animation: jackpotbounce 1.1s ease-in-out infinite;
+              text-shadow:
+                0 0 12px rgba(252, 211, 77, 0.9),
+                0 0 28px rgba(252, 211, 77, 0.6),
+                0 0 50px rgba(248, 113, 113, 0.5);
             }
           `,
         }}
@@ -690,11 +979,17 @@ function ResultPanel({
     >
       <CornerLights />
 
-      <div className="text-center mb-5">
-        <div className="text-amber-300 text-2xl sm:text-3xl mb-1 tracking-widest">
-          🏆 JACKPOT 🏆
+      <div className="text-center mb-5 relative">
+        <div className="text-amber-200/40 text-[10px] uppercase tracking-[0.5em] mb-1">
+          ✦ ✦ ✦ BIG WIN ✦ ✦ ✦
         </div>
-        <div className="text-amber-100/60 text-[10px] uppercase tracking-[0.4em]">
+        <div className="text-amber-300 text-3xl sm:text-5xl mb-1 tracking-widest jackpot-bounce font-black">
+          🏆 J A C K P O T 🏆
+        </div>
+        <div className="text-rose-300/80 text-xs sm:text-sm uppercase tracking-[0.3em] mt-2">
+          ♠ House odds beaten ♥ The chip is yours ♦
+        </div>
+        <div className="text-amber-100/60 text-[10px] uppercase tracking-[0.4em] mt-2">
           Migliore offerta {commodity === "electricity" ? "luce" : "gas"} per{" "}
           {NUM.format(volume)} {volumeUnit}/anno
         </div>
@@ -760,14 +1055,18 @@ function ResultPanel({
       {/* Stat */}
       <div className="mt-5 text-center">
         <p className="text-amber-200/80 text-sm sm:text-base">
-          Selezionata tra{" "}
-          <span className="text-amber-300 font-bold text-xl">
+          🎰 Selezionata tra{" "}
+          <span className="text-amber-300 font-bold text-2xl">
             {result.totalAnalyzed}
           </span>{" "}
-          offerte {commodity === "electricity" ? "luce" : "gas"} analizzate
+          offerte {commodity === "electricity" ? "luce" : "gas"} analizzate 🎰
+        </p>
+        <p className="text-rose-300/60 text-[10px] uppercase tracking-[0.3em] mt-1.5 italic">
+          Win probability: 1 / {result.totalAnalyzed}{" "}
+          (= {(100 / result.totalAnalyzed).toFixed(2)}%)
         </p>
         <p className="text-amber-200/50 text-[10px] uppercase tracking-widest mt-1">
-          PLACET ARERA + Mercato Libero (PCV {">"} 0)
+          ♠ PLACET ARERA + Mercato Libero ♣ Solo offerte con PCV {">"} 0 ♦
         </p>
       </div>
     </section>
@@ -817,4 +1116,79 @@ function CasinoBackground() {
 function truncateCode(code: string): string {
   if (code.length <= 14) return code;
   return code.slice(0, 6) + "…" + code.slice(-6);
+}
+
+/**
+ * Banner "777 / WIN BIG / 777" stile marquee Vegas: 3 elementi neon
+ * lampeggianti in alto al header.
+ */
+function MarqueeMarquee() {
+  return (
+    <div
+      aria-hidden
+      className="flex justify-center items-center gap-3 sm:gap-5 text-amber-300 text-base sm:text-xl mb-4 font-black tracking-widest"
+    >
+      <span className="marquee-blink" style={{ animationDelay: "0s" }}>
+        ✦ 777 ✦
+      </span>
+      <span className="marquee-blink text-rose-400" style={{ animationDelay: "0.3s" }}>
+        WIN BIG
+      </span>
+      <span className="marquee-blink" style={{ animationDelay: "0.6s" }}>
+        ✦ 777 ✦
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Carte da gioco fluttuanti a sfondo (♠ ♥ ♦ ♣). 8 simboli in posizioni
+ * random fisse, animazione lieve flotter su/giu' (CSS infinite).
+ */
+function FloatingSuits() {
+  const suits = [
+    { sym: "♠", pos: "top-[8%] left-[5%]", delay: "0s", color: "text-amber-200/15" },
+    { sym: "♥", pos: "top-[15%] right-[8%]", delay: "1.2s", color: "text-rose-400/15" },
+    { sym: "♦", pos: "top-[40%] left-[3%]", delay: "0.6s", color: "text-rose-400/15" },
+    { sym: "♣", pos: "top-[55%] right-[5%]", delay: "1.8s", color: "text-amber-200/15" },
+    { sym: "♠", pos: "bottom-[20%] left-[12%]", delay: "2.4s", color: "text-amber-200/12" },
+    { sym: "♥", pos: "bottom-[10%] right-[15%]", delay: "0.8s", color: "text-rose-400/15" },
+    { sym: "♦", pos: "top-[70%] right-[3%]", delay: "1.5s", color: "text-rose-400/12" },
+    { sym: "♣", pos: "bottom-[30%] left-[7%]", delay: "2.1s", color: "text-amber-200/15" },
+  ];
+  return (
+    <div aria-hidden className="fixed inset-0 pointer-events-none z-0">
+      {suits.map((s, i) => (
+        <span
+          key={i}
+          className={`absolute ${s.pos} ${s.color} text-6xl sm:text-8xl select-none floating-suit`}
+          style={{ animationDelay: s.delay }}
+        >
+          {s.sym}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Leva slot machine decorativa attaccata al frame. Quando spinning,
+ * la barra ruota di 35° (animazione one-shot pull-down).
+ */
+function PullLever({ spinning }: { spinning: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className="hidden lg:block absolute right-[-50px] top-1/2 -translate-y-1/2 pointer-events-none"
+    >
+      {/* Knob */}
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-300 via-rose-500 to-rose-800 border-2 border-amber-300 shadow-[0_0_15px_rgba(244,63,94,0.6),inset_0_2px_3px_rgba(255,255,255,0.4)]" />
+      {/* Bar */}
+      <div
+        className={`absolute top-3 left-3 w-2 h-24 bg-gradient-to-b from-amber-200 to-amber-600 rounded-full origin-top border border-amber-700/60 shadow-md ${
+          spinning ? "lever-pull" : ""
+        }`}
+      />
+    </div>
+  );
 }
