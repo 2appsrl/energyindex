@@ -73,6 +73,9 @@ export function mapApiToDbRow(o: EnergiaProOffer, syncedAt: Date): Record<string
     source_url: o.source_url,
     notes: o.notes,
     last_verified_at: lastVerifiedIso,
+    // creator_role: fallback "superadmin" se la API legacy non lo espone
+    // (preserva il comportamento attuale: tutte le offerte legacy = Certificate)
+    creator_role: o.creator_role ?? "superadmin",
     raw: o,                              // intera response come fallback
     is_active: true,
     synced_at: syncedAt.toISOString(),

@@ -158,7 +158,29 @@ export interface Offer {
   priceType: "fisso" | "variabile";
   price: number;
   median: number;
+  /**
+   * Ruolo del creator su energiapro.biz (solo per source 'energiapro_commerciali').
+   * NULL/undefined per PLACET (sempre certificate via ARERA) e per offerte legacy.
+   */
+  creatorRole?: "superadmin" | "admin" | "agency" | null;
+  /** Tag della fonte: 'arera_placet', 'energiapro_commerciali', ecc. */
+  source?: string | null;
 }
+
+/**
+ * Una offerta e' "Certificate" (= validata, sicura) se:
+ *  - viene da PLACET ARERA (open data ufficiale, sempre validate)
+ *  - oppure proviene da energiapro.biz creata da superadmin (team interno)
+ *
+ * Altrimenti e' "Non certificate" (creata da agency/admin partner —
+ * l'offerta esiste ma non e' ancora stata validata dal team).
+ */
+export function isCertificateOffer(o: Offer): boolean {
+  if (o.source !== "energiapro_commerciali") return true;
+  return o.creatorRole === "superadmin";
+}
+
+export type CertFilter = "all" | "cert" | "non-cert";
 
 interface Section {
   key: string;
@@ -258,6 +280,16 @@ export function MarketMap({
   const [comboOpen, setComboOpen] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState(-1);
   const comboRef = useRef<HTMLDivElement>(null);
+  // Filtro Certificate / Non certificate: default "all" mostra tutte le offerte.
+  // Visibile solo nel source=libero (PLACET sono sempre certificate, filtro inutile).
+  const [certFilter, setCertFilter] = useState<CertFilter>("all");
+
+  // Conta offerte per badge nelle chip
+  const certCount = useMemo(
+    () => offers.filter((o) => isCertificateOffer(o)).length,
+    [offers],
+  );
+  const nonCertCount = offers.length - certCount;
   // Audio default ON: ma il browser blocca autoplay senza user gesture.
   // Strategia: ritardiamo la creazione dell'AudioContext fino al primo
   // gesto utente (hasInteracted), poi parte subito.
@@ -298,7 +330,17 @@ export function MarketMap({
     };
   }, [audioOn, hasInteracted]);
 
-  const sections = useMemo(() => groupOffers(offers), [offers]);
+  // Filter offers per Certificate/Non certificate prima di raggrupparle.
+  // Nota: la median di categoria e' precalcolata server-side sull'universo
+  // completo, cosi' il colore (delta vs median) resta coerente quando si
+  // applica il filtro (non muta la mediana).
+  const filteredOffers = useMemo(() => {
+    if (certFilter === "all") return offers;
+    if (certFilter === "cert") return offers.filter(isCertificateOffer);
+    return offers.filter((o) => !isCertificateOffer(o));
+  }, [offers, certFilter]);
+
+  const sections = useMemo(() => groupOffers(filteredOffers), [filteredOffers]);
 
   const distinctVendors = useMemo(() => {
     const set = new Set<string>();
@@ -459,6 +501,62 @@ export function MarketMap({
                   </>
                 )}
               </div>
+
+              {/* Filtro Certificate / Non certificate
+                  Visibile solo nella vista MERCATO LIBERO (PLACET sono
+                  sempre certificate by ARERA, il filtro sarebbe inutile). */}
+              {source === "libero" && nonCertCount > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="text-[10px] uppercase tracking-widest text-emerald-300/50 font-mono">
+                    Filtra:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCertFilter("all")}
+                    aria-pressed={certFilter === "all"}
+                    className={`px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-widest transition-colors ${
+                      certFilter === "all"
+                        ? "bg-emerald-300 text-black"
+                        : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
+                    }`}
+                  >
+                    Tutte {offers.length}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCertFilter("cert")}
+                    aria-pressed={certFilter === "cert"}
+                    title="Offerte create da team interno energiapro e verificate"
+                    className={`px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-widest transition-colors inline-flex items-center gap-1 ${
+                      certFilter === "cert"
+                        ? "bg-emerald-300 text-black"
+                        : "bg-transparent text-emerald-300/60 hover:text-emerald-300 border border-emerald-300/30"
+                    }`}
+                  >
+                    <span aria-hidden>✓</span> Certificate {certCount}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCertFilter("non-cert")}
+                    aria-pressed={certFilter === "non-cert"}
+                    title="Offerte create da agenzie partner, non ancora verificate dal team energiapro"
+                    className={`px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-widest transition-colors inline-flex items-center gap-1 ${
+                      certFilter === "non-cert"
+                        ? "bg-amber-300 text-black"
+                        : "bg-transparent text-amber-300/60 hover:text-amber-300 border border-amber-300/30"
+                    }`}
+                  >
+                    <span aria-hidden>⚠</span> Non certificate {nonCertCount}
+                  </button>
+                  <span className="text-[10px] text-emerald-300/40 font-mono italic ml-1 hidden md:inline">
+                    {certFilter === "all"
+                      ? "Mix: verificate + create da agenzie"
+                      : certFilter === "cert"
+                        ? "Solo offerte validate dal team"
+                        : "Solo offerte da agenzie partner"}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="w-full sm:w-80 space-y-2">
@@ -659,13 +757,20 @@ export function MarketMap({
                     const idx = globalIndex++;
                     const isMatch = matchesSearch(o.vendor);
                     const isDimmed = searchActive && !isMatch;
+                    const isNonCert = !isCertificateOffer(o);
                     const cls = [
                       "aspect-square rounded-[3px] cursor-pointer relative tile-fall focus:outline-none focus:ring-2 focus:ring-emerald-400",
                       isMatch ? "tile-pulse" : "",
                       isDimmed ? "tile-dim" : "",
+                      // Outline amber-200 + small ⚠ corner per Non certificate
+                      // (le Certificate restano "pulite" — è l'opzione di default sicura).
+                      isNonCert ? "ring-1 ring-inset ring-amber-200/70" : "",
                     ]
                       .filter(Boolean)
                       .join(" ");
+                    const certLabel = isNonCert
+                      ? " · NON CERTIFICATE (creata da agenzia)"
+                      : "";
                     return (
                       <button
                         key={o.codice}
@@ -681,8 +786,17 @@ export function MarketMap({
                         onMouseLeave={() => setHovered(null)}
                         onFocus={() => setHovered({ offer: o, section })}
                         onBlur={() => setHovered(null)}
-                        aria-label={`${o.vendor} ${NUMBER_4DP.format(o.price)} ${section.unit}`}
-                      />
+                        aria-label={`${o.vendor} ${NUMBER_4DP.format(o.price)} ${section.unit}${certLabel}`}
+                      >
+                        {isNonCert && (
+                          <span
+                            aria-hidden
+                            className="absolute -top-0.5 -right-0.5 text-[7px] leading-none text-amber-900 font-bold drop-shadow-[0_0_2px_rgba(0,0,0,0.6)]"
+                          >
+                            ⚠
+                          </span>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -710,8 +824,25 @@ export function MarketMap({
           aria-live="polite"
           className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/95 border-2 border-emerald-400/60 text-emerald-300 font-mono px-6 py-3 rounded-lg backdrop-blur-md z-30 shadow-[0_0_30px_rgba(20,217,122,0.4)] pointer-events-none min-w-[280px] max-w-[90vw]"
         >
-          <div className="text-base sm:text-lg font-bold text-emerald-400 tracking-wider">
-            {hovered.offer.vendor}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="text-base sm:text-lg font-bold text-emerald-400 tracking-wider">
+              {hovered.offer.vendor}
+            </div>
+            {isCertificateOffer(hovered.offer) ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 border border-emerald-300/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300"
+                title="Offerta verificata dal team energiapro"
+              >
+                <span aria-hidden>✓</span> Certificate
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 border border-amber-300/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300"
+                title="Offerta creata da agenzia partner, non ancora verificata dal team"
+              >
+                <span aria-hidden>⚠</span> Non certificate
+              </span>
+            )}
           </div>
           <div className="text-xs text-emerald-300/60 mb-2">
             {hovered.offer.codice} · {hovered.section.title}

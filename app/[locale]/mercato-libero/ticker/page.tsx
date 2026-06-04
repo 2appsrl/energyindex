@@ -44,6 +44,9 @@ interface MarketRow {
   price_type: string;
   price_value: number | string;
   category_median: number | string;
+  // Solo per get_market_map_libero (la RPC PLACET non li ha — undefined OK)
+  creator_role?: string | null;
+  source?: string | null;
 }
 
 export default async function MarketMapPage({
@@ -65,6 +68,12 @@ export default async function MarketMapPage({
     priceType: r.price_type as "fisso" | "variabile",
     price: Number(r.price_value),
     median: Number(r.category_median),
+    // Certificate logic:
+    //  - PLACET = sempre certificate (open data ARERA, validate dal Portale Offerte)
+    //  - energiapro + creator_role='superadmin' = certificate
+    //  - energiapro + creator_role='admin'|'agency' = NON certificate
+    creatorRole: (r.creator_role ?? null) as Offer["creatorRole"],
+    source: r.source ?? (source === "placet" ? "arera_placet" : null),
   }));
 
   const today = new Date().toISOString().slice(0, 10);

@@ -10,6 +10,8 @@
 const BASE_URL = "https://energiapro.biz/api/v1";
 const SUPPLIER_LOGO_BASE = "https://energiapro.biz";
 
+export type EnergiaProCreatorRole = "superadmin" | "admin" | "agency";
+
 export interface EnergiaProOffer {
   id: string;
   offer_code: string;
@@ -28,6 +30,16 @@ export interface EnergiaProOffer {
   source_url: string | null;
   last_verified_at: string | null;       // formato "YYYY-MM-DD HH:MM:SS"
   notes: string | null;
+  /**
+   * Ruolo dell'utente che ha creato l'offerta su energiapro.biz.
+   * - "superadmin" = offerta "Certificate" (validata dal team energyindex/energiapro)
+   * - "admin" | "agency" = offerta creata da agenzia partner, NON ancora certificate
+   *
+   * Backward-compat: la API legacy NON include questo campo; il client default-a
+   * "superadmin" per le response vecchie (preserva il comportamento attuale che
+   * mostra solo offerte certificate).
+   */
+  creator_role?: EnergiaProCreatorRole;
 }
 
 export interface EnergiaProResponse {
@@ -48,6 +60,13 @@ export interface FetchOffersParams {
   supplier?: string;
   limit?: number;
   offset?: number;
+  /**
+   * Lista di ruoli creator da includere (comma-separated nella URL).
+   * Default lato API energiapro.biz: ["superadmin"] (backward-compat con il
+   * comportamento legacy). Per pull completo passare:
+   *   include_creator_roles: ["superadmin", "admin", "agency"]
+   */
+  include_creator_roles?: EnergiaProCreatorRole[];
 }
 
 function getApiKey(): string {
@@ -75,6 +94,9 @@ export async function fetchOffersPage(p: FetchOffersParams = {}): Promise<Energi
   if (p.supplier) q.set("supplier", p.supplier);
   if (p.limit !== undefined) q.set("limit", String(p.limit));
   if (p.offset !== undefined) q.set("offset", String(p.offset));
+  if (p.include_creator_roles && p.include_creator_roles.length > 0) {
+    q.set("include_creator_roles", p.include_creator_roles.join(","));
+  }
   const qs = q.toString();
   const url = `${BASE_URL}/offers${qs ? `?${qs}` : ""}`;
 
@@ -120,13 +142,22 @@ export async function fetchOffersPage(p: FetchOffersParams = {}): Promise<Energi
 /**
  * Pagina automaticamente fino a esaurire `meta.total`. Filtri opzionali
  * applicati a livello API. Restituisce tutti gli offer come array unico.
+ *
+ * Default include_creator_roles = ['superadmin', 'admin', 'agency']:
+ *  pull completo di tutte le offerte (certificate + non certificate).
+ *  Il filtro UI Certificate/Non certificate e' applicato client-side
+ *  nella MarketMap, non a livello ETL.
  */
 export async function fetchAllOffers(filters: Omit<FetchOffersParams, "limit" | "offset"> = {}): Promise<EnergiaProOffer[]> {
   const PAGE_SIZE = 200;
   const collected: EnergiaProOffer[] = [];
   let offset = 0;
+  const effectiveFilters: Omit<FetchOffersParams, "limit" | "offset"> = {
+    include_creator_roles: ["superadmin", "admin", "agency"],
+    ...filters,
+  };
   while (true) {
-    const page = await fetchOffersPage({ ...filters, limit: PAGE_SIZE, offset });
+    const page = await fetchOffersPage({ ...effectiveFilters, limit: PAGE_SIZE, offset });
     collected.push(...page.offers);
     if (page.offers.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
