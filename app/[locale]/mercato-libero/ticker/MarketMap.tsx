@@ -442,11 +442,11 @@ export function MarketMap({
   smcAnno: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [hovered, setHovered] = useState<{
-    offer: Offer;
-    metric: number;
-    section: Section;
-  } | null>(null);
+  // Hovered tiene SOLO l'Offer (per codice). metric/section vengono
+  // ri-derivati dal sortMode corrente ad ogni render del tooltip — cosi'
+  // se l'utente cambia modalita' senza spostare il mouse, il tooltip si
+  // aggiorna automaticamente alla nuova metrica (no stale state).
+  const [hovered, setHovered] = useState<Offer | null>(null);
   const [search, setSearch] = useState("");
   const [comboOpen, setComboOpen] = useState(false);
   const [highlightedIdx, setHighlightedIdx] = useState(-1);
@@ -1083,9 +1083,9 @@ export function MarketMap({
                           animationDelay: `${idx * 3}ms`,
                           ["--glow" as string]: glow,
                         }}
-                        onMouseEnter={() => setHovered({ offer: o, metric, section })}
+                        onMouseEnter={() => setHovered(o)}
                         onMouseLeave={() => setHovered(null)}
-                        onFocus={() => setHovered({ offer: o, metric, section })}
+                        onFocus={() => setHovered(o)}
                         onBlur={() => setHovered(null)}
                         aria-label={`${o.vendor} ${ariaMetricValue}${certLabel}${winnerLabel}`}
                       >
@@ -1131,22 +1131,29 @@ export function MarketMap({
       </div>
 
       {hovered && (() => {
-        // Tooltip rifletta la metrica attiva (prezzo, PCV o bolletta).
-        // PCV=0 in modalita' pcv/consumo → metric=Infinity → mostriamo
-        // "dato non disponibile" invece del numero.
-        const sign = hovered.section.metricUsesSpreadPrefix ? "+" : "";
+        // Re-deriva section + metric dal sortMode CORRENTE (non da quello
+        // catturato all'hover). Cosi' se l'utente cambia modalita' senza
+        // spostare il mouse, il tooltip si aggiorna live: numero grande,
+        // unita', label e Δ tutti coerenti con la nuova lente cromatica.
+        const sectionKey = `${hovered.commodity}_${hovered.priceType}`;
+        const currentSection = sections.find((s) => s.key === sectionKey);
+        if (!currentSection) return null;
+        const offerInSection = currentSection.offers.find(
+          (o) => o.offer.codice === hovered.codice,
+        );
+        if (!offerInSection) return null;
+        const metric = offerInSection.metric;
+        const sign = currentSection.metricUsesSpreadPrefix ? "+" : "";
         const formatMetric = (v: number) => {
           if (!Number.isFinite(v)) return "—";
-          return hovered.section.metricUnit === "€/anno"
+          return currentSection.metricUnit === "€/anno"
             ? EUR_INT_HEADER.format(v)
             : NUMBER_4DP.format(v);
         };
-        const hasMetric = Number.isFinite(hovered.metric);
-        const med = hovered.section.medianMetric;
+        const hasMetric = Number.isFinite(metric);
+        const med = currentSection.medianMetric;
         const deltaPct =
-          hasMetric && med > 0
-            ? ((hovered.metric - med) / med) * 100
-            : null;
+          hasMetric && med > 0 ? ((metric - med) / med) * 100 : null;
         return (
           <div
             aria-live="polite"
@@ -1154,9 +1161,9 @@ export function MarketMap({
           >
             <div className="flex items-center gap-2 flex-wrap">
               <div className="text-base sm:text-lg font-bold text-emerald-400 tracking-wider">
-                {hovered.offer.vendor}
+                {hovered.vendor}
               </div>
-              {isCertificateOffer(hovered.offer) ? (
+              {isCertificateOffer(hovered) ? (
                 <span
                   className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 border border-emerald-300/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300"
                   title="Offerta verificata dal team energiapro"
@@ -1173,18 +1180,18 @@ export function MarketMap({
               )}
             </div>
             <div className="text-xs text-emerald-300/60 mb-2">
-              {hovered.offer.codice} · {hovered.section.title} ·{" "}
+              {hovered.codice} · {currentSection.title} ·{" "}
               <span className="uppercase tracking-widest">
-                {hovered.section.metricLabel}
+                {currentSection.metricLabel}
               </span>
             </div>
             <div className="text-2xl sm:text-3xl font-bold tabular-nums">
               {hasMetric ? (
                 <>
                   {sign}
-                  {formatMetric(hovered.metric)}{" "}
+                  {formatMetric(metric)}{" "}
                   <span className="text-sm font-normal text-emerald-300/70">
-                    {hovered.section.metricUnit}
+                    {currentSection.metricUnit}
                   </span>
                 </>
               ) : (
@@ -1220,15 +1227,12 @@ export function MarketMap({
                 Niente ridondanza, dati base sempre accessibili. */}
             {(() => {
               const showPrice = sortMode !== "price";
-              const showPcv =
-                sortMode !== "pcv" && hovered.offer.pcvEurAnno > 0;
+              const showPcv = sortMode !== "pcv" && hovered.pcvEurAnno > 0;
               if (!showPrice && !showPcv) return null;
               const priceLabel =
-                hovered.offer.priceType === "variabile"
-                  ? "Spread"
-                  : "Prezzo materia";
+                hovered.priceType === "variabile" ? "Spread" : "Prezzo materia";
               const priceUnit =
-                hovered.offer.commodity === "electricity" ? "€/kWh" : "€/Smc";
+                hovered.commodity === "electricity" ? "€/kWh" : "€/Smc";
               return (
                 <div className="border-t border-emerald-400/15 mt-2 pt-1.5 space-y-0.5 text-[10px] text-emerald-300/55 tabular-nums">
                   {showPrice && (
@@ -1236,8 +1240,8 @@ export function MarketMap({
                       <span className="text-emerald-300/40 uppercase tracking-wider">
                         {priceLabel}:
                       </span>{" "}
-                      {hovered.offer.priceType === "variabile" ? "+" : ""}
-                      {NUMBER_4DP.format(hovered.offer.price)} {priceUnit}
+                      {hovered.priceType === "variabile" ? "+" : ""}
+                      {NUMBER_4DP.format(hovered.price)} {priceUnit}
                     </div>
                   )}
                   {showPcv && (
@@ -1245,7 +1249,7 @@ export function MarketMap({
                       <span className="text-emerald-300/40 uppercase tracking-wider">
                         PCV (costo annuo):
                       </span>{" "}
-                      {EUR_INT_HEADER.format(hovered.offer.pcvEurAnno)} €/anno
+                      {EUR_INT_HEADER.format(hovered.pcvEurAnno)} €/anno
                     </div>
                   )}
                 </div>
