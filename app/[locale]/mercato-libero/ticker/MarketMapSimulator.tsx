@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import type { Offer } from "./MarketMap";
-import { isCertificateOffer } from "./MarketMap";
+import { annualCommodityCost, isCertificateOffer } from "./MarketMap";
 
 const NUM = new Intl.NumberFormat("it-IT");
 const NUM_2DP = new Intl.NumberFormat("it-IT", {
@@ -19,43 +19,23 @@ const EUR_INT = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 0,
 });
 
-/**
- * Calcola il costo commodity annuo per una offerta dato il consumo.
- * Non include: imposte, accise, oneri di sistema, distribuzione.
- * E' un'approssimazione del solo "costo materia + costi di
- * commercializzazione (PCV)".
- *
- * Formula:
- *   per_consumo = price × volume
- *   totale = pcvEurAnno + per_consumo
- *
- * Per offerte VARIABILI il `price` e' lo spread sopra PUN/PSV: dobbiamo
- * aggiungere il valore di mercato sottostante. Approssimazione:
- *   luce variabile: + PUN spot ~ 0.10 €/kWh (proxy 2026)
- *   gas  variabile: + PSV spot ~ 0.35 €/Smc (proxy 2026)
- * Senza questa proxy le offerte variabili comparirebbero artificiosamente
- * piu' economiche (spread di 0.02€ vs prezzo fisso di 0.20€).
- */
-function annualCommodityCost(offer: Offer, volume: number): number {
-  // Proxy market spot per offerte variabili (PUN luce, PSV gas).
-  // TODO: caricare dinamicamente da forecast EnergyIndex.
-  const SPOT_LUCE = 0.10; // €/kWh
-  const SPOT_GAS = 0.35; // €/Smc
-  let unitPrice = offer.price;
-  if (offer.priceType === "variabile") {
-    unitPrice += offer.commodity === "electricity" ? SPOT_LUCE : SPOT_GAS;
-  }
-  return offer.pcvEurAnno + unitPrice * volume;
-}
-
 interface BestOffer {
   offer: Offer;
   totalEurAnno: number;
 }
 
+/**
+ * Trova la migliore offerta per commodity al volume dato.
+ * Esclude offerte con pcvEurAnno <= 0: per le offerte nel DB un PCV = 0
+ * indica "dato mancante" piu' che "quota fissa zero" (le offerte legittime
+ * hanno sempre un PCV > 0 tipicamente 60-200 €/anno). Includerle
+ * inquinerebbe il "migliore" facendo apparire offerte incomplete in cima.
+ */
 function findBest(offers: Offer[], commodity: "electricity" | "gas", volume: number): BestOffer | null {
   if (volume <= 0) return null;
-  const candidates = offers.filter((o) => o.commodity === commodity);
+  const candidates = offers.filter(
+    (o) => o.commodity === commodity && o.pcvEurAnno > 0,
+  );
   if (candidates.length === 0) return null;
   let best: BestOffer | null = null;
   for (const o of candidates) {
@@ -74,17 +54,26 @@ function findBest(offers: Offer[], commodity: "electricity" | "gas", volume: num
  *
  * Riceve `offers` (gia' filtrato per source/cert dal wrapper se serve) e
  * la callback `onWinnersChange(codes)` per condividere lo state up.
+ *
+ * Sliders sono "controlled": value/onChange forniti dal wrapper. Cosi' il
+ * MarketMap puo' usare gli stessi volumi quando l'utente sceglie sortMode
+ * "consumo" — un'unica fonte di verita' per la simulazione.
  */
 export function MarketMapSimulator({
   offers,
   onWinnersChange,
+  kwhAnno,
+  smcAnno,
+  onKwhAnnoChange,
+  onSmcAnnoChange,
 }: {
   offers: Offer[];
   onWinnersChange: (codes: string[]) => void;
+  kwhAnno: number;
+  smcAnno: number;
+  onKwhAnnoChange: (v: number) => void;
+  onSmcAnnoChange: (v: number) => void;
 }) {
-  const [kwhAnno, setKwhAnno] = useState(2700); // default famiglia 4 persone
-  const [smcAnno, setSmcAnno] = useState(1400); // default famiglia 4 persone
-
   const bestLuce = useMemo(() => findBest(offers, "electricity", kwhAnno), [offers, kwhAnno]);
   const bestGas = useMemo(() => findBest(offers, "gas", smcAnno), [offers, smcAnno]);
 
@@ -128,7 +117,7 @@ export function MarketMapSimulator({
           min={0}
           max={10000}
           step={100}
-          onChange={setKwhAnno}
+          onChange={onKwhAnnoChange}
           mensile={Math.round(kwhAnno / 12)}
         />
         <ConsumoSlider
@@ -139,7 +128,7 @@ export function MarketMapSimulator({
           min={0}
           max={3000}
           step={50}
-          onChange={setSmcAnno}
+          onChange={onSmcAnnoChange}
           mensile={Math.round(smcAnno / 12)}
         />
       </div>

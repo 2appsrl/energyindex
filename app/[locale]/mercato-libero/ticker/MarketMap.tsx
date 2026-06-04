@@ -189,6 +189,36 @@ export function isCertificateOffer(o: Offer): boolean {
 
 export type CertFilter = "all" | "cert" | "non-cert";
 
+/**
+ * Modalita' di ordinamento dei tile dentro ogni sezione (commodity x priceType).
+ *  - "price"   : prezzo unitario / spread (€/kWh, €/Smc) — il default storico
+ *  - "pcv"     : Costo Commercializzazione Annuo (€/anno fisso indipendente
+ *                dal consumo); PCV=0 (dato mancante) viene spinto in fondo
+ *  - "consumo" : bolletta annua stimata sul consumo del Customer Simulator
+ *                (pcv + price × volume + proxy spot per variabili); offerte
+ *                con PCV=0 vanno in fondo (stesso criterio del simulator)
+ */
+export type SortMode = "price" | "pcv" | "consumo";
+
+/**
+ * Calcola il costo commodity annuo per una offerta dato il consumo.
+ * Condiviso con MarketMapSimulator: stessa formula per ordinamento "consumo"
+ * e per il calcolo del winner sotto la mappa.
+ *
+ * Formula: pcvEurAnno + unitPrice × volume.
+ * Per offerte VARIABILI aggiungiamo proxy spot (PUN/PSV) — altrimenti uno
+ * spread di 0.02 €/kWh "batterebbe" un fisso di 0.20 €/kWh, sbagliato.
+ */
+export function annualCommodityCost(offer: Offer, volume: number): number {
+  const SPOT_LUCE = 0.10; // €/kWh proxy PUN 2026
+  const SPOT_GAS = 0.35; // €/Smc proxy PSV 2026
+  let unitPrice = offer.price;
+  if (offer.priceType === "variabile") {
+    unitPrice += offer.commodity === "electricity" ? SPOT_LUCE : SPOT_GAS;
+  }
+  return offer.pcvEurAnno + unitPrice * volume;
+}
+
 interface Section {
   key: string;
   title: string;
@@ -213,6 +243,7 @@ const NUMBER_4DP = new Intl.NumberFormat("it-IT", {
   minimumFractionDigits: 4,
   maximumFractionDigits: 4,
 });
+const NUM_IT = new Intl.NumberFormat("it-IT");
 
 function colorForDelta(price: number, median: number): { fill: string; glow: string } {
   if (median <= 0) return { fill: "#facc15", glow: "rgba(250,204,21,0.4)" };
@@ -224,7 +255,29 @@ function colorForDelta(price: number, median: number): { fill: string; glow: str
   return { fill: "#f43f5e", glow: "rgba(244, 63, 94, 0.8)" };
 }
 
-function groupOffers(offers: Offer[]): Section[] {
+/**
+ * Chiave di ordinamento per una offerta data la modalita' attiva.
+ * PCV=0 (= dato mancante) viene mappato a Infinity nelle modalita' pcv/consumo
+ * cosi' finisce in fondo (e non inquina la "migliore offerta" lato UI).
+ */
+function sortKey(o: Offer, mode: SortMode, volume: number): number {
+  switch (mode) {
+    case "price":
+      return o.price;
+    case "pcv":
+      return o.pcvEurAnno > 0 ? o.pcvEurAnno : Number.POSITIVE_INFINITY;
+    case "consumo":
+      if (o.pcvEurAnno <= 0) return Number.POSITIVE_INFINITY;
+      return annualCommodityCost(o, volume);
+  }
+}
+
+function groupOffers(
+  offers: Offer[],
+  sortMode: SortMode,
+  kwhAnno: number,
+  smcAnno: number,
+): Section[] {
   const groups = new Map<string, Offer[]>();
   for (const o of offers) {
     const key = `${o.commodity}_${o.priceType}`;
@@ -267,7 +320,8 @@ function groupOffers(offers: Offer[]): Section[] {
     },
   ];
   for (const sec of meta) {
-    sec.offers.sort((a, b) => a.price - b.price);
+    const vol = sec.key.startsWith("electricity") ? kwhAnno : smcAnno;
+    sec.offers.sort((a, b) => sortKey(a, sortMode, vol) - sortKey(b, sortMode, vol));
   }
   return meta;
 }
@@ -277,6 +331,10 @@ export function MarketMap({
   asOf,
   source = "all",
   highlightedCodes,
+  sortMode,
+  onSortModeChange,
+  kwhAnno,
+  smcAnno,
 }: {
   offers: Offer[];
   asOf: string | null;
@@ -287,6 +345,12 @@ export function MarketMap({
    * stringhe — viene convertito in Set internamente per O(1) lookup.
    */
   highlightedCodes?: string[];
+  /** Modalita' di ordinamento dei tile (controlled dal wrapper). */
+  sortMode: SortMode;
+  onSortModeChange: (mode: SortMode) => void;
+  /** Consumi correnti del simulator — usati solo se sortMode='consumo'. */
+  kwhAnno: number;
+  smcAnno: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hovered, setHovered] = useState<{ offer: Offer; section: Section } | null>(null);
@@ -354,7 +418,10 @@ export function MarketMap({
     return offers.filter((o) => !isCertificateOffer(o));
   }, [offers, certFilter]);
 
-  const sections = useMemo(() => groupOffers(filteredOffers), [filteredOffers]);
+  const sections = useMemo(
+    () => groupOffers(filteredOffers, sortMode, kwhAnno, smcAnno),
+    [filteredOffers, sortMode, kwhAnno, smcAnno],
+  );
 
   // Set lookup O(1) per il tile-rendering. useMemo evita di ricreare il
   // Set ad ogni render se l'array highlightedCodes e' stabile.
@@ -534,6 +601,60 @@ export function MarketMap({
                     </span>
                   </>
                 )}
+              </div>
+
+              {/* Sort mode: 3 tastoni prominenti per scegliere l'ordinamento
+                  delle tile. Default = "price" (storico). */}
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <span className="text-[10px] uppercase tracking-widest text-emerald-300/50 font-mono">
+                  Ordina per:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSortModeChange("price")}
+                  aria-pressed={sortMode === "price"}
+                  title="Prezzo unitario in €/kWh o €/Smc (per le variabili e' lo spread sopra PUN/PSV)"
+                  className={`px-3 py-1.5 rounded text-[11px] font-mono uppercase tracking-widest transition-colors ${
+                    sortMode === "price"
+                      ? "bg-emerald-300 text-black shadow-[0_0_12px_rgba(20,217,122,0.5)]"
+                      : "bg-transparent text-emerald-300/70 hover:text-emerald-300 border border-emerald-300/30"
+                  }`}
+                >
+                  Costo Offerta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSortModeChange("pcv")}
+                  aria-pressed={sortMode === "pcv"}
+                  title="Prezzo per la Commercializzazione della Vendita: quota fissa annua €/POD o €/PdR, indipendente dal consumo"
+                  className={`px-3 py-1.5 rounded text-[11px] font-mono uppercase tracking-widest transition-colors ${
+                    sortMode === "pcv"
+                      ? "bg-emerald-300 text-black shadow-[0_0_12px_rgba(20,217,122,0.5)]"
+                      : "bg-transparent text-emerald-300/70 hover:text-emerald-300 border border-emerald-300/30"
+                  }`}
+                >
+                  Costo Commercializzazione Annuo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSortModeChange("consumo")}
+                  aria-pressed={sortMode === "consumo"}
+                  title="Bolletta annua stimata sul consumo del Customer Simulator (PCV + prezzo × consumo)"
+                  className={`px-3 py-1.5 rounded text-[11px] font-mono uppercase tracking-widest transition-colors ${
+                    sortMode === "consumo"
+                      ? "bg-emerald-300 text-black shadow-[0_0_12px_rgba(20,217,122,0.5)]"
+                      : "bg-transparent text-emerald-300/70 hover:text-emerald-300 border border-emerald-300/30"
+                  }`}
+                >
+                  Consumo Cliente
+                </button>
+                <span className="text-[10px] text-emerald-300/40 font-mono italic ml-1 hidden md:inline">
+                  {sortMode === "price"
+                    ? "Tile ordinati per €/kWh o €/Smc"
+                    : sortMode === "pcv"
+                      ? "Tile ordinati per quota fissa annua (€/anno)"
+                      : `Tile ordinati per bolletta annua stimata su ${NUM_IT.format(kwhAnno)} kWh + ${NUM_IT.format(smcAnno)} Smc`}
+                </span>
               </div>
 
               {/* Filtro Certificate / Non certificate
@@ -758,10 +879,18 @@ export function MarketMap({
         <div className="space-y-10">
           {sections.map((section) => {
             if (section.offers.length === 0) return null;
-            const best = section.offers[0];
-            const worst = section.offers[section.offers.length - 1];
-            const medianValue =
-              section.offers[Math.floor(section.offers.length / 2)].price;
+            // MED/BEST/WORST nell'header sono SEMPRE in unita' prezzo
+            // (€/kWh, €/Smc) e indipendenti dal sortMode: i colori dei tile
+            // sono price-based, l'header riassume quel range.
+            // Median: precomputato server-side per categoria (Offer.median),
+            //         identico per tutte le offerte di una sezione.
+            const medianValue = section.offers[0].median;
+            let priceMin = Number.POSITIVE_INFINITY;
+            let priceMax = Number.NEGATIVE_INFINITY;
+            for (const o of section.offers) {
+              if (o.price < priceMin) priceMin = o.price;
+              if (o.price > priceMax) priceMax = o.price;
+            }
             return (
               <section key={section.key}>
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-emerald-400/15 pb-2">
@@ -774,9 +903,9 @@ export function MarketMap({
                     {section.isSpread ? "+" : ""}
                     {NUMBER_4DP.format(medianValue)} {section.unit} · BEST{" "}
                     {section.isSpread ? "+" : ""}
-                    {NUMBER_4DP.format(best.price)} · WORST{" "}
+                    {NUMBER_4DP.format(priceMin)} · WORST{" "}
                     {section.isSpread ? "+" : ""}
-                    {NUMBER_4DP.format(worst.price)}
+                    {NUMBER_4DP.format(priceMax)}
                   </span>
                 </div>
 
