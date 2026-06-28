@@ -106,6 +106,15 @@ Il TTF (Title Transfer Facility) e' il benchmark europeo del gas naturale, quota
 
 - [EIDX Pro](https://energyindex.it/it/pro): suite analytics per fornitori energy, broker, PMI energivore: Margin Simulator (P&L cliente), Forecast & Scenari what-if, Report PDF brandizzato, Customer Simulator B2B con clusters
 
+## API JSON pubbliche (free, attribuzione richiesta)
+
+- [GET /api/v1](https://energyindex.it/api/v1): documentazione machine-readable degli endpoint
+- [GET /api/v1/pun/today](https://energyindex.it/api/v1/pun/today): valore PUN corrente in €/kWh e €/MWh nativo
+- [GET /api/v1/psv/today](https://energyindex.it/api/v1/psv/today): valore PSV corrente in €/kWh e €/MWh nativo
+- [GET /api/v1/today](https://energyindex.it/api/v1/today): snapshot di tutti gli indici (PUN, PSV, TTF, Brent, CO2) in una call
+
+CORS aperto, cache 15 min, license free per uso personale e commerciale con attribuzione "Fonte: Energy Index (https://energyindex.it)".
+
 ## FAQ piu' comuni
 
 - Quanto vale il PUN oggi? ${fmt(pun)} €/MWh (aggiornato ${today})
