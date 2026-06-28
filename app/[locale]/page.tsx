@@ -399,6 +399,47 @@ export default async function HomeIt() {
     ],
   };
 
+  // SEO #5: WebPage + SpeakableSpecification — dice a Google Assistant
+  // / Siri / AI Overview QUALI elementi della pagina sono adatti per
+  // risposte vocali. Mark via CSS selector (.speakable-*).
+  // Doc: https://schema.org/SpeakableSpecification
+  // Use case: ricerca vocale "Hey Google, quanto vale il PUN oggi?" →
+  // Assistant prende il contenuto degli elementi marcati .speakable-*
+  const webPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE}/it`,
+    url: `${SITE}/it`,
+    name: punStr
+      ? `PUN oggi ${punStr} €/MWh — Energy Index`
+      : "Energy Index — Osservatorio prezzi energia Italia",
+    description: punStr
+      ? `Il valore PUN oggi e' ${punStr} €/MWh. Tutti i prezzi all'ingrosso (PUN, PSV, TTF) aggiornati in tempo reale dal GME, con forecast e mappa offerte mercato libero.`
+      : "Osservatorio dei prezzi all'ingrosso dell'energia italiana: PUN, PSV gas, TTF, forecast a 180 giorni, offerte del mercato libero.",
+    inLanguage: "it-IT",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": SITE,
+      name: "Energy Index",
+      url: SITE,
+    },
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: [
+        ".speakable-headline",
+        ".speakable-summary",
+        ".speakable-values",
+      ],
+    },
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      url: `${SITE}/opengraph-image`,
+    },
+    datePublished: "2025-09-01",
+    dateModified: todayDate.toISOString(),
+    publisher: organization(),
+  };
+
   return (
     <div className="container mx-auto py-12 sm:py-16 px-4 space-y-8 sm:space-y-10">
       <script
@@ -417,6 +458,10 @@ export default async function HomeIt() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(webPageJsonLd) }}
+      />
 
       <header className="space-y-3">
         {/* Freshness signal visibile: <time datetime> permette a Googlebot
@@ -432,7 +477,7 @@ export default async function HomeIt() {
             Live data GME
           </span>
         </p>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+        <h1 className="speakable-headline text-4xl sm:text-5xl font-bold tracking-tight">
           {punStr ? (
             <>
               PUN oggi <span className="text-emerald-600 dark:text-emerald-400 tabular-nums">{punStr} €/MWh</span>: prezzo energia elettrica e gas in tempo reale
@@ -441,18 +486,30 @@ export default async function HomeIt() {
             "PUN oggi: prezzo energia elettrica e gas in tempo reale"
           )}
         </h1>
-        <p className="text-muted-foreground text-base sm:text-lg max-w-3xl">
+        <p className="speakable-summary text-muted-foreground text-base sm:text-lg max-w-3xl">
           Osservatorio gratuito sul <strong>valore PUN</strong> (mercato elettrico GME),{" "}
           <strong>PSV gas</strong>, <strong>TTF</strong>, Brent e CO₂. Forecast
           giornaliero a 7, 30, 90 e 180 giorni + mappa di tutte le offerte del{" "}
           <strong>mercato libero</strong> ARERA.
-          {punStr && psvStr ? (
-            <>
-              {" "}Oggi <strong>PUN {punStr} €/MWh</strong>, <strong>PSV {psvStr} €/MWh</strong>
-              {ttfStr ? <>, <strong>TTF {ttfStr} €/MWh</strong></> : null}.
-            </>
-          ) : null}
         </p>
+        {/* Frase compatta "speakable values" pensata per AI Overview / voice:
+            quando Google / Siri / Assistant leggono questa pagina per
+            rispondere "quanto vale il PUN oggi?", la SpeakableSpecification
+            JSON-LD punta a .speakable-values e legge solo questa frase. */}
+        {punStr && psvStr ? (
+          <p className="speakable-values text-base sm:text-lg max-w-3xl">
+            Oggi, {ddmmyyyy}:{" "}
+            <strong>PUN {punStr} €/MWh</strong>,{" "}
+            <strong>PSV gas {psvStr} €/MWh</strong>
+            {ttfStr ? (
+              <>
+                ,{" "}
+                <strong>TTF gas Europa {ttfStr} €/MWh</strong>
+              </>
+            ) : null}
+            .
+          </p>
+        ) : null}
       </header>
 
       <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
