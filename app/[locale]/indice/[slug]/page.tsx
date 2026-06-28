@@ -11,7 +11,7 @@ import { resolveTimeframe } from "@/lib/timeframes";
 import { resolveZone } from "@/lib/pun-zones";
 import { ZoneSelector } from "@/components/chart/ZoneSelector";
 import { ZoneMapItalia } from "@/components/chart/ZoneMapItalia";
-import { breadcrumbList, dataset, jsonLdString } from "@/lib/seo/jsonld";
+import { breadcrumbList, dataset, jsonLdString, organization } from "@/lib/seo/jsonld";
 import { ForecastSection } from "@/components/forecast/ForecastSection";
 
 // La pagina e' dynamic: legge searchParams.tf, quindi Next.js 16 forza
@@ -182,28 +182,50 @@ export async function generateMetadata({
   }
   const priceStr = price !== null ? `${NUMBER_2DP.format(price)} ${unit}` : "—";
 
+  // Date string per title/description — boost CTR + freshness signal
+  // su query "X oggi" che sono le piu' competitive del settore.
+  const today = new Date();
+  const ddmm = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const valueOnly = price !== null ? NUMBER_2DP.format(price) : null;
+
   let title: string;
   let description: string;
   if (slug === "pun") {
     const zoneLabel = zone && !zone.isNational ? ` Zona ${zone.displayShort}` : "";
-    title = `PUN${zoneLabel} oggi: ${priceStr}`;
-    description = `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`;
+    title = valueOnly
+      ? `PUN${zoneLabel} oggi ${valueOnly} €/MWh (${ddmm}) — GME | Energy Index`
+      : `PUN${zoneLabel} oggi: ${priceStr}`;
+    description = valueOnly
+      ? `Valore PUN${zoneLabel} oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Storico 5 anni, forecast 90 giorni, dato live GME (Gestore Mercati Energetici). Gratis, no registrazione.`
+      : `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`;
   } else if (slug === "psv") {
-    title = `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
-    description =
-      "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
+    title = valueOnly
+      ? `PSV oggi ${valueOnly} €/MWh (${ddmm}) — Gas Italia GME | Energy Index`
+      : `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
+    description = valueOnly
+      ? `Valore PSV oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Prezzo all'ingrosso gas naturale Italia, riferimento offerte gas variabili. Storico, forecast e dato live GME MGP-GAS.`
+      : "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
   } else if (slug === "brent") {
-    title = `Brent oggi: ${priceStr} — Petrolio greggio`;
-    description =
-      "Andamento del prezzo Brent crude oil (North Sea), benchmark europeo del petrolio. Driver storico dei prezzi gas ed elettrico.";
+    title = valueOnly
+      ? `Brent oggi ${valueOnly} $/bbl (${ddmm}) — Petrolio | Energy Index`
+      : `Brent oggi: ${priceStr} — Petrolio greggio`;
+    description = valueOnly
+      ? `Valore Brent oggi ${valueOnly} $/bbl aggiornato il ${ddmm}. Benchmark europeo petrolio (North Sea), driver storico di gas ed elettrico.`
+      : "Andamento del prezzo Brent crude oil (North Sea), benchmark europeo del petrolio. Driver storico dei prezzi gas ed elettrico.";
   } else if (slug === "co2") {
-    title = `CO2 EUA oggi: ${priceStr} — Quota emissione EU ETS`;
-    description =
-      "Prezzo settlement della quota di emissione CO2 nell'EU Emissions Trading System. Costo per i produttori termoelettrici, impatta indirettamente la bolletta elettrica.";
+    title = valueOnly
+      ? `CO2 EUA oggi ${valueOnly} €/tCO2 (${ddmm}) — EU ETS | Energy Index`
+      : `CO2 EUA oggi: ${priceStr} — Quota emissione EU ETS`;
+    description = valueOnly
+      ? `Valore CO2 EUA oggi ${valueOnly} €/tCO2 aggiornato il ${ddmm}. Quota emissione EU ETS, costo per produttori termoelettrici, impatto su bolletta.`
+      : "Prezzo settlement della quota di emissione CO2 nell'EU Emissions Trading System. Costo per i produttori termoelettrici, impatta indirettamente la bolletta elettrica.";
   } else if (slug === "ttf") {
-    title = `TTF oggi: ${priceStr} — Gas Europa (front-month)`;
-    description =
-      "Andamento del TTF (Title Transfer Facility), benchmark europeo del gas naturale. Driver principale del PSV italiano.";
+    title = valueOnly
+      ? `TTF oggi ${valueOnly} €/MWh (${ddmm}) — Gas Europa | Energy Index`
+      : `TTF oggi: ${priceStr} — Gas Europa (front-month)`;
+    description = valueOnly
+      ? `Valore TTF oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Title Transfer Facility, benchmark europeo gas naturale (front-month ICE Endex). Driver principale del PSV italiano.`
+      : "Andamento del TTF (Title Transfer Facility), benchmark europeo del gas naturale. Driver principale del PSV italiano.";
   } else {
     // temperatura
     title = `Temperatura Italia oggi: ${priceStr}`;
@@ -211,9 +233,50 @@ export async function generateMetadata({
       "Temperatura media nazionale italiana (media pesata di 9 citta'), driver dei consumi gas e elettrici. Anomalia stagionale vs media 5 anni.";
   }
 
+  // Keywords per-slug, specifiche per query high-intent
+  const slugKeywords: Record<string, string[]> = {
+    pun: [
+      "PUN",
+      "PUN oggi",
+      "valore PUN",
+      "PUN GME",
+      "prezzo PUN",
+      "PUN energia",
+      "PUN mercato elettrico",
+      "PUN MGP",
+      "PUN day-ahead",
+      ...(zone && !zone.isNational
+        ? [`PUN ${zone.displayShort}`, `PUN zona ${zone.displayShort}`]
+        : []),
+    ],
+    psv: [
+      "PSV",
+      "PSV oggi",
+      "valore PSV",
+      "PSV gas",
+      "PSV GME",
+      "prezzo PSV",
+      "PSV Italia",
+      "Punto di Scambio Virtuale",
+      "PSV MGP-GAS",
+      "PSV gas naturale",
+    ],
+    ttf: ["TTF", "TTF oggi", "valore TTF", "TTF gas", "TTF ICE", "TTF Europa", "gas Europa"],
+    brent: ["Brent", "Brent oggi", "petrolio oggi", "prezzo Brent", "North Sea"],
+    co2: ["CO2 EUA", "CO2 oggi", "EU ETS", "quota emissione", "CO2 prezzo"],
+    temperatura: ["temperatura Italia", "anomalia temperatura", "clima Italia"],
+  };
+
   return {
     title,
     description,
+    keywords: slugKeywords[slug],
+    alternates: {
+      canonical:
+        zone && !zone.isNational
+          ? `https://energyindex.it/it/indice/${slug}?zone=${zone.code}`
+          : `https://energyindex.it/it/indice/${slug}`,
+    },
     openGraph: {
       title,
       description,
@@ -224,6 +287,10 @@ export async function generateMetadata({
         : `/it/indice/${slug}`,
     },
     twitter: { card: "summary_large_image", title, description },
+    other: {
+      googlebot:
+        "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+    },
   };
 }
 
@@ -377,8 +444,117 @@ export default async function IndicePage({
           ),
         }}
       />
+      {/* NewsArticle JSON-LD per le 3 commodity di mercato (PUN/PSV/TTF)
+          + Brent/CO2 — google interpreta la pagina come "news" con
+          datePublished/dateModified freschi → freshness boost continuo
+          per query high-intent come "PUN oggi" / "PSV oggi". */}
+      {(slug === "pun" || slug === "psv" || slug === "ttf" || slug === "brent" || slug === "co2") && latestPoint && (() => {
+        const today = new Date();
+        const ddmmyyyy = today.toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+        const labelMap: Record<string, string> = {
+          pun: "PUN",
+          psv: "PSV gas",
+          ttf: "TTF gas Europa",
+          brent: "Brent petrolio",
+          co2: "CO2 EUA",
+        };
+        const label = labelMap[slug];
+        const valueFmt = NUMBER_2DP.format(latestPoint.value);
+        const newsArticleJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: `${label} oggi ${valueFmt} ${assetMeta.unit} (${ddmmyyyy})`,
+          description: `Il valore ${label} oggi e' ${valueFmt} ${assetMeta.unit}, aggiornato il ${ddmmyyyy}. Storico, forecast e dato live.`,
+          image: `https://energyindex.it/it/indice/${slug}/opengraph-image`,
+          datePublished: latestPoint.observed_at,
+          dateModified: today.toISOString(),
+          author: organization(),
+          publisher: organization(),
+          mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": `https://energyindex.it/it/indice/${slug}`,
+          },
+          inLanguage: "it-IT",
+        };
+        // FAQPage one-question targeted: la risposta diretta alla query
+        // di ricerca "{INDICE} oggi" — Google AI Overview la cita come
+        // featured snippet con valore numerico.
+        const todayFaqJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: `Quanto vale il ${label} oggi?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `Il valore ${label} oggi e' ${valueFmt} ${assetMeta.unit}, aggiornato il ${ddmmyyyy}. Il dato e' pubblicato in tempo reale su energyindex.it dalla fonte ufficiale.`,
+              },
+            },
+            {
+              "@type": "Question",
+              name: `Qual e' il valore ${label} oggi?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: `${label}: ${valueFmt} ${assetMeta.unit} (aggiornato ${ddmmyyyy}).`,
+              },
+            },
+          ],
+        };
+        // WebPage + SpeakableSpecification: per Google Assistant / Siri
+        // / Apple Intelligence che cercano la risposta vocale alla query
+        // "Quanto vale il PUN oggi?" — leggono solo l'H1 e la card valore.
+        const webPageJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": `https://energyindex.it/it/indice/${slug}`,
+          url: `https://energyindex.it/it/indice/${slug}`,
+          name: `${label} oggi ${valueFmt} ${assetMeta.unit}`,
+          description: `Valore ${label} attuale: ${valueFmt} ${assetMeta.unit}, aggiornato ${ddmmyyyy}.`,
+          inLanguage: "it-IT",
+          isPartOf: {
+            "@type": "WebSite",
+            "@id": "https://energyindex.it",
+            name: "Energy Index",
+          },
+          speakable: {
+            "@type": "SpeakableSpecification",
+            cssSelector: [".speakable-headline", ".speakable-value"],
+          },
+          datePublished: latestPoint.observed_at,
+          dateModified: today.toISOString(),
+          publisher: organization(),
+        };
+        return (
+          <>
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: jsonLdString(newsArticleJsonLd) }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: jsonLdString(todayFaqJsonLd) }}
+            />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: jsonLdString(webPageJsonLd) }}
+            />
+            {/* Frase speakable nascosta ottimizzata per voice-readback
+                degli AI Assistant. NON visibile a schermo (sr-only) per
+                evitare duplicazione UX con LatestValueCard sotto. */}
+            <p className="speakable-value sr-only">
+              Il valore {label} oggi, {ddmmyyyy}, e&apos; {valueFmt} {assetMeta.unit},
+              aggiornato in tempo reale dalla fonte ufficiale.
+            </p>
+          </>
+        );
+      })()}
       <header className="space-y-2">
-        <h1 className="text-4xl font-bold tabular-nums">
+        <h1 className="speakable-headline text-4xl font-bold tabular-nums">
           {assetMeta.display_name_it}
         </h1>
         {description && <p className="text-muted-foreground">{description}</p>}
