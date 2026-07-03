@@ -37,5 +37,15 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // Esclusioni dal middleware next-intl (che altrimenti forza il prefix
+  // /it/ su tutto):
+  //  - api/*, _next/*, _vercel/*: infrastruttura Next.js
+  //  - opengraph-image, twitter-image, icon, apple-icon: Next.js metadata
+  //    routes senza estensione (root-level). Senza esclusione, /opengraph-image
+  //    viene redirected a /it/opengraph-image che non esiste → 404 su Google.
+  //  - Qualsiasi path che contiene un punto (.jpg, .svg, .txt, .ico, ecc.):
+  //    e' un asset statico, salta il routing intl.
+  matcher: [
+    "/((?!api|_next|_vercel|opengraph-image|twitter-image|icon|apple-icon|.*\\..*).*)",
+  ],
 };

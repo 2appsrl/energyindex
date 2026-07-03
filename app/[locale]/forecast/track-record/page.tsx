@@ -6,18 +6,40 @@ import { breadcrumbList, jsonLdString } from "@/lib/seo/jsonld";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Track record forecast — Energy Index",
-  description:
-    "Dashboard dei forecast emessi vs realtà negli ultimi 12 mesi. MAPE, RMSE, hit ratio e coverage per asset × orizzonte.",
-  openGraph: {
-    title: "Track record forecast PUN/PSV/TTF — Energy Index",
-    description: "Verifica empirica delle previsioni del modello Energy Index.",
-    type: "website",
-    locale: "it_IT",
-    url: "/it/forecast/track-record",
-  },
-};
+/**
+ * generateMetadata dinamico: emette SEMPRE lo stesso canonical
+ * (https://energyindex.it/it/forecast/track-record) indipendentemente
+ * dai searchParams asset/fh. Cosi' Google capisce che tutte le varianti
+ * ?asset=pun&fh=7, ?asset=psv&fh=180, ecc. sono la STESSA pagina e ne
+ * indicizza solo una — no piu' "Pagina duplicata senza URL canonico".
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ asset?: string; fh?: string }>;
+}): Promise<Metadata> {
+  const { asset, fh } = await searchParams;
+  const activeLabel =
+    asset && fh
+      ? ` (${asset.toUpperCase()} · ${fh}gg)`
+      : "";
+  return {
+    title: `Track record forecast${activeLabel} — Energy Index`,
+    description:
+      "Dashboard dei forecast emessi vs realta' negli ultimi 12 mesi. MAPE, RMSE, hit ratio e coverage per asset x orizzonte.",
+    alternates: {
+      // Canonical FISSO alla base URL — strippiamo asset/fh
+      canonical: "https://energyindex.it/it/forecast/track-record",
+    },
+    openGraph: {
+      title: "Track record forecast PUN/PSV/TTF — Energy Index",
+      description: "Verifica empirica delle previsioni del modello Energy Index.",
+      type: "website",
+      locale: "it_IT",
+      url: "/it/forecast/track-record",
+    },
+  };
+}
 
 const SLUGS = ["pun", "psv", "ttf"] as const;
 const HORIZONS = [7, 30, 90, 180] as const;
