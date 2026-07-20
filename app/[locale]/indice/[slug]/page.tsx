@@ -193,35 +193,35 @@ export async function generateMetadata({
   if (slug === "pun") {
     const zoneLabel = zone && !zone.isNational ? ` Zona ${zone.displayShort}` : "";
     title = valueOnly
-      ? `PUN${zoneLabel} oggi ${valueOnly} €/MWh (${ddmm}) — GME | Energy Index`
+      ? `PUN${zoneLabel} oggi ${valueOnly} €/MWh (${ddmm}) — GME`
       : `PUN${zoneLabel} oggi: ${priceStr}`;
     description = valueOnly
       ? `Valore PUN${zoneLabel} oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Storico 5 anni, forecast 90 giorni, dato live GME (Gestore Mercati Energetici). Gratis, no registrazione.`
       : `Andamento e prezzo attuale del PUN${zoneLabel}, riferimento all'ingrosso dell'energia elettrica italiana. Storico 5 anni, aggiornato ogni ora dal GME.`;
   } else if (slug === "psv") {
     title = valueOnly
-      ? `PSV oggi ${valueOnly} €/MWh (${ddmm}) — Gas Italia GME | Energy Index`
+      ? `PSV oggi ${valueOnly} €/MWh (${ddmm}) — Gas Italia GME`
       : `PSV oggi: ${priceStr} — Punto di Scambio Virtuale gas`;
     description = valueOnly
       ? `Valore PSV oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Prezzo all'ingrosso gas naturale Italia, riferimento offerte gas variabili. Storico, forecast e dato live GME MGP-GAS.`
       : "Andamento del PSV (Punto di Scambio Virtuale), prezzo all'ingrosso del gas naturale italiano. Storico 5 anni, aggiornato ogni giorno dal GME MGP-GAS.";
   } else if (slug === "brent") {
     title = valueOnly
-      ? `Brent oggi ${valueOnly} $/bbl (${ddmm}) — Petrolio | Energy Index`
+      ? `Brent oggi ${valueOnly} $/bbl (${ddmm}) — Petrolio`
       : `Brent oggi: ${priceStr} — Petrolio greggio`;
     description = valueOnly
       ? `Valore Brent oggi ${valueOnly} $/bbl aggiornato il ${ddmm}. Benchmark europeo petrolio (North Sea), driver storico di gas ed elettrico.`
       : "Andamento del prezzo Brent crude oil (North Sea), benchmark europeo del petrolio. Driver storico dei prezzi gas ed elettrico.";
   } else if (slug === "co2") {
     title = valueOnly
-      ? `CO2 EUA oggi ${valueOnly} €/tCO2 (${ddmm}) — EU ETS | Energy Index`
+      ? `CO2 EUA oggi ${valueOnly} €/tCO2 (${ddmm}) — EU ETS`
       : `CO2 EUA oggi: ${priceStr} — Quota emissione EU ETS`;
     description = valueOnly
       ? `Valore CO2 EUA oggi ${valueOnly} €/tCO2 aggiornato il ${ddmm}. Quota emissione EU ETS, costo per produttori termoelettrici, impatto su bolletta.`
       : "Prezzo settlement della quota di emissione CO2 nell'EU Emissions Trading System. Costo per i produttori termoelettrici, impatta indirettamente la bolletta elettrica.";
   } else if (slug === "ttf") {
     title = valueOnly
-      ? `TTF oggi ${valueOnly} €/MWh (${ddmm}) — Gas Europa | Energy Index`
+      ? `TTF oggi ${valueOnly} €/MWh (${ddmm}) — Gas Europa`
       : `TTF oggi: ${priceStr} — Gas Europa (front-month)`;
     description = valueOnly
       ? `Valore TTF oggi ${valueOnly} €/MWh aggiornato il ${ddmm}. Title Transfer Facility, benchmark europeo gas naturale (front-month ICE Endex). Driver principale del PSV italiano.`
