@@ -1,33 +1,30 @@
 import type { MetadataRoute } from "next";
 
 const BASE = "https://energyindex.it";
+const ZONES = ["nord", "cnor", "csud", "sud", "sici", "sard"] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
   return [
-    {
-      url: `${BASE}/it`,
-      changeFrequency: "hourly",
-      priority: 1,
-    },
-    {
-      url: `${BASE}/it/indice/pun`,
-      changeFrequency: "hourly",
-      priority: 1,
-    },
-    {
-      url: `${BASE}/it/indice/psv`,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: `${BASE}/it/mercato-libero`,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE}/it/mercato-libero/ticker`,
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
+    { url: `${BASE}/it`, lastModified: now, priority: 1.0, changeFrequency: "hourly" },
+    { url: `${BASE}/it/indice/pun`, lastModified: now, priority: 0.9, changeFrequency: "hourly" },
+    ...ZONES.map((z) => ({
+      url: `${BASE}/it/indice/pun?zone=${z}`,
+      lastModified: now,
+      priority: 0.7 as const,
+      changeFrequency: "hourly" as const,
+    })),
+    { url: `${BASE}/it/indice/psv`, lastModified: now, priority: 0.9, changeFrequency: "daily" },
+    { url: `${BASE}/it/indice/ttf`, lastModified: now, priority: 0.8, changeFrequency: "daily" },
+    { url: `${BASE}/it/indice/brent`, lastModified: now, priority: 0.7, changeFrequency: "daily" },
+    { url: `${BASE}/it/indice/co2`, lastModified: now, priority: 0.7, changeFrequency: "daily" },
+    { url: `${BASE}/it/indice/temperatura`, lastModified: now, priority: 0.6, changeFrequency: "daily" },
+    { url: `${BASE}/it/mercato-libero`, lastModified: now, priority: 0.9, changeFrequency: "daily" },
+    { url: `${BASE}/it/mercato-libero/ticker`, lastModified: now, priority: 0.7, changeFrequency: "daily" },
+    { url: `${BASE}/it/ctemachine`, lastModified: now, priority: 0.5, changeFrequency: "weekly" },
+    { url: `${BASE}/it/forecast`, lastModified: now, priority: 0.9, changeFrequency: "daily" },
+    { url: `${BASE}/it/forecast/track-record`, lastModified: now, priority: 0.6, changeFrequency: "daily" },
+    { url: `${BASE}/it/forecast/metodologia`, lastModified: now, priority: 0.5, changeFrequency: "monthly" },
+    { url: `${BASE}/it/pro`, lastModified: now, priority: 0.8, changeFrequency: "weekly" },
   ];
 }

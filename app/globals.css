@@ -128,3 +128,35 @@
     @apply font-sans;
   }
 }
+
+/*
+ * EIDX Pro forced-light scope.
+ *
+ * /pro/simulator must render light regardless of the user's saved theme
+ * (ei-theme stored in localStorage). The ThemeToggle sets `.dark` on
+ * <html>; here we override the token values back to light when nested
+ * inside a [data-theme="pro-light"] container, plus a few visual
+ * surfaces (cream background) anchored on the scope itself.
+ */
+[data-theme="pro-light"],
+.dark [data-theme="pro-light"] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.42 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  color-scheme: light;
+}

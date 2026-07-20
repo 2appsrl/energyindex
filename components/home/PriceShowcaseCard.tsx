@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Flame, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatEurMwh, formatPercentDelta } from "@/lib/format";
+import {
+  formatEurMwh,
+  formatPercentDelta,
+  formatRetailEquivalent,
+  type Commodity,
+} from "@/lib/format";
 
 const ICONS = {
   zap: Zap,
@@ -16,6 +21,9 @@ export interface PriceShowcaseCardProps {
   prevValue: number | null;
   unit: string;
   ariaLabel: string;
+  /** Se specificato, sotto il big number mostra anche la conversione retail
+   *  (€/kWh per luce, €/Smc per gas). */
+  commodity?: Commodity;
 }
 
 export function PriceShowcaseCard({
@@ -26,6 +34,7 @@ export function PriceShowcaseCard({
   prevValue,
   unit,
   ariaLabel,
+  commodity,
 }: PriceShowcaseCardProps) {
   const Icon = ICONS[icon];
   const delta =
@@ -34,6 +43,10 @@ export function PriceShowcaseCard({
       : null;
   const isUp =
     value !== null && prevValue !== null && value >= prevValue;
+  const retail =
+    value !== null && commodity && unit === "€/MWh"
+      ? formatRetailEquivalent(value, commodity)
+      : null;
 
   return (
     <Link
@@ -63,16 +76,23 @@ export function PriceShowcaseCard({
             </span>
           )}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {title}
           </h2>
           {value !== null ? (
-            <p className="text-4xl sm:text-5xl font-bold tabular-nums">
-              {unit === "€/MWh"
-                ? formatEurMwh(value)
-                : `${value.toFixed(2)} ${unit}`}
-            </p>
+            <>
+              <p className="text-4xl sm:text-5xl font-bold tabular-nums">
+                {unit === "€/MWh"
+                  ? formatEurMwh(value)
+                  : `${value.toFixed(2)} ${unit}`}
+              </p>
+              {retail && (
+                <p className="text-sm sm:text-base tabular-nums text-muted-foreground">
+                  ≈ {retail}
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-base sm:text-lg text-muted-foreground">
               Dati in arrivo

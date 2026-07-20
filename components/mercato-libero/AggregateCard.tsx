@@ -3,8 +3,17 @@ const NUMBER_4DP = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 4,
 });
 
+const NUMBER_2DP = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 function fmt(n: number | null | undefined): string {
   return n == null || !Number.isFinite(n) ? "—" : NUMBER_4DP.format(n);
+}
+
+function fmt2(n: number | null | undefined): string {
+  return n == null || !Number.isFinite(n) ? "—" : NUMBER_2DP.format(n);
 }
 
 export interface AggregateCardProps {
@@ -26,6 +35,14 @@ export interface AggregateCardProps {
    * solo quando isSpread=true per il testo "+ X €/kWh sopra <reference>".
    */
   referenceLabel?: string;
+  /**
+   * Mediana / quartili del costo commercializzazione fisso mensile
+   * (EUR/mese). Renderizzato solo per source='libero' (PLACET non lo
+   * espone). null o 0 -> niente riga.
+   */
+  fixedCostMedian?: number | null;
+  fixedCostP25?: number | null;
+  fixedCostP75?: number | null;
 }
 
 export function AggregateCard({
@@ -38,6 +55,9 @@ export function AggregateCard({
   unit,
   isSpread = false,
   referenceLabel,
+  fixedCostMedian = null,
+  fixedCostP25 = null,
+  fixedCostP75 = null,
 }: AggregateCardProps) {
   const noData = median === null || sampleSize === 0;
   return (
@@ -71,6 +91,14 @@ export function AggregateCard({
             <div className="text-xs text-muted-foreground tabular-nums">
               p25 {isSpread ? "+" : ""}{fmt(p25)} · p75 {isSpread ? "+" : ""}{fmt(p75)} · {sampleSize} offerte domestico
             </div>
+            {fixedCostMedian != null && Number.isFinite(fixedCostMedian) && fixedCostMedian > 0 && (
+              <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/50 tabular-nums">
+                + {fmt2(fixedCostMedian)} €/mese fisso (mediano
+                {fixedCostP25 != null && fixedCostP75 != null &&
+                  ` · range ${fmt2(fixedCostP25)}–${fmt2(fixedCostP75)}`}
+                )
+              </p>
+            )}
           </>
         )}
       </div>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Card } from "@/components/ui/card";
+import { faqPage, jsonLdString } from "@/lib/seo/jsonld";
 
 // Inline frontmatter stripper. Our FAQ markdown is fully under our control,
 // so a 5-line helper avoids pulling in gray-matter as a runtime dependency.
@@ -64,29 +65,20 @@ export async function FaqSection({ slug }: { slug: string }) {
     return { question: question.trim(), answer };
   });
 
-  // Dati strutturati FAQPage: aiutano motori di ricerca e assistenti AI a
-  // estrarre le risposte. Il testo va ripulito dalla sintassi markdown
-  // ([testo](url) -> testo, **bold** -> bold).
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: items.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-          .replace(/\*\*([^*]+)\*\*/g, "$1"),
-      },
+  const faqJsonLd = faqPage(
+    items.map((item) => ({
+      question: item.question,
+      // L'answer e' markdown con link [text](url). Per JSON-LD usiamo la versione
+      // raw (Google riconosce HTML basic). Strip dei link markdown per pulizia.
+      answer: item.answer.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"),
     })),
-  };
+  );
 
   return (
     <section className="space-y-6">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(faqJsonLd) }}
       />
       <h2 className="text-2xl font-semibold tracking-tight">
         Domande frequenti

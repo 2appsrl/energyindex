@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { type ZoneCode } from "@/lib/pun-zones";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 // Path SVG stilizzati (viewBox 200x280). Non precisi geograficamente:
 // rappresentazione schematica con stivale + 2 isole, suddiviso in 4 bande
@@ -61,7 +64,15 @@ export function ZoneMapItalia({
           ([code, shape]) => {
             const isActive = code === active;
             return (
-              <Link key={code} href={buildHref(code)} scroll={false} aria-label={`Vai a zona ${shape.label}`}>
+              <Link
+                key={code}
+                href={buildHref(code)}
+                scroll={false}
+                aria-label={`Vai a zona ${shape.label}`}
+                onClick={() => {
+                  if (!isActive) trackEvent("zone_change", { zone: code, via: "map" });
+                }}
+              >
                 <g className="group cursor-pointer">
                   <path
                     d={shape.d}
@@ -95,6 +106,7 @@ export function ZoneMapItalia({
         <Link
           href={buildHref("nazionale")}
           scroll={false}
+          onClick={() => trackEvent("zone_change", { zone: "nazionale", via: "map_back" })}
           className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
         >
           ← Torna a vista nazionale

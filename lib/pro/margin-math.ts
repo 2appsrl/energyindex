@@ -1,0 +1,269 @@
+/**
+ * Slice 9 — EIDX Pro Margin Simulator math foundation.
+ *
+ * Pure functions, no I/O. KPI calculation for retail electricity/gas
+ * contracts assuming a PUN+spread (cost passthrough) pricing model.
+ *
+ * See AGENTS / Slice 9 design notes for the underlying assumptions.
+ */
+
+export type ContractType = "variabile" | "fisso";
+
+export interface SimulatorInputs {
+  /** Volume annuo cliente in kWh. */
+  volumeKwhPerYear: number;
+  /** Durata contratto in mesi (tipicamente 6 | 12 | 18 | 24). */
+  contractMonths: number;
+  /**
+   * Markup vendita applicato sopra il costo di approvvigionamento, €/MWh.
+   * Input naturale in modalita "variabile" (PUN passthrough).
+   */
+  spreadEurPerMwh: number;
+  /**
+   * Prezzo di vendita fisso al cliente, €/MWh (assoluto, non spread).
+   * Input naturale in modalita "fisso" (lock-in): "vendo a 130 €/MWh per 12 mesi".
+   * In modalita "variabile" il valore e ignorato.
+   */
+  fixedPriceEurPerMwh: number;
+  /** Costo acquisizione cliente, EUR (one-shot). */
+  cacEur: number;
+  /** Churn atteso annuo, frazione 0–1 (es. 0.14 = 14%). */
+  churnAnnualPct: number;
+  /** Overhead di approvvigionamento sopra il PUN, €/MWh. Default 3. */
+  approvOverheadEurPerMwh?: number;
+  /**
+   * Tipo contratto:
+   * - "variabile": PUN passthrough. Cliente assorbe le variazioni di mercato,
+   *   il margine = spread × volume (invariato sotto cost shock).
+   * - "fisso": lock-in. Fornitore assorbe il rischio prezzo: un cost shock
+   *   riduce lo spread effettivo dello stesso importo (derivato da
+   *   fixedPrice − costoApprov).
+   */
+  contractType: ContractType;
+}
+
+export interface ForecastBand {
+  /** Media del forecast PUN sulla durata contratto, €/MWh. */
+  averageEurPerMwh: number;
+  /** Banda inferiore (P10 o simile), €/MWh. */
+  lowerEurPerMwh: number;
+  /** Banda superiore (P90 o simile), €/MWh. */
+  upperEurPerMwh: number;
+}
+
+export interface KpiResult {
+  /** Costo medio approvvigionamento = avg(PUN) + overhead, €/MWh. */
+  costoApprovvigionamentoEurPerMwh: number;
+  /** Prezzo finale al cliente = costo + spread, €/MWh. */
+  prezzoVenditaEurPerMwh: number;
+  /** Margine lordo annuo per cliente, EUR. */
+  margineAnnoEur: number;
+  /** LTV netto (margine cumulato × retention − CAC), EUR. */
+  ltvContrattoEur: number;
+  /** Revenue lorda totale contratto = prezzo × volume × anni, EUR. */
+  contractValueEur: number;
+}
+
+export type ScenarioName = "base" | "inverno_freddo" | "ttf_spike" | "recessione_domanda";
+
+export interface ScenarioModifier {
+  name: ScenarioName;
+  label: string;
+  /** Moltiplicatore sul volume (es. 1.10 = +10%). */
+  volumeMultiplier: number;
+  /** Shock additivo sul costo €/MWh (es. +8 = costo +8 €/MWh). */
+  costShockEurPerMwh: number;
+}
+
+export const SCENARIOS: ScenarioModifier[] = [
+  { name: "base", label: "Base case", volumeMultiplier: 1.0, costShockEurPerMwh: 0 },
+  {
+    name: "inverno_freddo",
+    label: "Inverno freddo +10% volume",
+    volumeMultiplier: 1.1,
+    costShockEurPerMwh: 0,
+  },
+  {
+    name: "ttf_spike",
+    label: "TTF +20% (costo +8 €/MWh)",
+    volumeMultiplier: 1.0,
+    costShockEurPerMwh: 8,
+  },
+  {
+    name: "recessione_domanda",
+    label: "Recessione domanda −5%",
+    volumeMultiplier: 0.95,
+    costShockEurPerMwh: 0,
+  },
+];
+
+const DEFAULT_APPROV_OVERHEAD_EUR_PER_MWH = 3;
+
+/**
+ * Somma geometrica della retention su `years` anni.
+ *
+ * - churn = 0 -> Σ = years (lineare)
+ * - 0 < churn <= 1 -> Σ = (1 − (1 − churn)^years) / churn
+ *
+ * Supporta `years` frazionari (es. 1.5 per contratti 18 mesi).
+ */
+function geometricRetentionSum(years: number, churnAnnualPct: number): number {
+  if (churnAnnualPct <= 0) return years;
+  const ratio = 1 - churnAnnualPct;
+  return (1 - Math.pow(ratio, years)) / churnAnnualPct;
+}
+
+export function computeKpi(inputs: SimulatorInputs, forecast: ForecastBand): KpiResult {
+  const overhead = inputs.approvOverheadEurPerMwh ?? DEFAULT_APPROV_OVERHEAD_EUR_PER_MWH;
+  const costoApprovvigionamentoEurPerMwh = forecast.averageEurPerMwh + overhead;
+
+  let prezzoVenditaEurPerMwh: number;
+  let effectiveSpread: number;
+  if (inputs.contractType === "fisso") {
+    // In fisso l'utente imposta il prezzo finale al cliente; lo spread
+    // effettivo e derivato (prezzo − costo). Puo essere negativo se
+    // l'utente vende sotto costo (visibile come margine negativo).
+    prezzoVenditaEurPerMwh = inputs.fixedPriceEurPerMwh;
+    effectiveSpread = prezzoVenditaEurPerMwh - costoApprovvigionamentoEurPerMwh;
+  } else {
+    // In variabile l'utente imposta lo spread; il prezzo finale segue
+    // il costo (PUN passthrough).
+    effectiveSpread = inputs.spreadEurPerMwh;
+    prezzoVenditaEurPerMwh = costoApprovvigionamentoEurPerMwh + effectiveSpread;
+  }
+
+  const volumeMwh = inputs.volumeKwhPerYear / 1000;
+  const margineAnnoEur = effectiveSpread * volumeMwh;
+
+  const years = inputs.contractMonths / 12;
+  const retentionSum = geometricRetentionSum(years, inputs.churnAnnualPct);
+  const ltvGross = margineAnnoEur * retentionSum;
+  const ltvContrattoEur = ltvGross - inputs.cacEur;
+
+  const contractValueEur = prezzoVenditaEurPerMwh * volumeMwh * years;
+
+  return {
+    costoApprovvigionamentoEurPerMwh,
+    prezzoVenditaEurPerMwh,
+    margineAnnoEur,
+    ltvContrattoEur,
+    contractValueEur,
+  };
+}
+
+/**
+ * Applica uno scenario di stress: scala il volume per `volumeMultiplier`
+ * e somma `costShockEurPerMwh` al PUN medio del forecast, poi ricalcola
+ * il KPI.
+ *
+ * In modalita "variabile" (PUN passthrough) il margine dipende solo dal
+ * volume — il cost shock passa al cliente.
+ *
+ * In modalita "fisso" (lock-in) il fornitore assorbe il rischio prezzo:
+ * il cost shock riduce lo spread effettivo dello stesso importo, erodendo
+ * il margine.
+ */
+export function applyScenario(
+  inputs: SimulatorInputs,
+  forecast: ForecastBand,
+  scenario: ScenarioModifier,
+): KpiResult {
+  // Il cost shock fluisce attraverso forecast.averageEurPerMwh; computeKpi
+  // gestisce automaticamente il collasso dello spread in modalita fisso
+  // (prezzo fissato − costo che sale = margine eroso). In variabile lo
+  // spread e input diretto, quindi il margine resta invariato (passthrough).
+  const effectiveInputs: SimulatorInputs = {
+    ...inputs,
+    volumeKwhPerYear: inputs.volumeKwhPerYear * scenario.volumeMultiplier,
+  };
+  const effectiveForecast: ForecastBand = {
+    averageEurPerMwh: forecast.averageEurPerMwh + scenario.costShockEurPerMwh,
+    lowerEurPerMwh: forecast.lowerEurPerMwh + scenario.costShockEurPerMwh,
+    upperEurPerMwh: forecast.upperEurPerMwh + scenario.costShockEurPerMwh,
+  };
+  return computeKpi(effectiveInputs, effectiveForecast);
+}
+
+export interface WhatIfShocks {
+  /** Shock volume, frazione decimale (-0.20 .. +0.20, es. 0.10 = +10%). */
+  volumeShockPct: number;
+  /** Shock costo additivo, €/MWh (-10 .. +20). */
+  costShockEurPerMwh: number;
+  /** Shock churn additivo, frazione decimale (-0.10 .. +0.10). */
+  churnShockPct: number;
+}
+
+export const NO_SHOCKS: WhatIfShocks = {
+  volumeShockPct: 0,
+  costShockEurPerMwh: 0,
+  churnShockPct: 0,
+};
+
+/**
+ * Applica shock what-if arbitrari sul KPI base. Combina shock di volume,
+ * costo e churn. Il cost shock impatta il margine solo in modalita "fisso"
+ * (stessa logica di applyScenario per gli scenari preset).
+ */
+export function applyWhatIf(
+  inputs: SimulatorInputs,
+  forecast: ForecastBand,
+  shocks: WhatIfShocks,
+): KpiResult {
+  // Vedi applyScenario: il cost shock fluisce attraverso il forecast;
+  // computeKpi gestisce la differenza fisso/variabile.
+  const effectiveInputs: SimulatorInputs = {
+    ...inputs,
+    volumeKwhPerYear: inputs.volumeKwhPerYear * (1 + shocks.volumeShockPct),
+    churnAnnualPct: Math.max(
+      0,
+      Math.min(0.95, inputs.churnAnnualPct + shocks.churnShockPct),
+    ),
+  };
+  const effectiveForecast: ForecastBand = {
+    averageEurPerMwh: forecast.averageEurPerMwh + shocks.costShockEurPerMwh,
+    lowerEurPerMwh: forecast.lowerEurPerMwh + shocks.costShockEurPerMwh,
+    upperEurPerMwh: forecast.upperEurPerMwh + shocks.costShockEurPerMwh,
+  };
+  return computeKpi(effectiveInputs, effectiveForecast);
+}
+
+export interface CompetitorBenchmark {
+  /** Spread vendita scelto dall'utente, €/MWh. */
+  yourSpreadEurPerMwh: number;
+  /** Mediano di mercato per offerte comparabili, €/MWh. */
+  marketMedianEurPerMwh: number;
+  /** P25 di mercato, €/MWh. */
+  marketP25EurPerMwh: number;
+  /** P75 di mercato, €/MWh. */
+  marketP75EurPerMwh: number;
+}
+
+export interface BenchmarkVerdict {
+  /** Indicativo: 25 (sotto), 50 (allineato), 75 (sopra). */
+  positionPercentile: number;
+  /** Stringa user-facing in italiano con delta arrotondato. */
+  label: string;
+}
+
+const BENCHMARK_TOLERANCE_PCT = 10;
+
+export function computeBenchmarkVerdict(b: CompetitorBenchmark): BenchmarkVerdict {
+  if (b.marketMedianEurPerMwh <= 0) {
+    return { positionPercentile: 50, label: "Allineato al mercato (±10%)" };
+  }
+  const deltaPct = ((b.yourSpreadEurPerMwh - b.marketMedianEurPerMwh) / b.marketMedianEurPerMwh) * 100;
+  const rounded = Math.round(deltaPct);
+  if (deltaPct < -BENCHMARK_TOLERANCE_PCT) {
+    return {
+      positionPercentile: 25,
+      label: `Sotto mediano (${rounded}%) — competitivo`,
+    };
+  }
+  if (deltaPct > BENCHMARK_TOLERANCE_PCT) {
+    return {
+      positionPercentile: 75,
+      label: `Sopra mediano (+${rounded}%) — premium`,
+    };
+  }
+  return { positionPercentile: 50, label: "Allineato al mercato (±10%)" };
+}

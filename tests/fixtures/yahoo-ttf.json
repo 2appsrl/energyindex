@@ -1,0 +1,16 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": { "currency": "EUR", "symbol": "TTF=F" },
+        "timestamp": [1715644800, 1715731200, 1715817600],
+        "indicators": {
+          "quote": [
+            { "close": [29.10, 30.45, null] }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

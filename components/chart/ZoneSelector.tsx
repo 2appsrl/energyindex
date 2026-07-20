@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { PUN_ZONES, type ZoneCode } from "@/lib/pun-zones";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 export function ZoneSelector({
   active,
@@ -31,6 +34,11 @@ export function ZoneSelector({
             href={href}
             scroll={false}
             aria-current={isActive ? "page" : undefined}
+            onClick={() => {
+              if (!isActive) {
+                trackEvent("zone_change", { zone: z.code, via: "pill" });
+              }
+            }}
             className={cn(
               "shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               isActive

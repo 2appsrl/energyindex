@@ -1,0 +1,8 @@
+{
+  "latitude": 45.4642,
+  "longitude": 9.19,
+  "daily": {
+    "time": ["2026-05-12", "2026-05-13"],
+    "temperature_2m_mean": [18.3, 19.1]
+  }
+}
