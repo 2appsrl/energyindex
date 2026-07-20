@@ -64,8 +64,30 @@ export async function FaqSection({ slug }: { slug: string }) {
     return { question: question.trim(), answer };
   });
 
+  // Dati strutturati FAQPage: aiutano motori di ricerca e assistenti AI a
+  // estrarre le risposte. Il testo va ripulito dalla sintassi markdown
+  // ([testo](url) -> testo, **bold** -> bold).
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/\*\*([^*]+)\*\*/g, "$1"),
+      },
+    })),
+  };
+
   return (
     <section className="space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <h2 className="text-2xl font-semibold tracking-tight">
         Domande frequenti
       </h2>

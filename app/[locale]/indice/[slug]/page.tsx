@@ -24,6 +24,38 @@ const SOURCE_GRANULARITY_BY_SLUG: Record<string, "hourly" | "daily"> = {
   psv: "daily",
 };
 
+const SLUG_META: Record<string, { title: string; description: string }> = {
+  pun: {
+    title: "Prezzo PUN oggi — energia elettrica: valore, grafico e storico",
+    description:
+      "PUN (Prezzo Unico Nazionale) aggiornato ogni giorno dall'asta MGP del GME: prezzo corrente in €/MWh, grafico storico e prezzi delle zone di mercato (Nord, Sud, Sicilia, Sardegna...).",
+  },
+  psv: {
+    title: "Prezzo PSV oggi — gas naturale: valore, grafico e storico",
+    description:
+      "PSV (Punto di Scambio Virtuale) aggiornato ogni giorno dall'asta MGP-GAS del GME: prezzo all'ingrosso del gas naturale in Italia in €/MWh, con grafico storico e FAQ.",
+  },
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  const meta = SLUG_META[slug];
+  if (!meta) return {};
+  return {
+    title: meta.title,
+    description: meta.description,
+    alternates: {
+      // Canonical senza query param: le varianti ?tf= e ?zone= sono viste
+      // dai crawler come la stessa pagina.
+      canonical: `/${locale}/indice/${slug}`,
+    },
+  };
+}
+
 export default async function IndicePage({
   params,
   searchParams,

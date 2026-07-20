@@ -8,8 +8,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://energyindex.it"),
   title: { default: "Energy Index", template: "%s | Energy Index" },
-  description: "Osservatorio prezzi luce e gas in tempo reale.",
+  description:
+    "Osservatorio prezzi luce e gas in tempo reale: PUN e PSV aggiornati ogni giorno con grafici storici e prezzi zonali.",
+  openGraph: {
+    siteName: "Energy Index",
+    locale: "it_IT",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
