@@ -1,0 +1,41 @@
+name: IndexNow ping
+
+# Notifica i motori di ricerca (Bing -> ChatGPT Search / Copilot, Seznam,
+# Naver, Yandex) che le pagine prezzo sono cambiate, subito dopo le
+# pubblicazioni GME: PUN ~12:30 Europe/Rome, PSV ~17:00 Europe/Rome.
+# I cron sono in UTC: coprono sia ora solare che legale con margine.
+# Google non supporta IndexNow: per Google la freshness passa da
+# sitemap lastmod (dinamica, revalidate 15 min) e Search Console.
+on:
+  schedule:
+    - cron: "45 11 * * *" # ~13:45 CEST / 12:45 CET — dopo pubblicazione PUN
+    - cron: "15 16 * * *" # ~18:15 CEST / 17:15 CET — dopo pubblicazione PSV
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping IndexNow
+        run: |
+          curl -sS -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "host": "energyindex.it",
+              "key": "e06024d950d98f76689ead67931078c9",
+              "keyLocation": "https://energyindex.it/e06024d950d98f76689ead67931078c9.txt",
+              "urlList": [
+                "https://energyindex.it/it",
+                "https://energyindex.it/it/indice/pun",
+                "https://energyindex.it/it/indice/psv",
+                "https://energyindex.it/it/indice/ttf",
+                "https://energyindex.it/it/indice/brent",
+                "https://energyindex.it/it/indice/co2",
+                "https://energyindex.it/it/indice/temperatura",
+                "https://energyindex.it/it/forecast",
+                "https://energyindex.it/it/mercato-libero"
+              ]
+            }' -w "\nHTTP %{http_code}\n"
