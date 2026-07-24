@@ -54,9 +54,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const today = new Date();
   const ddmm = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}`;
   const valueStr = pun.value !== null ? formatValue(pun.value) : null;
+  // Niente suffisso "| Energy Index": lo aggiunge gia' il template del root layout.
   const title = valueStr
-    ? `PUN oggi ${valueStr} €/MWh (${ddmm}) — Prezzo energia | Energy Index`
-    : "PUN oggi — Prezzo PUN energia elettrica in tempo reale | Energy Index";
+    ? `PUN oggi ${valueStr} €/MWh (${ddmm}) — Prezzo energia`
+    : "PUN oggi — Prezzo PUN energia elettrica in tempo reale";
   const description = valueStr
     ? `PUN oggi ${valueStr} €/MWh aggiornato ${ddmm}. Valore PUN per zona (Nord, CNord, CSud, Sud, Sicilia, Sardegna), PSV gas, TTF + forecast 7-180 giorni + offerte mercato libero ARERA. Gratis, no registrazione.`
     : "PUN oggi: prezzo energia elettrica all'ingrosso in tempo reale (GME). Forecast PUN/PSV/TTF a 7/30/90/180 giorni con track record verificabile. Offerte mercato libero ARERA. Gratis.";
