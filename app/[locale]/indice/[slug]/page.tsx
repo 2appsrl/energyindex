@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { LatestValueCard } from "@/components/LatestValueCard";
-import { PriceChart } from "@/components/chart/PriceChart";
+import { PriceChart, type OverlaySeries, type PricePoint } from "@/components/chart/PriceChart";
 import { FaqSection } from "@/components/FaqSection";
 import { CtaToEnergiapro } from "@/components/CtaToEnergiapro";
 import { TimeframeSelector } from "@/components/chart/TimeframeSelector";
@@ -149,6 +149,50 @@ const getLatestObservations = cache(async (assetId: string | number, limit = 2) 
     .order("observed_at", { ascending: false })
     .limit(limit);
 });
+
+const toPoints = (rows: unknown): PricePoint[] =>
+  ((rows ?? []) as { observed_at: string; value: number | string }[]).map((p) => ({
+    observed_at: String(p.observed_at),
+    value: Number(p.value),
+  }));
+
+/**
+ * Serie TTF da sovrapporre al chart PSV: rende visibile lo spread TTF→PSV
+ * (driver Europa vs hub italiano). Ritorna null se il TTF non ha dati.
+ *
+ * Estratta a funzione per poter girare in parallelo con la serie principale:
+ * i suoi due round trip verso Supabase erano in coda a quelli della pagina.
+ */
+async function loadTtfOverlay(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  tf: { intervalSql: string; bucket: string },
+): Promise<OverlaySeries | null> {
+  const { data: ttfMeta } = await getAssetMetaBySlug("ttf");
+  if (!ttfMeta?.asset_id) return null;
+  const { data: ttfSeries } = await supabase.rpc("get_price_series", {
+    p_asset_id: ttfMeta.asset_id,
+    p_interval: tf.intervalSql,
+    p_bucket: tf.bucket,
+  });
+  const points = toPoints(ttfSeries);
+  if (points.length === 0) return null;
+  return {
+    label: "TTF Europa",
+    color: "#f59e0b", // amber-500 — netto contrasto col verde principale
+    points,
+  };
+}
+
+/** Placeholder del blocco forecast mentre la sua RPC e' ancora in volo. */
+function ForecastSkeleton() {
+  return (
+    <section aria-busy="true" className="space-y-3">
+      <div className="h-6 w-56 rounded-md bg-muted animate-pulse" />
+      <div className="h-[300px] w-full rounded-lg border bg-muted/50 animate-pulse" />
+      <span className="sr-only">Caricamento previsioni in corso.</span>
+    </section>
+  );
+}
 
 export async function generateMetadata({
   params,
@@ -358,59 +402,34 @@ export default async function IndicePage({
 
   const supabase = await createServerClient();
 
-  // Per temperatura: chiama RPC anomalia (delta vs media 5 anni stesso giorno).
-  let temperatureAnomaly: { anomaly: number | null; baseline_years: number } | null = null;
-  if (slug === "temperatura") {
-    const { data: anomData } = await supabase.rpc("get_temperature_anomaly", {
-      p_date: latestPoint.observed_at.slice(0, 10),
-    });
-    const row = Array.isArray(anomData) ? anomData[0] : null;
-    if (row) {
-      temperatureAnomaly = {
-        anomaly: row.anomaly ?? null,
-        baseline_years: row.baseline_years ?? 0,
-      };
-    }
-  }
-
-  // Bucketed series for the chart, via RPC
-  const { data: series } = await supabase.rpc("get_price_series", {
-    p_asset_id: assetMeta.asset_id,
-    p_interval: tf.intervalSql,
-    p_bucket: tf.bucket,
-  });
-  const points = (series ?? []).map(
-    (p: { observed_at: string; value: number | string }) => ({
-      observed_at: String(p.observed_at),
-      value: Number(p.value),
+  // Serie principale, anomalia temperatura e overlay TTF sono indipendenti:
+  // partono insieme. In sequenza ognuna aggiungeva il suo round trip Supabase
+  // al TTFB (PSV pagava 2 query extra per l'overlay, ~4.5s a freddo).
+  const [seriesRes, anomalyRes, ttfOverlay] = await Promise.all([
+    supabase.rpc("get_price_series", {
+      p_asset_id: assetMeta.asset_id,
+      p_interval: tf.intervalSql,
+      p_bucket: tf.bucket,
     }),
-  );
+    slug === "temperatura"
+      ? supabase.rpc("get_temperature_anomaly", {
+          p_date: latestPoint.observed_at.slice(0, 10),
+        })
+      : Promise.resolve(null),
+    // Overlay solo per PSV: il confronto TTF↔PSV non ha senso sugli altri indici.
+    slug === "psv" ? loadTtfOverlay(supabase, tf) : Promise.resolve(null),
+  ]);
 
-  // Overlay TTF sul chart PSV: rende visibile lo spread TTF→PSV (driver Europa
-  // vs hub italiano). Solo per PSV nazionale (no zone), e solo se TTF ha dati.
-  let ttfOverlay: { label: string; color: string; points: typeof points } | null = null;
-  if (slug === "psv") {
-    const { data: ttfMeta } = await getAssetMetaBySlug("ttf");
-    if (ttfMeta?.asset_id) {
-      const { data: ttfSeries } = await supabase.rpc("get_price_series", {
-        p_asset_id: ttfMeta.asset_id,
-        p_interval: tf.intervalSql,
-        p_bucket: tf.bucket,
-      });
-      const ttfPoints = (ttfSeries ?? []).map(
-        (p: { observed_at: string; value: number | string }) => ({
-          observed_at: String(p.observed_at),
-          value: Number(p.value),
-        }),
-      );
-      if (ttfPoints.length > 0) {
-        ttfOverlay = {
-          label: "TTF Europa",
-          color: "#f59e0b", // amber-500 — netto contrasto col verde principale
-          points: ttfPoints,
-        };
-      }
-    }
+  const points = toPoints(seriesRes.data);
+
+  // Per temperatura: anomalia = delta vs media 5 anni stesso giorno.
+  let temperatureAnomaly: { anomaly: number | null; baseline_years: number } | null = null;
+  const anomRow = Array.isArray(anomalyRes?.data) ? anomalyRes.data[0] : null;
+  if (anomRow) {
+    temperatureAnomaly = {
+      anomaly: anomRow.anomaly ?? null,
+      baseline_years: anomRow.baseline_years ?? 0,
+    };
   }
 
   // Description zone-aware: per una zona PUN specifica, descrive il prezzo zonale;
@@ -648,13 +667,18 @@ export default async function IndicePage({
         />
       </section>
 
+      {/* Suspense: la RPC del forecast non deve trattenere prezzo e grafico.
+          Il resto della pagina viene inviato subito, il forecast arriva in
+          streaming quando pronto. */}
       {(slug === "pun" || slug === "psv" || slug === "ttf") && (
-        <ForecastSection
-          assetSlug={slug}
-          assetId={Number(assetMeta.asset_id)}
-          unit={assetMeta.unit}
-          horizonDays={forecastHorizon}
-        />
+        <Suspense fallback={<ForecastSkeleton />}>
+          <ForecastSection
+            assetSlug={slug}
+            assetId={Number(assetMeta.asset_id)}
+            unit={assetMeta.unit}
+            horizonDays={forecastHorizon}
+          />
+        </Suspense>
       )}
 
       <FaqSection slug={slug} />
