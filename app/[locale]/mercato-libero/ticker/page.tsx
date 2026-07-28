@@ -42,6 +42,10 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // Canonical sempre sull'URL base: ?src= e' un filtro di vista sullo stesso
+    // contenuto. Senza questo Google segnalava le 3 varianti come "pagina
+    // duplicata senza URL canonico" e spalmava i segnali su 3 URL diversi.
+    alternates: { canonical: "https://energyindex.it/it/mercato-libero/ticker" },
     openGraph: {
       title,
       description,

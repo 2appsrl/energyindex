@@ -13,9 +13,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Previsioni PUN, PSV, TTF — Energy Index",
+  // Niente suffisso brand: lo aggiunge il template del root layout.
+  title: "Previsioni PUN, PSV, TTF",
   description:
     "Forecast giornalieri di PUN, PSV e TTF a 7/30/90/180 giorni, con banda di confidenza calibrata e track record verificabile. Metodologia trasparente, dataset gratuito.",
+  alternates: { canonical: "https://energyindex.it/it/forecast" },
   openGraph: {
     title: "Previsioni PUN, PSV, TTF — Energy Index",
     description:

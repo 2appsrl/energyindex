@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "EIDX Marketing Desk",
+  alternates: { canonical: "https://energyindex.it/it/pro/marketing" },
   description:
     "Dashboard unificata per chi vende energia: margin simulator, customer simulator, forecast & scenari, report builder. Demo gratuita pre-launch.",
   robots: { index: false },

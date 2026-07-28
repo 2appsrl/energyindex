@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Customer Simulator — EIDX Pro",
+  alternates: { canonical: "https://energyindex.it/it/pro/customer-simulator" },
   description:
     "Trova in tempo reale l'offerta migliore per il tuo cliente in base al consumo. Confronta tutte le offerte mercato libero (PUN+spread o prezzo fisso) considerando il costo commercializzazione.",
   robots: { index: false },

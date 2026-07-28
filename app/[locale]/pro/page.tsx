@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   title: "EIDX Pro — analytics professionali per il mercato energy",
   description:
     "Margin simulator, forecast a 24 mesi con scenari, report PDF brandizzati. Lo stack analytics per fornitori, broker e PMI energivore. Lancio Q3 2026.",
+  alternates: { canonical: "https://energyindex.it/it/pro" },
   openGraph: {
     title: "EIDX Pro — analytics professionali per il mercato energy",
     description:

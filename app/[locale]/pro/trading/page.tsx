@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "EIDX Trading Desk",
+  alternates: { canonical: "https://energyindex.it/it/pro/trading" },
   description:
     "Dashboard purpose-built per trader energy italiani: Spark Spread, cross spreads, ATR, correlation matrix, posizioni + VaR + stress test.",
   robots: { index: false },

@@ -32,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "CTE Machine — Slot machine delle offerte luce e gas",
     description:
       "Gioca alla slot machine dell'energia: scegli luce o gas, inserisci il tuo consumo, premi SPIN THAT WHEEL e scopri la migliore offerta sul mercato.",
+    alternates: { canonical: "https://energyindex.it/it/ctemachine" },
     openGraph: {
       title: "CTE Machine · Energy Index",
       description:

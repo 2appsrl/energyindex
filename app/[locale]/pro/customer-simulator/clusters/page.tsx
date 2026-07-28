@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Cluster Clienti — Customer Simulator EIDX Pro",
+  alternates: {
+    canonical: "https://energyindex.it/it/pro/customer-simulator/clusters",
+  },
   description:
     "Trova subito l'offerta migliore per i 5 profili di consumo piu' comuni: single, coppia, famiglia 3-4, famiglia 5+, all-electric. Stampa/PDF.",
   robots: { index: false },

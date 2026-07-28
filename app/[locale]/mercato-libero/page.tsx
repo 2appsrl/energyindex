@@ -106,6 +106,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    // Canonical sull'URL base: le varianti ?src=placet|libero del SourceToggle
+    // sono lo stesso contenuto filtrato.
+    alternates: { canonical: "https://energyindex.it/it/mercato-libero" },
     openGraph: {
       title,
       description,

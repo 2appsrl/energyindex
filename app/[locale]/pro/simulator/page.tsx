@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Margin Simulator — EIDX Pro",
+  alternates: { canonical: "https://energyindex.it/it/pro/simulator" },
   description:
     "Simulatore di margine per fornitori energy: spread vendita, scenari stress, posizionamento competitor. Demo gratuita.",
   robots: { index: false, follow: true },

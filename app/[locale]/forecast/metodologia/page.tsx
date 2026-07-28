@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { breadcrumbList, jsonLdString, techArticle } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
-  title: "Metodologia forecast — Energy Index",
+  // Niente suffisso brand: lo aggiunge il template del root layout.
+  title: "Metodologia forecast",
   description:
     "Specifica tecnica del modello forecast di Energy Index: Ridge regression con feature engineering esteso, banda di confidenza via split conformal prediction, validazione walk-forward.",
+  alternates: { canonical: "https://energyindex.it/it/forecast/metodologia" },
   openGraph: {
     title: "Metodologia forecast — Energy Index",
     description: "Come funzionano le previsioni PUN/PSV/TTF di Energy Index.",
