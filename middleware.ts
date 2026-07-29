@@ -20,6 +20,41 @@ const HOSTS_TO_REDIRECT = new Set([
   "www.energyindex.pro",
 ]);
 
+const INDEX_SLUGS = ["pun", "psv", "ttf", "brent", "co2", "temperatura"] as const;
+
+/**
+ * Redirect 308 per URL "scritti a mano" e per route legacy.
+ *
+ * Perche' qui e non in `next.config.redirects()`: su Netlify il middleware
+ * Next gira come edge function PRIMA del routing interno, quindi i redirect
+ * di next.config non vengono mai raggiunti (verificato in produzione: il
+ * deploy era `ready` ma /pun rispondeva ancora col 307 di next-intl).
+ * Stessa ragione per cui i redirect di host in netlify.toml usano force=true.
+ *
+ * Il 308 e' voluto: prima un indirizzo sconosciuto riceveva il prefisso
+ * lingua e finiva comunque su un 404 (/pun -> 307 -> /it/pun -> 404), e il
+ * 307 diceva a Google "temporaneo, ricontrolla".
+ */
+const EXACT_REDIRECTS = new Map<string, string>([
+  // Scorciatoie brevi: sono gli URL che uno detta a voce o scrive in un post.
+  ...INDEX_SLUGS.map((slug) => [`/${slug}`, `/it/indice/${slug}`] as const),
+  // Route legacy: Risk e Vitals erano pagine a se' prima che il Trading Desk
+  // diventasse a schede. Gestite qui e non con permanentRedirect() nella page
+  // perche' sotto un layout async la risposta e' gia' in streaming e Next
+  // ripiega su un <meta http-equiv="refresh"> con status 200, non un 308.
+  ["/it/pro/trading/risk", "/it/pro/trading?tab=risk"],
+  ["/it/pro/trading/vitals", "/it/pro/trading?tab=vitals"],
+]);
+
+/** Sezioni raggiungibili senza prefisso lingua, sottopercorsi inclusi. */
+const SECTION_PREFIXES = [
+  "/indice",
+  "/forecast",
+  "/mercato-libero",
+  "/pro",
+  "/ctemachine",
+] as const;
+
 export default function middleware(request: NextRequest) {
   const host = request.headers.get("host")?.toLowerCase() ?? "";
 
@@ -29,6 +64,27 @@ export default function middleware(request: NextRequest) {
     url.protocol = "https:";
     url.port = "";
     return NextResponse.redirect(url, 301);
+  }
+
+  const { pathname, search } = request.nextUrl;
+
+  const exact = EXACT_REDIRECTS.get(pathname);
+  if (exact) {
+    // La destinazione legacy porta gia' la sua querystring: in quel caso la
+    // search in ingresso viene scartata, altrimenti si otterrebbe un "??".
+    const target = exact.includes("?") ? exact : `${exact}${search}`;
+    return NextResponse.redirect(new URL(target, request.url), 308);
+  }
+
+  // I path che iniziano gia' con /it non entrano qui: nessun prefisso della
+  // lista combacia, quindi il routing normale resta intatto.
+  for (const prefix of SECTION_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return NextResponse.redirect(
+        new URL(`/it${pathname}${search}`, request.url),
+        308,
+      );
+    }
   }
 
   // Per tutti gli altri host (energyindex.it canonical, *.netlify.app preview,
