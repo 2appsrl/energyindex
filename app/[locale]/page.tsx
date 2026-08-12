@@ -464,13 +464,21 @@ export default async function HomeIt() {
         dangerouslySetInnerHTML={{ __html: jsonLdString(webPageJsonLd) }}
       />
 
-      <header className="space-y-3">
+      {/* ATTENZIONE: il testo di questo header e la sua struttura semantica
+          (h1, <time datetime>, i tre .speakable-* referenziati dalla
+          SpeakableSpecification nel JSON-LD, i <strong>) sono invariati.
+          Qui sotto cambiano solo classi di stile: nessun nodo di testo e'
+          stato riscritto, spostato o rimosso. */}
+      <header className="space-y-4">
         {/* Freshness signal visibile: <time datetime> permette a Googlebot
             di leggere la data esatta dell'aggiornamento. */}
-        <p className="text-xs sm:text-sm text-muted-foreground font-mono">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5 align-middle" aria-hidden />
+        <p className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs sm:text-sm text-muted-foreground">
+          <span className="relative flex h-1.5 w-1.5" aria-hidden>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          </span>
           Aggiornato il{" "}
-          <time dateTime={observedIso} className="font-semibold">
+          <time dateTime={observedIso} className="font-semibold tabular-nums">
             {ddmmyyyy}
           </time>
           {" · "}
@@ -478,7 +486,7 @@ export default async function HomeIt() {
             Live data GME
           </span>
         </p>
-        <h1 className="speakable-headline text-4xl sm:text-5xl font-bold tracking-tight">
+        <h1 className="speakable-headline text-4xl sm:text-5xl font-bold tracking-tight text-balance">
           {punStr ? (
             <>
               PUN oggi <span className="text-emerald-600 dark:text-emerald-400 tabular-nums">{punStr} €/MWh</span>: prezzo energia elettrica e gas in tempo reale
@@ -487,7 +495,9 @@ export default async function HomeIt() {
             "PUN oggi: prezzo energia elettrica e gas in tempo reale"
           )}
         </h1>
-        <p className="speakable-summary text-muted-foreground text-base sm:text-lg max-w-3xl">
+        {/* I <strong> restano dove erano: cambia solo come sono resi
+            (colore pieno invece del grassetto a spruzzo). */}
+        <p className="speakable-summary text-muted-foreground text-base sm:text-lg max-w-2xl [&>strong]:font-medium [&>strong]:text-foreground">
           Osservatorio gratuito sul <strong>valore PUN</strong> (mercato elettrico GME),{" "}
           <strong>PSV gas</strong>, <strong>TTF</strong>, Brent e CO₂. Forecast
           giornaliero a 7, 30, 90 e 180 giorni + mappa di tutte le offerte del{" "}
@@ -496,9 +506,14 @@ export default async function HomeIt() {
         {/* Frase compatta "speakable values" pensata per AI Overview / voice:
             quando Google / Siri / Assistant leggono questa pagina per
             rispondere "quanto vale il PUN oggi?", la SpeakableSpecification
-            JSON-LD punta a .speakable-values e legge solo questa frase. */}
+            JSON-LD punta a .speakable-values e legge solo questa frase.
+            I <strong> sono resi come badge: la frase resta identica, cambia
+            solo il modo in cui i tre valori vengono disegnati.
+            gap-x-0 + margine sui soli <strong> tiene la virgola attaccata al
+            chip che la precede, come in una normale enumerazione, invece di
+            farla fluttuare a meta' strada: e' spaziatura, non markup. */}
         {punStr && psvStr ? (
-          <p className="speakable-values text-base sm:text-lg max-w-3xl">
+          <p className="speakable-values flex flex-wrap items-center gap-x-0 gap-y-2 text-sm sm:text-base text-muted-foreground max-w-3xl [&>strong]:ml-1.5 [&>strong]:inline-flex [&>strong]:items-baseline [&>strong]:rounded-lg [&>strong]:border [&>strong]:border-border/70 [&>strong]:bg-card/60 [&>strong]:px-2.5 [&>strong]:py-1 [&>strong]:text-sm [&>strong]:font-semibold [&>strong]:tabular-nums [&>strong]:text-foreground">
             Oggi, {ddmmyyyy}:{" "}
             <strong>PUN {punStr} €/MWh</strong>,{" "}
             <strong>PSV gas {psvStr} €/MWh</strong>
