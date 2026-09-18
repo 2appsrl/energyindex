@@ -7,6 +7,12 @@ import {
   type Commodity,
 } from "@/lib/format";
 
+const itSigned = new Intl.NumberFormat("it-IT", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+});
+
 export interface LatestValueProps {
   value: number;
   unit: string;
@@ -15,6 +21,11 @@ export interface LatestValueProps {
   display_name: string;
   /** Se specificato, mostra la conversione retail sotto il big number. */
   commodity?: Commodity;
+  /** Se passato, sostituisce il delta % con un'anomalia signed in unita' base
+   *  (es. 2.3 -> "+2,3 °C"). Utile per la temperatura vs media stagionale. */
+  anomaly?: number;
+  /** Label esplicativa mostrata sotto l'anomalia, es. "vs media 2021-2025". */
+  baselineLabel?: string;
 }
 
 export function LatestValueCard({
@@ -24,10 +35,17 @@ export function LatestValueCard({
   prev_value,
   display_name,
   commodity,
+  anomaly,
+  baselineLabel,
 }: LatestValueProps) {
+  const usingAnomaly = anomaly !== undefined;
   const delta =
-    prev_value !== undefined ? formatPercentDelta(value, prev_value) : null;
-  const isUp = prev_value !== undefined && value >= prev_value;
+    !usingAnomaly && prev_value !== undefined
+      ? formatPercentDelta(value, prev_value)
+      : null;
+  const isUp = usingAnomaly
+    ? anomaly! >= 0
+    : prev_value !== undefined && value >= prev_value;
   const retail =
     commodity && unit === "€/MWh"
       ? formatRetailEquivalent(value, commodity)
@@ -46,14 +64,29 @@ export function LatestValueCard({
           ≈ {retail}
         </div>
       )}
-      {delta && (
-        <div
-          className={`text-sm tabular-nums ${
-            isUp ? "text-emerald-500" : "text-rose-500"
-          }`}
-        >
-          {delta}
+      {usingAnomaly ? (
+        <div className="space-y-0.5">
+          <div
+            className={`text-sm tabular-nums ${
+              isUp ? "text-emerald-500" : "text-rose-500"
+            }`}
+          >
+            {itSigned.format(anomaly!)} {unit}
+          </div>
+          {baselineLabel && (
+            <div className="text-xs text-muted-foreground">{baselineLabel}</div>
+          )}
         </div>
+      ) : (
+        delta && (
+          <div
+            className={`text-sm tabular-nums ${
+              isUp ? "text-emerald-500" : "text-rose-500"
+            }`}
+          >
+            {delta}
+          </div>
+        )
       )}
       <div className="text-xs text-muted-foreground">
         Aggiornato {formatRelativeTime(observed_at)}
