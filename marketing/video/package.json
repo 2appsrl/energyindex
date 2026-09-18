@@ -1,0 +1,23 @@
+{
+  "name": "eidx-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion 60s promo videos for Energy Index (B2C) and EIDX Pro (B2B)",
+  "scripts": {
+    "dev": "remotion studio",
+    "render:eidx": "remotion render EnergyIndex out/energyindex-60s.mp4",
+    "render:pro": "remotion render EidxPro out/eidx-pro-60s.mp4",
+    "render:all": "npm run render:eidx && npm run render:pro"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.395",
+    "@remotion/google-fonts": "4.0.395",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.395"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}
