@@ -108,6 +108,9 @@ Il TTF (Title Transfer Facility) e' il benchmark europeo del gas naturale, quota
 
 ## API JSON pubbliche (free, attribuzione richiesta)
 
+- [API Energy Index](https://energyindex.it/it/api): panoramica, piani (Open e Developer gratuiti, API 99 €/mese) ed esempi di integrazione
+- [Documentazione API](https://energyindex.it/it/api/docs): riferimento tecnico completo (autenticazione, limiti, errori, schema di ogni endpoint)
+- [OpenAPI 3.1](https://energyindex.it/api/v1/openapi.json): specifica machine-readable, importabile come tool negli agenti AI
 - [GET /api/v1](https://energyindex.it/api/v1): documentazione machine-readable degli endpoint
 - [GET /api/v1/pun/today](https://energyindex.it/api/v1/pun/today): valore PUN corrente in €/kWh e €/MWh nativo
 - [GET /api/v1/psv/today](https://energyindex.it/api/v1/psv/today): valore PSV corrente in €/kWh e €/MWh nativo

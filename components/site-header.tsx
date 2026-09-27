@@ -79,6 +79,14 @@ export function SiteHeader() {
         <div className="flex items-center gap-2 sm:gap-3">
           {!isProSection && (
             <Link
+              href="/it/api"
+              className="rounded-md px-1.5 py-0.5 font-mono text-xs font-bold tracking-wider text-muted-foreground ring-1 ring-border hover:text-foreground transition-colors"
+            >
+              API
+            </Link>
+          )}
+          {!isProSection && (
+            <Link
               href="/it/pro"
               aria-label="Vai a EIDX Pro"
               className="group inline-flex items-baseline gap-1.5 text-sm font-bold tracking-tight hover:opacity-80 transition-opacity"

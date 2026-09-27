@@ -100,6 +100,11 @@ export function SiteFooter() {
                   Metodologia forecast
                 </Link>
               </li>
+              <li>
+                <Link href="/it/api" className="text-muted-foreground hover:text-foreground transition-colors">
+                  API per sviluppatori
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
