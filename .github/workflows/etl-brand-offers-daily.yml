@@ -1,0 +1,23 @@
+name: ETL Brand offers scraping (daily)
+
+on:
+  schedule:
+    - cron: "30 5 * * *"   # 05:30 UTC — dopo l'ETL ARERA, prima dell'apertura uffici
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Scrape brand offers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/etl-brand-offers.ts

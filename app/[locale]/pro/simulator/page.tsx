@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { EidxProHeader } from "@/components/pro/EidxProHeader";
 import { MarginSimulator } from "@/components/pro/MarginSimulator";
+import { lockProChannels, parseChannelRows } from "@/lib/pro/channel-benchmark";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +23,6 @@ interface ForecastRow {
   value_upper: number | string | null;
 }
 
-interface CompetitorRow {
-  p25_eur_mwh: number | string;
-  median_eur_mwh: number | string;
-  p75_eur_mwh: number | string;
-  n_offerte: number;
-  source: string;
-}
-
 export default async function SimulatorPage() {
   const supabase = await createServerClient();
 
@@ -41,8 +34,8 @@ export default async function SimulatorPage() {
     p_horizon_days: 180,
   });
 
-  // Competitor benchmark: electricity variabile (PMI commerciale tipica).
-  const { data: compRaw } = await supabase.rpc("get_competitor_spread_stats", {
+  // Competitor benchmark a 3 canali: electricity variabile (PMI tipica).
+  const { data: compRaw } = await supabase.rpc("get_competitor_spread_stats_channels", {
     p_commodity: "electricity",
     p_price_type: "variabile",
   });
@@ -55,25 +48,9 @@ export default async function SimulatorPage() {
     value_upper: r.value_upper === null ? null : Number(r.value_upper),
   }));
 
-  const compRow =
-    Array.isArray(compRaw) && compRaw[0]
-      ? (compRaw[0] as CompetitorRow)
-      : null;
-  const competitor = compRow
-    ? {
-        medianEurPerMwh: Number(compRow.median_eur_mwh),
-        p25EurPerMwh: Number(compRow.p25_eur_mwh),
-        p75EurPerMwh: Number(compRow.p75_eur_mwh),
-        nOfferte: compRow.n_offerte,
-        source: String(compRow.source ?? "placet_arera"),
-      }
-    : {
-        medianEurPerMwh: 60,
-        p25EurPerMwh: 40,
-        p75EurPerMwh: 100,
-        nOfferte: 0,
-        source: "placet_arera",
-      };
+  // Demo pubblica: il canale online_brand (scraping) e' riservato al tier
+  // Pro — i percentili non lasciano il server, resta il conteggio teaser.
+  const channels = lockProChannels(parseChannelRows(compRaw));
 
   const forecastRows = forecastPoints.filter((p) => p.source === "forecast");
   const forecastAvg =
@@ -98,7 +75,7 @@ export default async function SimulatorPage() {
         <MarginSimulator
           forecastPoints={forecastPoints}
           forecastAvgEurPerMwh={forecastAvg}
-          competitor={competitor}
+          channels={channels}
         />
 
         <footer className="pt-6 border-t border-stone-200 text-xs text-stone-500 flex justify-between flex-wrap gap-2">

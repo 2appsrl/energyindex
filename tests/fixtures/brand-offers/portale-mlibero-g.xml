@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ListaOfferteMercatoLibero xmlns="http://www.acquirenteunico.it/schemas/SII_AU/OffertaRetail/01">
+<offerta>
+        <IdentificativiOfferta>
+            <PIVA_UTENTE>01771990445</PIVA_UTENTE>
+            <COD_OFFERTA>000129GSFML08XXXXXXOCTOFIXG24v08</COD_OFFERTA>
+        </IdentificativiOfferta>
+        <DettaglioOfferta>
+            <TIPO_MERCATO>02</TIPO_MERCATO>
+            <OFFERTA_SINGOLA>SI</OFFERTA_SINGOLA>
+            <TIPO_CLIENTE>01</TIPO_CLIENTE>
+            <TIPO_OFFERTA>01</TIPO_OFFERTA>
+            <TIPOLOGIA_ATT_CONTR>01</TIPOLOGIA_ATT_CONTR>
+            <TIPOLOGIA_ATT_CONTR>02</TIPOLOGIA_ATT_CONTR>
+            <TIPOLOGIA_ATT_CONTR>03</TIPOLOGIA_ATT_CONTR>
+            <TIPOLOGIA_ATT_CONTR>04</TIPOLOGIA_ATT_CONTR>
+            <NOME_OFFERTA>Octopus Fissa 24M Gas</NOME_OFFERTA>
+            <DESCRIZIONE>Octopus Fissa 24M Gas è la tariffa gas con il prezzo bloccato per 24 mesi.</DESCRIZIONE>
+            <DURATA>24</DURATA>
+            <GARANZIE>A garanzia dell’esatto adempimento delle obbligazioni derivanti dal Contratto, Octopus potrà richiedere al Cliente, al momento dell’attivazione della Fornitura, un deposito cauzionale, come di seguito indicato.a) Per l’energia elettrica (i) per i clienti domestici il deposito cauzionale è pari a € 16,00 (sedici/00) per ogni kW di potenza impegnata; (ii) per i clienti non domestici il deposito cauzionale è pari a € 20,00 (venti/00) per ogni kW di potenza impegnata;b) Per il gas (i) per per consumi annuali inferiori a 500 Smc sarà applicato il valore di €30,00 (trenta/00); (ii) per consumi fino a 1.500 Smc €90,00 (novanta/00); (iii) per consumi fino a 2.500 Smc €150,00 (centocinquanta/00); (iv) per consumi fino a 5.000 Smc €300,00 (trecento/00) e (v) per i consumi oltre 5.000 Smc una mensilità di consumo medio annuo del cliente, al netto delle imposte.Per maggiori informazioni consultare l'art. 11 delle CGF.</GARANZIE>
+            <ModalitaAttivazione>
+                <MODALITA>01</MODALITA>
+            </ModalitaAttivazione>
+            <Contatti>
+                <TELEFONO>0238582776</TELEFONO>
+                <URL_SITO_VENDITORE>www.octopusenergy.it</URL_SITO_VENDITORE>
+                <URL_OFFERTA>https://octopusenergy.it/le-nostre-tariffe</URL_OFFERTA>
+            </Contatti>
+        </DettaglioOfferta>
+        <ValiditaOfferta>
+            <DATA_INIZIO>10/10/2026_00:00:00</DATA_INIZIO>
+            <DATA_FINE>13/10/2026_23:59:59</DATA_FINE>
+        </ValiditaOfferta>
+        <CaratteristicheOfferta>
+            <CONSUMO_MIN>0</CONSUMO_MIN>
+            <CONSUMO_MAX>10000</CONSUMO_MAX>
+        </CaratteristicheOfferta>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>01</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>99</MODALITA_PAGAMENTO>
+            <DESCRIZIONE>PagoPA</DESCRIZIONE>
+        </MetodoPagamento>
+        <ComponenteImpresa>
+            <NOME>Corrispettivo di commercializzazione</NOME>
+            <DESCRIZIONE>Corrispettivo di commercializzazione</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>01</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>84.000000</PREZZO>
+                <UNITA_MISURA>01</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <ComponenteImpresa>
+            <NOME>Prezzo</NOME>
+            <DESCRIZIONE>Prezzo</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>04</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>0.690000</PREZZO>
+                <UNITA_MISURA>04</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>01</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>Il Contratto si intende perfezionato nel momento in cui il Cliente riceve l’accettazione scritta da parte di Octopus della Richiesta di Fornitura presentata dal Cliente.L'attivazione della fornitura avverrà in base alle tempistiche stabilite dalla normativa vigente applicabile ed è in ogni caso subordinata al buon esito delle attività del Distributore Locale.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>03</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>Il Cliente può recedere, unilateralmente e senza oneri, per cambiare il Fornitore anche per una sola fornitura. Qualora il Cliente voglia recedere per cambiare fornitore, la comunicazione di recesso deve pervenire a Octopus tramite il nuovo fornitore, secondo la procedura prevista dalla normativa vigente. Qualora ci sia un ritardo nell’attivazione della fornitura da parte del nuovo Fornitore, Octopus Energy Italia continuerà ad applicare le stesse condizioni economiche e contrattuali in corso.Se il Cliente desidera cessare la fornitura, dovrà inoltrare direttamente a Octopus Energy Italia SRL via email (ciao@octopusenergy.it) o posta (Via dei Gorghi 9, 63100 Ascoli Piceno AP) la comunicazione di recesso con un termine di preavviso di 1 (un) mese decorrente dalla data di ricevimento della comunicazione di recesso.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Rinnovo</ALTRO>
+            <DESCRIZIONE>Le condizioni economiche prevedono un prezzo fisso per 24 mesi dalla data di attivazione della Fornitura. Alla scadenza, Octopus comunicherà al Cliente le condizioni economiche applicabili per il periodo successivo, nei termini e secondo le modalità previsti dalla normativa vigente, tramite una comunicazione denominata “Proposta di rinnovo con modifica delle condizioni economiche”, contenente le nuove condizioni e la relativa data di decorrenza. In alternativa, il Cliente potrà scegliere un’altra offerta disponibile al momento del rinnovo. In assenza di una scelta diversa, si applicheranno le nuove condizioni comunicate, ferma restando la possibilità di cambiare fornitore in qualsiasi momento senza costi né penali.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Reclami</ALTRO>
+            <DESCRIZIONE>Il Cliente può inviare eventuali reclami mediante i seguenti canali:-Via Web: dal sito www.octopusenergy.it compilando l’apposito modulo-Per Posta scrivendo ad Octopus Energy Italia Srl, Via dei Gorghi 9, 63100 Ascoli Piceno. Per i reclami relativi al servizio di distribuzione e misura della fornitura di elettricità e al servizio di distribuzione della fornitura di gas, Octopus Energy Italia Srl richiede al Distributore i dati tecnici necessari ad inviare la risposta al Cliente. Per i detti servizi il Cliente può inviare il reclamo direttamente al Distributore, che è tenuto a rispondere al Cliente non oltre 30 giorni solari. I Fornitori devono rispettare precisi livelli di qualità nei confronti dei propri Clienti anche per quanto riguarda modalità e tempi di risposta ai reclami, come stabilito dall’Allegato A alla Delibera dell'ARERA n. 413/2016/R/com (TIQV); in caso contrario, possono essere tenuti a versare loro importi a titolo di indennizzo. In caso di mancata risoluzione del reclamo, si potranno attivare le procedure extragiudiziali di risoluzione delle controversie indicate nell’articolo dedicato nelle Condizioni Generali di Fornitura; tutte le informazioni al riguardo sono disponibili anche sul sito octopusenergy.it. Se Lei è un cliente vulnerabile, come definito dalla normativa vigente, può scegliere, in alternativa all’offerta di cui alla presente Scheda, le condizioni economiche e contrattuali di fornitura definite dall’Autorità di Regolazione per Energia Reti e Ambiente. Per ottenere ulteriori informazioni generali sui propri diritti, anche relativi agli obblighi di servizio pubblico universale dei venditori, e in merito al Codice di condotta commerciale, che impone precise regole di comportamento per i venditori, consulti il sito dell’Autorità di Regolazione per Energia Reti e Ambiente www.arera.it/consumatori o chiami il numero verde 800.166.654.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Ripensamento</ALTRO>
+            <DESCRIZIONE>Il Cliente Consumatore può esercitare il diritto di ripensamento senza oneri e senza dover fornire alcuna motivazione entro 14 (quattordici) giorni decorrenti dalla data di perfezionamento del Contratto. Il diritto di ripensamento potrà essere esercitato avvalendosi del Modulo di Ripensamento allegato al Contratto o con comunicazione scritta tramite raccomandata A/R a Octopus Energy Italia, Via dei Gorghi 9 - 63100 Ascoli Piceno (AP). Il Cliente Consumatore può fare richiesta, nella Richiesta di Fornitura, di iniziare l’esecuzione del Contratto prima che sia decorso il termine di ripensamento, rinunciandovi espressamente. Tale richiesta potrebbe comportare l’avvio della Fornitura nel periodo previsto per il ripensamento e comporterà un anticipo della Fornitura rispetto alle normali tempistiche di cui al successivo articolo 6. In tal caso, sarà comunque data facoltà al Cliente Consumatore di esercitare il diritto di ripensamento, ma sarà tenuto a corrispondere a Octopus i seguenti importi:  a. un importo pari a €23,00 (ventitré), ovvero - se inferiore - al contributo in quota fissa di cui all’art. 9.6 del Codice di condotta commerciale, qualora non sia stata avviata la Fornitura; b. il prezzo previsto dal Contratto per l’energia elettrica e/o il gas naturale effettivamente forniti da Octopus al Cliente Consumatore fino al momento della cessazione della Fornitura.  Nel caso di esercizio del diritto di ripensamento, qualora non fossero già state avviate da Octopus le attività di esecuzione del Contratto, la Fornitura sarà garantita dal precedente fornitore qualora il precedente contratto di Fornitura non risulti essere stato sciolto o dai soggetti che erogano il servizio di maggior tutela di cui al TIV (energia elettrica) o il servizio di Fornitura di ultima istanza di cui al TIVG (gas naturale). In alternativa, la Fornitura potrà essere garantita da Octopus per il tempo necessario a permettere un nuovo cambio fornitore o la sospensione ovvero la chiusura del Punto di Fornitura sulla base della volontà manifestata dal Cliente Consumatore. Nel caso di esercizio del diritto di ripensamento diretto alla cessazione della Fornitura con disattivazione del Punto di Fornitura, il Cliente Consumatore sarà tenuto a richiedere la disattivazione a Octopus, che provvederà, se del caso tramite l’utente del trasporto e del dispacciamento (energia elettrica) ovvero l’utente del servizio di distribuzione (gas naturale).</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Letture</ALTRO>
+            <DESCRIZIONE>La fatturazione avverrà sulla base delle misure rilevate dal distributore territorialmente competente; il cliente potrà effettuare l'autolettura del suo contatore, secondo modalità e tempi descritti in fattura. Qualora detti dati non siano resi disponibili dal Distributore in tempo utile per l’emissione della fattura, ferma restando la competenza dello stesso in materia di rilevazione delle misure, la fatturazione avverrà in base all’autolettura fornita dal Cliente e validata dal Distributore oppure, in assenza della stessa, con l’utilizzo di stime definite dal Fornitore o dal Distributore. Per maggiori informazioni è possibile consultare le CGF.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>05</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>Octopus Energy non applica alcun onere di recesso, quindi anche questa offerta non ne prevede.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Pagamenti</ALTRO>
+            <DESCRIZIONE>La fatturazione dei consumi di energia elettrica e/o di gas naturale avverrà in modalità elettronica in conformità alla normativa vigente e nel rispetto di quanto previsto nelle CPF. Octopus Energy Italia, fatto salvo ogni altro diritto riconosciuto dal Contratto, applicherà al Cliente che abbia pagato in ritardo una fattura, senza necessità di formale messa in mora, gli interessi moratori. Gli interessi di mora saranno calcolati sugli importi delle fatture insolute al tasso BCE tempo per tempo vigente aumentato di 3,5 punti percentuali per gli utenti domestici e per i condomini e di una somma pari agliinteressi di mora calcolati nella misura del tasso di mora ex DLgs. 231/2002 - in vigore alla data di scadenza della relativa fattura. Octopus Energy Italia si riserva inoltre la facoltà di applicare i seguenti addebiti per la gestione del ritardato pagamento: €5,00 (iva e imposte escluse) per ogni comunicazione di sollecito inviata tramite posta ordinaria o tramite canali elettronici (esempio: email, SMS, PEC), €10,00 (iva e imposte escluse) per ogni comunicazione di sollecito inviata tramite raccomandata, €5,00 (iva e imposte escluse) per ogni insoluto bancario ricevuto a seguito di invio richiesta SDD (SEPA).</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Imposte</ALTRO>
+            <DESCRIZIONE>Per informazioni sulle aliquote delle imposte consultare il sito www.octopusenergy.it</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Limitazioni</ALTRO>
+            <DESCRIZIONE>Offerta riservata a clienti finali titolari di utenze gas ad uso domestico.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Corrispettivi</ALTRO>
+            <DESCRIZIONE>Per maggiori dettagli, consulta il sito dell'Autorità di Regolazione per Energia Reti e Ambiente (ARERA): https://www.arera.it/consumatori/valori-rete-oneri-domestici-gas</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Vincoli</ALTRO>
+            <DESCRIZIONE>L'offerta economica è riservata esclusivamente ai clienti finali domestici titolari di un punto di riconsegna gas ad uso domestico con consumi fino a 10.000 Smc/anno.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Bonus sociale</ALTRO>
+            <DESCRIZIONE>Il bonus sociale per la fornitura di gas metano è stato introdotto come misura per ridurre la spesa di gas delle famiglie in stato di disagio economico. Per riceverlo in bolletta, è sufficiente presentare ogni anno la Dichiarazione Sostitutiva Unica (DSU), tramite ad esempio il Comune, i CAF o il sito INPS, al fine di ottenere l'attestazione ISEE utile per le differenti prestazioni sociali agevolate. Per maggiori informazioni visita il sito www.arera.it o chiama il n° verde 800.166.654.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Sottoscrizione</ALTRO>
+            <DESCRIZIONE>Questo documento segue una struttura definita da ARERA, l’autorità che regola il mercato dell’energia in Italia, ed è uguale per tutti i fornitori. ARERA ha scelto un approccio basato sulla trasparenza, cioè mostrare ogni singolo dettaglio del prezzo con tutte le voci separate, una per una, così che chi vuole possa analizzarle. Questo però rende il documento più complesso da leggere e molto lungo.In Octopus Energy crediamo invece nella semplificazione: prendere quella complessità e trasformarla in qualcosa di chiaro e immediato, che chiunque possa capire senza dover entrare in ogni dettaglio. Per questo disegniamo le nostre offerte per essere semplici e convenienti, con poche voci, solo quelle indispensabili, senza extra né costi nascosti, e con prezzi pensati per essere equi nel tempo, non solo il primo anno.Oggi la normativa ci permette di intervenire direttamente solo sulla parte chiamata “materia energia”, mentre il resto è stabilito dalle Autorità, ma crediamo che le persone vogliano un prezzo finale dell’energia, tutto incluso, equo e facile da capire. Mentre lavoriamo per arrivare a questo modello, ARERA ha già recepito una nostra richiesta: rendere più evidente la separazione tra il costo dell’energia e le altre voci obbligatorie.Continuiamo a spingere per un sistema più semplice, come raccontiamo nel nostro Manifesto: https://octopusenergy.it/manifesto</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Trasporto</ALTRO>
+            <DESCRIZIONE>Questa è una componente regolata: i valori sono definiti da ARERA sulla base della normativa vigente e sono uguali per tutte le compagnie energetiche. Gli importi vengono versati ai gestori della rete del gas, cioè le società che gestiscono le infrastrutture (metanodotti, reti di distribuzione locale e contatori) e si occupano di trasportare e distribuire il gas naturale fino a casa, oltre che garantirne la corretta misurazione.Si applicano quindi i corrispettivi relativi ai servizi di trasporto, distribuzione e misura, che includono nello specifico:- Le tariffe per i servizi di distribuzione e misura, aggiornate in base all'ambito tariffario della fornitura;- La componente QTt, a copertura dei costi di trasporto del gas fino al contatore.Si applicano inoltre eventuali canoni comunali, se previsti nel comune in cui è attiva la fornitura.Tutti questi valori sono definiti e aggiornati periodicamente da ARERA.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Oneri di Sistema</ALTRO>
+            <DESCRIZIONE>Questa è una componente regolata: i valori sono definiti da ARERA sulla base della normativa vigente e sono uguali per tutte le compagnie energetiche. Questa spesa comprende gli oneri definiti e aggiornati da ARERA per l'ambito tariffario nel quale ricade il punto di fornitura.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+    </offerta>
+<offerta>
+        <IdentificativiOfferta>
+            <PIVA_UTENTE>01771990445</PIVA_UTENTE>
+            <COD_OFFERTA>000129GSVML24XXXXXXXOCTOFLEXGv24</COD_OFFERTA>
+        </IdentificativiOfferta>
+        <DettaglioOfferta>
+            <TIPO_MERCATO>02</TIPO_MERCATO>
+            <OFFERTA_SINGOLA>SI</OFFERTA_SINGOLA>
+            <TIPO_CLIENTE>01</TIPO_CLIENTE>
+            <TIPO_OFFERTA>02</TIPO_OFFERTA>
+            <TIPOLOGIA_ATT_CONTR>01</TIPOLOGIA_ATT_CONTR>
+            <TIPOLOGIA_ATT_CONTR>04</TIPOLOGIA_ATT_CONTR>
+            <NOME_OFFERTA>Octopus Flex Gas</NOME_OFFERTA>
+            <DESCRIZIONE>Octopus Flex Gas è l’offerta gas che garantisce un costo della materia prima sempre allineato all’andamento del mercato. La tariffa è indicizzata all’indice ufficiale PSVDA(m) (PSV), il prezzo di riferimento del gas naturale rilevato sulla Piattaforma di Scambio Virtuale gestita da Snam Rete Gas.</DESCRIZIONE>
+            <DURATA>-1</DURATA>
+            <GARANZIE>A garanzia dell’esatto adempimento delle obbligazioni derivanti dal Contratto, Octopus potrà richiedere al Cliente, al momento dell’attivazione della Fornitura, un deposito cauzionale, come di seguito indicato. a) Per l’energia elettrica (i) per i clienti domestici il deposito cauzionale è pari a €16,00 (sedici/00) per ogni kW di potenza impegnata; (ii) per i clienti non domestici il deposito cauzionale è pari a €20,00 (venti/00) per ogni kW di potenza impegnata; b) Per il gas (i) per per consumi annuali inferiori a 500 Smc sarà applicato il valore di €30,00 (trenta/00); (ii) per consumi fino a 1.500 Smc €90,00 (novanta/00); (iii) per consumi fino a 2.500 Smc €150,00 (centocinquanta/00); (iv) per consumi fino a 5.000 Smc €300,00 (trecento/00) e (v) per i consumi oltre 5.000 Smc una mensilità di consumo medio annuo del cliente, al netto delle imposte. Per maggiori informazioni consultare l'art. 11 delle CGF.</GARANZIE>
+            <ModalitaAttivazione>
+                <MODALITA>02</MODALITA>
+            </ModalitaAttivazione>
+            <Contatti>
+                <TELEFONO>0238582776</TELEFONO>
+                <URL_SITO_VENDITORE>www.octopusenergy.it</URL_SITO_VENDITORE>
+                <URL_OFFERTA>https://octopusenergy.it/faq/condizioni-economiche</URL_OFFERTA>
+            </Contatti>
+        </DettaglioOfferta>
+        <RiferimentiPrezzoEnergia>
+            <IDX_PREZZO_ENERGIA>14</IDX_PREZZO_ENERGIA>
+        </RiferimentiPrezzoEnergia>
+        <ValiditaOfferta>
+            <DATA_INIZIO>01/10/2026_00:00:00</DATA_INIZIO>
+            <DATA_FINE>31/10/2026_23:59:59</DATA_FINE>
+        </ValiditaOfferta>
+        <CaratteristicheOfferta>
+            <CONSUMO_MIN>0</CONSUMO_MIN>
+            <CONSUMO_MAX>10000</CONSUMO_MAX>
+        </CaratteristicheOfferta>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>01</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>02</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <ComponenteImpresa>
+            <NOME>Corrispettivo di commercializzazione</NOME>
+            <DESCRIZIONE>Corrispettivo di commercializzazione</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>01</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>84.000000</PREZZO>
+                <UNITA_MISURA>01</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <ComponenteImpresa>
+            <NOME>Spread</NOME>
+            <DESCRIZIONE>Spread</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>04</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>0.060000</PREZZO>
+                <UNITA_MISURA>04</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>01</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>Il Contratto si intende perfezionato nel momento in cui il Cliente riceve l’accettazione scritta da parte di Octopus della Richiesta di Fornitura presentata dal Cliente.L'attivazione della fornitura avverrà in base alle tempistiche stabilite dalla normativa vigente applicabile ed è in ogni caso subordinata al buon esito delle attività del Distributore Locale.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Rinnovo</ALTRO>
+            <DESCRIZIONE>Il Contratto ha durata indeterminata. La Fornitura decorre dalla data prevista di attivazione così come indicata nella Richiesta di Fornitura. Octopus si riserva il diritto di modificare unilateralmente per giustificato motivo i termini e le condizioni del Contratto, inclusi quelli economici. In questo caso, Octopus invierà al Cliente apposita comunicazione intitolata “Proposta di modifica unilaterale del Contratto” ai sensi della normativa vigente di cui al Codice di condotta commerciale; le modificazioni avranno effetto dopo un periodo di 3 (tre) mesi. Il Cliente, nel caso in cui non intenda accettare le modificazioni unilaterali, potrà recedere senza oneri dal Contratto con le modalità al precedente paragrafo "Recesso".</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>05</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>Octopus Energy non applica alcun onere di recesso, quindi anche questa offerta non ne prevede.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Trasporto</ALTRO>
+            <DESCRIZIONE>Questa è una componente regolata: i valori sono definiti da ARERA sulla base della normativa vigente e sono uguali per tutte le compagnie energetiche. Gli importi vengono versati ai gestori della rete del gas, cioè le società che gestiscono le infrastrutture (metanodotti, reti di distribuzione locale e contatori) e si occupano di trasportare e distribuire il gas naturale fino a casa, oltre che garantirne la corretta misurazione.Si applicano quindi i corrispettivi relativi ai servizi di trasporto, distribuzione e misura, che includono nello specifico:- Le tariffe per i servizi di distribuzione e misura, aggiornate in base all'ambito tariffario della fornitura;- La componente QTt, a copertura dei costi di trasporto del gas fino al contatore.Si applicano inoltre eventuali canoni comunali, se previsti nel comune in cui è attiva la fornitura. Tutti questi valori sono definiti e aggiornati periodicamente da ARERA.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Oneri di Sistema</ALTRO>
+            <DESCRIZIONE>Questa è una componente regolata: i valori sono definiti da ARERA sulla base della normativa vigente e sono uguali per tutte le compagnie energetiche. Questa spesa comprende gli oneri definiti e aggiornati da ARERA per l'ambito tariffario nel quale ricade il punto di fornitura.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Reclami</ALTRO>
+            <DESCRIZIONE>Il Cliente può inviare eventuali reclami mediante i seguenti canali: -Via Web: dal sito www.octopusenergy.it compilando l’apposito modulo -Per Posta scrivendo ad Octopus Energy Italia Srl, Via dei Gorghi 9, 63100 Ascoli Piceno. Per i reclami relativi al servizio di distribuzione e misura della fornitura di elettricità e al servizio di distribuzione della fornitura di gas, Octopus Energy Italia Srl richiede al Distributore i dati tecnici necessari ad inviare la risposta al Cliente. Per i detti servizi il Cliente può inviare il reclamo direttamente al Distributore, che è tenuto a rispondere al Cliente non oltre 30 giorni solari. I Fornitori devono rispettare precisi livelli di qualità nei confronti dei propri Clienti anche per quanto riguarda modalità e tempi di risposta ai reclami, come stabilito dall’Allegato A alla Delibera dell'ARERA n. 413/2016/R/com (TIQV); in caso contrario, possono essere tenuti a versare loro importi a titolo di indennizzo. In caso di mancata risoluzione del reclamo, si potranno attivare le procedure extragiudiziali di risoluzione delle controversie indicate nell’articolo dedicato nelle Condizioni Generali di Fornitura; tutte le informazioni al riguardo sono disponibili anche sul sito octopusenergy.it. Se Lei è un cliente vulnerabile, come definito dalla normativa vigente, può scegliere, in alternativa all’offerta di cui alla presente Scheda, le condizioni economiche e contrattuali di fornitura definite dall’Autorità di Regolazione per Energia Reti e Ambiente. Per ottenere ulteriori informazioni generali sui propri diritti, anche relativi agli obblighi di servizio pubblico universale dei venditori, e in merito al Codice di condotta commerciale, che impone precise regole di comportamento per i venditori, consulti il sito dell’Autorità di Regolazione per Energia Reti e Ambiente www.arera.it/consumatori o chiami il numero verde 800.166.654. Per ottenere ulteriori informazioni generali sui propri diritti, anche relativi agli obblighi di servizio pubblico universale dei venditori, e in merito al Codice di condotta commerciale, che impone precise regole di comportamento per i venditori, consulti il sito dell’Autorità di Regolazione per Energia Reti e Ambiente www.arera.it o chiami il numero verde 800.166.654.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Ripensamento</ALTRO>
+            <DESCRIZIONE>Il Cliente Consumatore può esercitare il diritto di ripensamento senza oneri e senza dover fornire alcuna motivazione entro 14 (quattordici) giorni decorrenti dalla data di perfezionamento del Contratto. Il diritto di ripensamento potrà essere esercitato avvalendosi del Modulo di Ripensamento allegato al Contratto o con comunicazione scritta tramite raccomandata A/R a Octopus Energy Italia, Via dei Gorghi 9 - 63100 Ascoli Piceno (AP). Il Cliente Consumatore può fare richiesta, nella Richiesta di Fornitura, di iniziare l’esecuzione del Contratto prima che sia decorso il termine di ripensamento, rinunciandovi espressamente. Tale richiesta potrebbe comportare l’avvio della Fornitura nel periodo previsto per il ripensamento e comporterà un anticipo della Fornitura rispetto alle normali tempistiche di cui al successivo articolo 6. In tal caso, sarà comunque data facoltà al Cliente Consumatore di esercitare il diritto di ripensamento, ma sarà tenuto a corrispondere a Octopus i seguenti importi:  a. un importo pari a €23,00 (ventitré), ovvero - se inferiore - al contributo in quota fissa di cui all’art. 9.6 del Codice di condotta commerciale, qualora non sia stata avviata la Fornitura; b. il prezzo previsto dal Contratto per l’energia elettrica e/o il gas naturale effettivamente forniti da Octopus al Cliente Consumatore fino al momento della cessazione della Fornitura.  Nel caso di esercizio del diritto di ripensamento, qualora non fossero già state avviate da Octopus le attività di esecuzione del Contratto, la Fornitura sarà garantita dal precedente fornitore qualora il precedente contratto di Fornitura non risulti essere stato sciolto o dai soggetti che erogano il servizio di maggior tutela di cui al TIV (energia elettrica) o il servizio di Fornitura di ultima istanza di cui al TIVG (gas naturale). In alternativa, la Fornitura potrà essere garantita da Octopus per il tempo necessario a permettere un nuovo cambio fornitore o la sospensione ovvero la chiusura del Punto di Fornitura sulla base della volontà manifestata dal Cliente Consumatore. Nel caso di esercizio del diritto di ripensamento diretto alla cessazione della Fornitura con disattivazione del Punto di Fornitura, il Cliente Consumatore sarà tenuto a richiedere la disattivazione a Octopus, che provvederà, se del caso tramite l’utente del trasporto e del dispacciamento (energia elettrica) ovvero l’utente del servizio di distribuzione (gas naturale). </DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Letture</ALTRO>
+            <DESCRIZIONE>La fatturazione avverrà sulla base delle misure rilevate dal distributore territorialmente competente; il cliente potrà effettuare l'autolettura del suo contatore, secondo modalità e tempi descritti in fattura. Qualora detti dati non siano resi disponibili dal Distributore in tempo utile per l’emissione della fattura, ferma restando la competenza dello stesso in materia di rilevazione delle misure, la fatturazione avverrà in base all’autolettura fornita dal Cliente e validata dal Distributore oppure, in assenza della stessa, con l’utilizzo di stime definite dal Fornitore o dal Distributore. Per maggiori informazioni è possibile consultare le CGF.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Pagamenti</ALTRO>
+            <DESCRIZIONE>La fatturazione dei consumi di energia elettrica e/o di gas naturale avverrà in modalità elettronica in conformità alla normativa vigente e nel rispetto di quanto previsto nelle CPF. Octopus Energy Italia, fatto salvo ogni altro diritto riconosciuto dal Contratto, applicherà al Cliente che abbia pagato in ritardo una fattura, senza necessità di formale messa in mora, gli interessi moratori. Gli interessi di mora saranno calcolati sugli importi delle fatture insolute al tasso BCE tempo per tempo vigente aumentato di 3,5 punti percentuali per gli utenti domestici e per i condomini e di una somma pari agliinteressi di mora calcolati nella misura del tasso di mora ex DLgs. 231/2002 - in vigore alla data di scadenza della relativa fattura. Octopus Energy Italia si riserva inoltre la facoltà di applicare i seguenti addebiti per la gestione del ritardato pagamento: €5,00 (iva e imposte escluse) per ogni comunicazione di sollecito inviata tramite posta ordinaria o tramite canali elettronici (esempio: email, SMS, PEC), €10,00 (iva e imposte escluse) per ogni comunicazione di sollecito inviata tramite raccomandata, €5,00 (iva e imposte escluse) per ogni insoluto bancario ricevuto a seguito di invio richiesta SDD (SEPA). </DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Imposte</ALTRO>
+            <DESCRIZIONE>Per informazioni sulle aliquote delle imposte consultare il sito www.octopusenergy.it</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Limitazioni</ALTRO>
+            <DESCRIZIONE>Offerta riservata a clienti finali titolari di utenze gas ad uso domestico.</DESCRIZIONE>
+            <LIMITANTE>01</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Corrispettivi</ALTRO>
+            <DESCRIZIONE>I valori aggiornati della tariffa per l’uso del gas naturale e degli oneri generali di sistema si possono consultare al seguente indirizzo: https://www.arera.it/consumatori/valori-rete-oneri-domestici-gas</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Vincoli</ALTRO>
+            <DESCRIZIONE>L'offerta economica è riservata esclusivamente ai clienti finali domestici titolari di un punto di riconsegna gas ad uso domestico con consumi fino a 10.000 Smc/anno.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Bonus sociale</ALTRO>
+            <DESCRIZIONE>Il bonus sociale per la fornitura di gas metano è stato introdotto come misura per ridurre la spesa di gas delle famiglie in stato di disagio economico. Per riceverlo in bolletta, è sufficiente presentare ogni anno la Dichiarazione Sostitutiva Unica (DSU), tramite ad esempio il Comune, i CAF o il sito INPS, al fine di ottenere l'attestazione ISEE utile per le differenti prestazioni sociali agevolate. Per maggiori informazioni visita il sito www.arera.it o chiama il n° verde 800.166.654.</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>99</TIPOLOGIA_CONDIZIONE>
+            <ALTRO>Sottoscrizione</ALTRO>
+            <DESCRIZIONE>Questo documento segue una struttura definita da ARERA, l’autorità che regola il mercato dell’energia in Italia, ed è uguale per tutti i fornitori. ARERA ha scelto un approccio basato sulla trasparenza, cioè mostrare ogni singolo dettaglio del prezzo con tutte le voci separate, una per una, così che chi vuole possa analizzarle. Questo però rende il documento più complesso da leggere e molto lungo. In Octopus Energy crediamo invece nella semplificazione: prendere quella complessità e trasformarla in qualcosa di chiaro e immediato, che chiunque possa capire senza dover entrare in ogni dettaglio. Per questo disegniamo le nostre offerte per essere semplici e convenienti, con poche voci, solo quelle indispensabili, senza extra né costi nascosti, e con prezzi pensati per essere equi nel tempo, non solo il primo anno. Oggi la normativa ci permette di intervenire direttamente solo sulla parte chiamata “materia energia”, mentre il resto è stabilito dalle Autorità, ma crediamo che le persone vogliano un prezzo finale dell’energia, tutto incluso, equo e facile da capire. Mentre lavoriamo per arrivare a questo modello, ARERA ha già recepito una nostra richiesta: rendere più evidente la separazione tra il costo dell’energia e le altre voci obbligatorie. Continuiamo a spingere per un sistema più semplice, come raccontiamo nel nostro Manifesto: https://octopusenergy.it/manifesto</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+    </offerta>
+<offerta>
+        <IdentificativiOfferta>
+            <PIVA_UTENTE>03925910618</PIVA_UTENTE>
+            <COD_OFFERTA>020237GSVML01XX0FLEXHOMEGASLIGHT</COD_OFFERTA>
+        </IdentificativiOfferta>
+        <DettaglioOfferta>
+            <TIPO_MERCATO>02</TIPO_MERCATO>
+            <OFFERTA_SINGOLA>SI</OFFERTA_SINGOLA>
+            <TIPO_CLIENTE>01</TIPO_CLIENTE>
+            <TIPO_OFFERTA>02</TIPO_OFFERTA>
+            <TIPOLOGIA_ATT_CONTR>99</TIPOLOGIA_ATT_CONTR>
+            <NOME_OFFERTA>FLEX HOME GAS LIGHT</NOME_OFFERTA>
+            <DESCRIZIONE>OFFERTA RISERVATA AI CLIENTI DOMESTICO</DESCRIZIONE>
+            <DURATA>12</DURATA>
+            <GARANZIE>NO</GARANZIE>
+            <ModalitaAttivazione>
+                <MODALITA>02</MODALITA>
+            </ModalitaAttivazione>
+            <Contatti>
+                <TELEFONO>08651956167</TELEFONO>
+                <URL_SITO_VENDITORE>https://www.2genergia.it/</URL_SITO_VENDITORE>
+                <URL_OFFERTA>https://www.2genergia.it/</URL_OFFERTA>
+            </Contatti>
+        </DettaglioOfferta>
+        <RiferimentiPrezzoEnergia>
+            <IDX_PREZZO_ENERGIA>14</IDX_PREZZO_ENERGIA>
+        </RiferimentiPrezzoEnergia>
+        <ValiditaOfferta>
+            <DATA_INIZIO>08/10/2026_00:00:00</DATA_INIZIO>
+            <DATA_FINE>31/12/2026_23:59:59</DATA_FINE>
+        </ValiditaOfferta>
+        <CaratteristicheOfferta>
+            <POTENZA_MAX>0.0</POTENZA_MAX>
+        </CaratteristicheOfferta>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>04</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>01</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>03</MODALITA_PAGAMENTO>
+        </MetodoPagamento>
+        <MetodoPagamento>
+            <MODALITA_PAGAMENTO>99</MODALITA_PAGAMENTO>
+            <DESCRIZIONE>BONIFICO BANCARIO</DESCRIZIONE>
+        </MetodoPagamento>
+        <ComponentiRegolate>
+            <CODICE>03</CODICE>
+            <CODICE>06</CODICE>
+            <CODICE>07</CODICE>
+            <CODICE>10</CODICE>
+        </ComponentiRegolate>
+        <ComponenteImpresa>
+            <NOME>SPREAD</NOME>
+            <DESCRIZIONE>SPREAD</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>04</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>0.180000</PREZZO>
+                <UNITA_MISURA>04</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <ComponenteImpresa>
+            <NOME>PCVEVA</NOME>
+            <DESCRIZIONE>PCVEVA</DESCRIZIONE>
+            <TIPOLOGIA>01</TIPOLOGIA>
+            <MACROAREA>01</MACROAREA>
+            <IntervalloPrezzi>
+                <PREZZO>156.000000</PREZZO>
+                <UNITA_MISURA>01</UNITA_MISURA>
+            </IntervalloPrezzi>
+        </ComponenteImpresa>
+        <CondizioniContrattuali>
+            <TIPOLOGIA_CONDIZIONE>01</TIPOLOGIA_CONDIZIONE>
+            <DESCRIZIONE>ATTIVAZIONE</DESCRIZIONE>
+            <LIMITANTE>02</LIMITANTE>
+        </CondizioniContrattuali>
+        <Sconto>
+            <NOME>Sconto Bolletta Online</NOME>
+            <DESCRIZIONE>Sconto di 0,50 € fattura solo invio bolletta digitale tramite mail</DESCRIZIONE>
+            <VALIDITA>01</VALIDITA>
+            <IVA_SCONTO>01</IVA_SCONTO>
+            <Condizione>
+                <CONDIZIONE_APPLICAZIONE>01</CONDIZIONE_APPLICAZIONE>
+            </Condizione>
+            <PrezziSconto>
+                <TIPOLOGIA>01</TIPOLOGIA>
+                <UNITA_MISURA>01</UNITA_MISURA>
+                <PREZZO>6.000000</PREZZO>
+            </PrezziSconto>
+        </Sconto>
+    </offerta>
+</ListaOfferteMercatoLibero>

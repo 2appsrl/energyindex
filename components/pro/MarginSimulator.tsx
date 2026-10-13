@@ -14,22 +14,18 @@ import {
   type WhatIfShocks,
 } from "@/lib/pro/margin-math";
 import type { ForecastChartPoint } from "@/components/forecast/ForecastChart";
+import {
+  pickReferenceChannel,
+  type ChannelSpreadStats,
+} from "@/lib/pro/channel-benchmark";
 import { SimulatorInputsPanel } from "./SimulatorInputsPanel";
 import { KpiCards } from "./KpiCards";
 import { ScenarioStress } from "./ScenarioStress";
-import { CompetitorBenchmark } from "./CompetitorBenchmark";
+import { CompetitorBenchmarkChannels } from "./CompetitorBenchmarkChannels";
 import { SimulatorChart } from "./SimulatorChart";
 import { SimulatorActions } from "./SimulatorActions";
 import { SimulatorTour } from "./SimulatorTour";
 import { DemoLockBanner } from "./DemoLockBanner";
-
-interface CompetitorData {
-  medianEurPerMwh: number;
-  p25EurPerMwh: number;
-  p75EurPerMwh: number;
-  nOfferte: number;
-  source: string;
-}
 
 const DEFAULT_INPUTS: SimulatorInputs = {
   volumeKwhPerYear: 250_000,
@@ -45,11 +41,11 @@ const DEFAULT_INPUTS: SimulatorInputs = {
 export function MarginSimulator({
   forecastPoints,
   forecastAvgEurPerMwh,
-  competitor,
+  channels,
 }: {
   forecastPoints: ForecastChartPoint[];
   forecastAvgEurPerMwh: number;
-  competitor: CompetitorData;
+  channels: ChannelSpreadStats[];
 }) {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_INPUTS);
   const [whatIfShocks, setWhatIfShocks] = useState<WhatIfShocks>(NO_SHOCKS);
@@ -102,16 +98,17 @@ export function MarginSimulator({
     ? inputs.fixedPriceEurPerMwh - kpi.costoApprovvigionamentoEurPerMwh
     : inputs.spreadEurPerMwh;
 
-  const verdict = useMemo(
-    () =>
-      computeBenchmarkVerdict({
-        yourSpreadEurPerMwh: effectiveSpreadEurPerMwh,
-        marketMedianEurPerMwh: competitor.medianEurPerMwh,
-        marketP25EurPerMwh: competitor.p25EurPerMwh,
-        marketP75EurPerMwh: competitor.p75EurPerMwh,
-      }),
-    [effectiveSpreadEurPerMwh, competitor],
-  );
+  // Il verdict testuale resta su un canale solo: il canale di riferimento
+  // (commerciale quando disponibile, PLACET come ultima spiaggia).
+  const verdict = useMemo(() => {
+    const ref = pickReferenceChannel(channels);
+    return computeBenchmarkVerdict({
+      yourSpreadEurPerMwh: effectiveSpreadEurPerMwh,
+      marketMedianEurPerMwh: ref?.medianEurPerMwh ?? 60,
+      marketP25EurPerMwh: ref?.p25EurPerMwh ?? 40,
+      marketP75EurPerMwh: ref?.p75EurPerMwh ?? 100,
+    });
+  }, [effectiveSpreadEurPerMwh, channels]);
 
   return (
     <div className="space-y-4">
@@ -148,9 +145,9 @@ export function MarginSimulator({
               />
             </div>
             <div data-tour="competitor">
-              <CompetitorBenchmark
+              <CompetitorBenchmarkChannels
                 yourSpread={effectiveSpreadEurPerMwh}
-                competitor={competitor}
+                channels={channels}
                 verdict={verdict}
               />
             </div>

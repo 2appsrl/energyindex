@@ -11,6 +11,14 @@ import {
   type ClusterId,
   type CompetitorBenchmark,
 } from "@/lib/pro/pricing-math";
+import {
+  CHANNEL_META,
+  CHANNEL_SMALL_SAMPLE,
+  isChannelUsable,
+  pickReferenceChannel,
+  type BenchmarkChannelId,
+  type ChannelSpreadStats,
+} from "@/lib/pro/channel-benchmark";
 
 const EUR0 = new Intl.NumberFormat("it-IT", {
   style: "currency",
@@ -24,16 +32,44 @@ const PCT0 = new Intl.NumberFormat("it-IT", {
 });
 
 export interface DynamicPricingViewProps {
-  benchmark: CompetitorBenchmark;
+  channels: ChannelSpreadStats[];
   costoApprovvigionamentoEurPerMwh: number;
 }
 
 export function DynamicPricingView({
-  benchmark,
+  channels,
   costoApprovvigionamentoEurPerMwh,
 }: DynamicPricingViewProps) {
   const [selectedId, setSelectedId] = useState<ClusterId>("pmi");
   const cluster = useMemo(() => getCluster(selectedId)!, [selectedId]);
+
+  // Scenario competitor: il canale selezionato guida il price ladder.
+  // Default: canale di riferimento (commerciale quando disponibile).
+  const defaultChannel = useMemo(
+    () => pickReferenceChannel(channels)?.channel ?? "placet_arera",
+    [channels],
+  );
+  const [channelId, setChannelId] = useState<BenchmarkChannelId>(defaultChannel);
+
+  const activeChannel = useMemo(() => {
+    const c = channels.find((x) => x.channel === channelId);
+    return c && isChannelUsable(c)
+      ? c
+      : (channels.find((x) => x.channel === defaultChannel) ?? null);
+  }, [channels, channelId, defaultChannel]);
+
+  const benchmark: CompetitorBenchmark = useMemo(
+    () =>
+      activeChannel && isChannelUsable(activeChannel)
+        ? {
+            p25: activeChannel.p25EurPerMwh as number,
+            median: activeChannel.medianEurPerMwh as number,
+            p75: activeChannel.p75EurPerMwh as number,
+            nOfferte: activeChannel.nOfferte,
+          }
+        : { p25: 40, median: 60, p75: 100, nOfferte: 0 },
+    [activeChannel],
+  );
 
   const ladder = useMemo(
     () =>
@@ -70,19 +106,69 @@ export function DynamicPricingView({
         </p>
       </div>
 
-      {/* COMPETITOR BENCHMARK */}
+      {/* COMPETITOR BENCHMARK — scenario a 3 canali */}
       <section className="rounded-2xl border border-stone-200 bg-white p-5 space-y-3">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
           <h2 className="font-semibold text-stone-900">Competitor benchmark (live)</h2>
           <span className="text-xs text-stone-500">
-            {benchmark.nOfferte} offerte mercato libero analizzate
+            {benchmark.nOfferte} offerte · canale{" "}
+            {activeChannel ? CHANNEL_META[activeChannel.channel].label : "—"}
           </span>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Canale benchmark">
+          {channels.map((c) => {
+            const meta = CHANNEL_META[c.channel];
+            const usable = isChannelUsable(c);
+            const active = activeChannel?.channel === c.channel;
+            return (
+              <button
+                key={c.channel}
+                type="button"
+                disabled={!usable}
+                onClick={() => setChannelId(c.channel)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  active
+                    ? "border-stone-900 bg-stone-50 text-stone-900"
+                    : usable
+                      ? "border-stone-200 bg-white text-stone-500 hover:border-stone-400"
+                      : "border-stone-200 bg-stone-50 text-stone-400 cursor-not-allowed"
+                }`}
+              >
+                <span
+                  className={`inline-block h-2 w-2 rounded-sm ${meta.dotClass}`}
+                  aria-hidden
+                />
+                {meta.label}
+                {c.locked ? (
+                  <span className="inline-flex items-center gap-1 font-normal text-amber-700">
+                    <Lock className="h-3 w-3" aria-hidden />
+                    {c.nOfferte > 0 ? `${c.nOfferte} · Pro` : "Pro"}
+                  </span>
+                ) : (
+                  <span className="font-normal tabular-nums">
+                    {usable ? `· ${c.nOfferte}` : "· in costruzione"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         <div className="grid grid-cols-3 gap-3">
           <BenchStat label="25° pct (aggressive)" value={`${benchmark.p25.toFixed(1)} €/MWh`} />
           <BenchStat label="Mediana" value={`${benchmark.median.toFixed(1)} €/MWh`} highlight />
           <BenchStat label="75° pct (premium)" value={`${benchmark.p75.toFixed(1)} €/MWh`} />
         </div>
+        {activeChannel && (
+          <p className="text-xs text-stone-500">
+            {CHANNEL_META[activeChannel.channel].description}
+            {activeChannel.nOfferte < CHANNEL_SMALL_SAMPLE && (
+              <span className="ml-1 rounded-full bg-amber-50 px-2 py-px font-semibold text-amber-700">
+                campione ridotto
+              </span>
+            )}
+          </p>
+        )}
       </section>
 
       {/* PRICE LADDER */}

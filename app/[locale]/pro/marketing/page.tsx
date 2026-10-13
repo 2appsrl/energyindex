@@ -5,6 +5,7 @@ import { MarketingDashboardView } from "@/components/pro/MarketingDashboardView"
 import type { OfferRecord, ForecastAverages } from "@/lib/pro/customer-math";
 import type { ForecastPoint } from "@/lib/pro/forecast-scenari-math";
 import type { ReportSnapshot } from "@/components/pro/ReportBuilderView";
+import { lockProChannels, parseChannelRows } from "@/lib/pro/channel-benchmark";
 
 export const dynamic = "force-dynamic";
 
@@ -34,14 +35,6 @@ interface ForecastChartRow {
   value: number | string;
   value_lower: number | string | null;
   value_upper: number | string | null;
-}
-
-interface CompetitorRow {
-  p25_eur_mwh: number | string;
-  median_eur_mwh: number | string;
-  p75_eur_mwh: number | string;
-  n_offerte: number;
-  source: string;
 }
 
 interface OfferRow {
@@ -105,7 +98,7 @@ export default async function MarketingDashboardPage({
     p_asset_id: 1,
     p_horizon_days: 180,
   });
-  const marginCompetitorP = supabase.rpc("get_competitor_spread_stats", {
+  const marginCompetitorP = supabase.rpc("get_competitor_spread_stats_channels", {
     p_commodity: "electricity",
     p_price_type: "variabile",
   });
@@ -171,25 +164,8 @@ export default async function MarketingDashboardPage({
     value_lower: r.value_lower === null ? null : Number(r.value_lower),
     value_upper: r.value_upper === null ? null : Number(r.value_upper),
   }));
-  const compRow =
-    Array.isArray(marginCompetitor.data) && marginCompetitor.data[0]
-      ? (marginCompetitor.data[0] as CompetitorRow)
-      : null;
-  const competitor = compRow
-    ? {
-        medianEurPerMwh: Number(compRow.median_eur_mwh),
-        p25EurPerMwh: Number(compRow.p25_eur_mwh),
-        p75EurPerMwh: Number(compRow.p75_eur_mwh),
-        nOfferte: compRow.n_offerte,
-        source: String(compRow.source ?? "placet_arera"),
-      }
-    : {
-        medianEurPerMwh: 60,
-        p25EurPerMwh: 40,
-        p75EurPerMwh: 100,
-        nOfferte: 0,
-        source: "placet_arera",
-      };
+  // Demo pubblica: canale online_brand riservato Pro (vedi lockProChannels).
+  const channels = lockProChannels(parseChannelRows(marginCompetitor.data));
   const fcRows = marginForecastPoints.filter((p) => p.source === "forecast");
   const marginForecastAvg =
     fcRows.length > 0 ? fcRows.reduce((s, p) => s + p.value, 0) / fcRows.length : 100;
@@ -279,7 +255,7 @@ export default async function MarketingDashboardPage({
         margin={{
           forecastPoints: marginForecastPoints,
           forecastAvgEurPerMwh: marginForecastAvg,
-          competitor,
+          channels,
         }}
         customer={{
           offers,
@@ -295,12 +271,7 @@ export default async function MarketingDashboardPage({
           marketPunEurPerMwh: latestPunSpot,
         }}
         pricing={{
-          benchmark: {
-            p25: competitor.p25EurPerMwh,
-            median: competitor.medianEurPerMwh,
-            p75: competitor.p75EurPerMwh,
-            nOfferte: competitor.nOfferte,
-          },
+          channels,
           costoApprovvigionamentoEurPerMwh: marginForecastAvg,
         }}
         cteBuilder={{
