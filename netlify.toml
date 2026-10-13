@@ -15,6 +15,22 @@
 # .pro e www.* fanno 301 al canonical via condizione sul Host header.
 # `force = true` + Host condition fa scattare il redirect PRIMA del middleware Next.js
 # (i redirect Netlify host-conditional hanno priorita` sul plugin Next.js).
+# La home di .pro porta all'area Pro (/it/pro); gli altri path restano 1:1.
+# Netlify applica la prima regola che combacia: le regole "/" stanno sopra "/*".
+
+[[redirects]]
+  from = "/"
+  to = "https://energyindex.it/it/pro"
+  status = 301
+  force = true
+  conditions = {Host = ["energyindex.pro"]}
+
+[[redirects]]
+  from = "/"
+  to = "https://energyindex.it/it/pro"
+  status = 301
+  force = true
+  conditions = {Host = ["www.energyindex.pro"]}
 
 [[redirects]]
   from = "/*"
