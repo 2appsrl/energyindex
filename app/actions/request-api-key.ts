@@ -9,6 +9,7 @@
  */
 
 import { Resend } from "resend";
+import { saveLead } from "@/lib/admin/leads";
 
 export type ApiKeyPlan = "developer" | "api" | "pro" | "enterprise";
 
@@ -64,6 +65,15 @@ function escapeHtml(str: string): string {
 export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
   const err = validate(d);
   if (err) return { ok: false, error: err };
+
+  await saveLead({
+    source: "api_key",
+    nome: d.nome,
+    email: d.email,
+    azienda: d.azienda,
+    piano: d.piano,
+    messaggio: d.progetto,
+  });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

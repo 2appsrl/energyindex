@@ -1,6 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
+import { createServerClient } from "@supabase/ssr";
 import { defaultLocale, locales } from "./lib/i18n/config";
+import { classifyAgent, isLoggableBot } from "./lib/traffic/classify";
+import { buildRecord, hashSalt, writeRecord } from "./lib/traffic/log";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -11,6 +14,7 @@ const intlMiddleware = createMiddleware({
 // Host canonical: energyindex.it (no www).
 // Tutti gli altri host autorizzati (energyindex.pro, www.energyindex.it,
 // www.energyindex.pro) fanno 301 al canonical, preservando path + querystring.
+// Eccezione: la home di .pro va a /it/pro.
 // Questo redirect avviene PRIMA del next-intl middleware, cosi` il browser
 // vede direttamente il dominio corretto e Google non considera duplicati.
 const CANONICAL_HOST = "energyindex.it";
@@ -55,7 +59,55 @@ const SECTION_PREFIXES = [
   "/ctemachine",
 ] as const;
 
-export default function middleware(request: NextRequest) {
+/** File letti dai crawler (e dagli LLM) che il matcher include solo per il log. */
+const CRAWLER_FILES = new Set(["/llms.txt", "/robots.txt", "/sitemap.xml"]);
+
+/** Registra la richiesta in traffic_log senza far aspettare la risposta. */
+function logTraffic(kind: "api" | "bot", request: NextRequest, event: NextFetchEvent) {
+  event.waitUntil(buildRecord(kind, request, hashSalt()).then(writeRecord).catch(() => {}));
+}
+
+/**
+ * Area admin: rinnova la sessione Supabase Auth ad ogni richiesta e
+ * scrive i cookie aggiornati sulla risposta. Senza questo passaggio i
+ * server component (che non possono scrivere cookie) userebbero un token
+ * scaduto e il refresh token ruotato andrebbe perso.
+ */
+async function withAdminSession(request: NextRequest, response: NextResponse): Promise<NextResponse> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) return response;
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (cookies) => {
+        for (const { name, value, options } of cookies) response.cookies.set(name, value, options);
+      },
+    },
+  });
+  await supabase.auth.getUser();
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+export default async function middleware(request: NextRequest, event: NextFetchEvent) {
+  const { pathname: path } = request.nextUrl;
+
+  // API pubbliche: si registra ogni chiamata (anche quelle che poi la CDN
+  // serve dalla cache, perche' il middleware gira prima) e si prosegue
+  // senza toccare nient'altro: niente redirect di host, niente i18n.
+  if (path === "/api/v1" || path.startsWith("/api/v1/")) {
+    if (request.method !== "OPTIONS") logTraffic("api", request, event);
+    return NextResponse.next();
+  }
+
+  // Pagine e file per crawler: si registrano solo i bot. I visitatori
+  // umani li conta gia' Umami.
+  if (isLoggableBot(classifyAgent(request.headers.get("user-agent")).kind)) {
+    logTraffic("bot", request, event);
+  }
+  if (CRAWLER_FILES.has(path)) return NextResponse.next();
+
   const host = request.headers.get("host")?.toLowerCase() ?? "";
 
   if (HOSTS_TO_REDIRECT.has(host)) {
@@ -63,6 +115,8 @@ export default function middleware(request: NextRequest) {
     url.host = CANONICAL_HOST;
     url.protocol = "https:";
     url.port = "";
+    // La home di .pro porta all'area Pro, non alla home del sito.
+    if (host.endsWith("energyindex.pro") && url.pathname === "/") url.pathname = "/it/pro";
     return NextResponse.redirect(url, 301);
   }
 
@@ -89,7 +143,9 @@ export default function middleware(request: NextRequest) {
 
   // Per tutti gli altri host (energyindex.it canonical, *.netlify.app preview,
   // localhost dev) deleghiamo al middleware next-intl per il routing /it/...
-  return intlMiddleware(request);
+  const response = intlMiddleware(request);
+  if (pathname.startsWith("/it/admin")) return withAdminSession(request, response);
+  return response;
 }
 
 export const config = {
@@ -101,7 +157,14 @@ export const config = {
   //    viene redirected a /it/opengraph-image che non esiste → 404 su Google.
   //  - Qualsiasi path che contiene un punto (.jpg, .svg, .txt, .ico, ecc.):
   //    e' un asset statico, salta il routing intl.
+  //  - Eccezioni esplicite, solo per il log del traffico: le API pubbliche
+  //    /api/v1 e i file letti dai crawler (llms.txt, robots.txt, sitemap.xml).
   matcher: [
     "/((?!api|_next|_vercel|opengraph-image|twitter-image|icon|apple-icon|.*\\..*).*)",
+    "/api/v1",
+    "/api/v1/:path*",
+    "/llms.txt",
+    "/robots.txt",
+    "/sitemap.xml",
   ],
 };

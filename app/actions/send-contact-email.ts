@@ -18,6 +18,7 @@
  */
 
 import { Resend } from "resend";
+import { saveLead } from "@/lib/admin/leads";
 
 // ============================================================
 // TYPES (esportati per ContactForm)
@@ -96,6 +97,16 @@ export async function sendContactEmail(data: ContactFormData): Promise<SendResul
   if (validationError) {
     return { ok: false, error: validationError };
   }
+
+  // Il lead resta in DB (dashboard /it/admin) anche se l'email fallisce.
+  await saveLead({
+    source: "contact",
+    nome: data.nome,
+    email: data.email,
+    azienda: data.azienda,
+    oggetto: data.oggetto,
+    messaggio: data.messaggio,
+  });
 
   // Check API key configurata
   const apiKey = process.env.RESEND_API_KEY;
