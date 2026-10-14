@@ -383,7 +383,7 @@ export default function ProLandingPage() {
       <header className="space-y-6 max-w-3xl py-8 sm:py-16">
         <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">
           <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" aria-hidden />
-          In arrivo Q3 2026
+          PreLaunch Q4 2026
         </div>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
           EIDX Pro — analytics professionali per il mercato energy

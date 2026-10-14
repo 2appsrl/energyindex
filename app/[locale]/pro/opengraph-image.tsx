@@ -43,7 +43,7 @@ export default function Image() {
               letterSpacing: 2,
             }}
           >
-            In arrivo Q3 2026
+            PreLaunch Q4 2026
           </div>
         </div>
         <div
