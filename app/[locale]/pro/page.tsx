@@ -27,12 +27,12 @@ import { breadcrumbList, jsonLdString, organization } from "@/lib/seo/jsonld";
 export const metadata: Metadata = {
   title: "EIDX Pro — analytics professionali per il mercato energy",
   description:
-    "Margin simulator, forecast a 24 mesi con scenari, report PDF brandizzati. Lo stack analytics per fornitori, broker e PMI energivore. Lancio Q3 2026.",
+    "Margin simulator, forecast a 24 mesi con scenari, report PDF brandizzati. Lo stack analytics per fornitori, broker e PMI energivore. Lancio Q4 2026.",
   alternates: { canonical: "https://energyindex.it/it/pro" },
   openGraph: {
     title: "EIDX Pro — analytics professionali per il mercato energy",
     description:
-      "Lo stack analytics per fornitori, broker e PMI energivore. Lancio Q3 2026.",
+      "Lo stack analytics per fornitori, broker e PMI energivore. Lancio Q4 2026.",
     type: "website",
     locale: "it_IT",
     url: "/it/pro",
@@ -311,7 +311,7 @@ export default function ProLandingPage() {
             provider: organization(),
             url: "https://energyindex.it/it/pro",
             description:
-              "Margin simulator, forecast 24 mesi con scenari, report PDF brandizzati per fornitori energy, broker e PMI energivore. Lancio Q3 2026.",
+              "Margin simulator, forecast 24 mesi con scenari, report PDF brandizzati per fornitori energy, broker e PMI energivore. Lancio Q4 2026.",
             availableChannel: {
               "@type": "ServiceChannel",
               serviceUrl: "https://energyindex.it/it/pro",
@@ -700,7 +700,7 @@ export default function ProLandingPage() {
         <div className="space-y-2">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Pre-registrazione lancio</h2>
           <p className="text-muted-foreground">
-            Ti contatteremo prima del lancio ufficiale (Q3 2026) con accesso prioritario e pricing early-bird (sconto 30% sul primo anno).
+            Ti contatteremo prima del lancio ufficiale (Q4 2026) con accesso prioritario e pricing early-bird (sconto 30% sul primo anno).
           </p>
         </div>
         <LeadCaptureForm />

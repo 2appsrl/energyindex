@@ -105,7 +105,7 @@ export function LeadCaptureForm() {
       </button>
 
       <p className="text-xs text-muted-foreground">
-        Niente spam. Solo un&apos;email quando il prodotto sara&apos; disponibile (Q3 2026).
+        Niente spam. Solo un&apos;email quando il prodotto sara&apos; disponibile (Q4 2026).
         Puoi cancellarti in qualsiasi momento.
       </p>
     </form>

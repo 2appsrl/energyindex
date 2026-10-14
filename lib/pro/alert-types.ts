@@ -1,6 +1,6 @@
 /**
  * Wave 4 — Alert & API. Pure types per la configurazione alert client-side.
- * No math, no I/O. La persistenza nel demo e' localStorage; al lancio Q3 2026
+ * No math, no I/O. La persistenza nel demo e' localStorage; al lancio Q4 2026
  * sara' una tabella Supabase con RLS per user_id + edge function di valutazione
  * trigger via pg_cron + invio email/webhook via Resend.
  */

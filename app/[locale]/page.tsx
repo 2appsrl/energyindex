@@ -867,7 +867,7 @@ export default async function HomeIt() {
               Scopri EIDX Pro
             </span>
             <p className="text-xs text-emerald-200/70 text-center lg:text-right">
-              Demo gratuite · niente registrazione · lancio Q3 2026
+              Demo gratuite · niente registrazione · lancio Q4 2026
             </p>
           </div>
         </div>

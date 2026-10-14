@@ -538,7 +538,7 @@ function ApiExplorerSection() {
           </button>
         </div>
         <p className="text-[11px] text-amber-700 font-medium">
-          ⚠ Chiave demo non funzionante — gli endpoint vanno live al lancio Q3 2026.
+          ⚠ Chiave demo non funzionante — gli endpoint vanno live al lancio Q4 2026.
         </p>
       </div>
 
