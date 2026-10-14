@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
+import { ProIntroVideo } from "@/components/pro/ProIntroVideo";
 import { ContactForm } from "@/components/pro/ContactForm";
 import { MegaCTACarousel } from "@/components/pro/MegaCTACarousel";
 import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData, type PricingAddonData } from "@/components/pro/PricingSection";
@@ -422,20 +423,13 @@ export default function ProLandingPage() {
       {/* VIDEO INTRO — cosa fa EIDX Pro in 60 secondi */}
       <section aria-label="Video di presentazione EIDX Pro" className="-mt-8 space-y-3">
         <div className="relative overflow-hidden rounded-3xl border-2 border-primary/20 shadow-2xl shadow-primary/10 bg-stone-950">
-          <video
-            className="w-full aspect-video"
+          <ProIntroVideo
             src="/video/eidx-pro-intro.mp4"
             poster="/video/eidx-pro-intro-poster.jpg"
-            autoPlay
-            muted
-            loop
-            playsInline
-            controls
-            preload="metadata"
           />
         </div>
         <p className="text-xs text-muted-foreground text-center">
-          EIDX Pro in 60 secondi · attiva l&apos;audio per la voce narrante
+          EIDX Pro in 60 secondi
         </p>
       </section>
 
