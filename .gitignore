@@ -44,3 +44,9 @@ next-env.d.ts
 # Sample raw freschi vengono ignorati per non gonfiare il repo.
 spikes/samples/raw/
 
+
+# Local Netlify folder
+.netlify
+deploy/energiapro-cron/dist/
+deploy/energiapro-cron/logs/
+deploy/energiapro-cron/.env

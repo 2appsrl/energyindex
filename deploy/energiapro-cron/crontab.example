@@ -1,0 +1,17 @@
+# Crontab EnergyIndex — ETL offerte dal server energiapro.biz (IP italiano:
+# il Portale Offerte blocca con 403 i runner GitHub/datacenter).
+# Installazione: crontab -e e incolla le righe, correggendo il path base.
+#
+# Orari in ora del server. Il portale pubblica i file nella notte:
+# 06:30 locale e' sicuro; brand scraping dopo, cosi' i benchmark del
+# mattino sono completi.
+
+# ARERA PLACET (CSV giornaliero, canale regolato)
+30 6 * * *  /home/UTENTE/energyindex-cron/run-etl.sh arera-placet
+
+# Portale mercato libero (XML ~35MB, canale online bulk, 3.000+ offerte)
+40 6 * * *  /home/UTENTE/energyindex-cron/run-etl.sh portale-mlibero
+
+# Scraping siti brand (Octopus, Pulsee, Illumia) — ridondante col workflow
+# GitHub che gia' funziona: attivalo solo se vuoi tutto in un posto solo.
+#50 6 * * *  /home/UTENTE/energyindex-cron/run-etl.sh brand-offers
