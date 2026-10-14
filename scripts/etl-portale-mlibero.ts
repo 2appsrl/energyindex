@@ -41,12 +41,19 @@ function supabaseClient(): SupabaseClient {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+// Stesso UA "onesto" dell'ETL ARERA PLACET: il WAF del portale accetta i bot
+// dichiarati ma blocca gli UA browser contraffatti dai datacenter (GitHub).
+const USER_AGENT = "EnergyIndex/0.1 (commerciale@deagroup.biz; +https://energyindex.it)";
+
 async function fetchXml(url: string): Promise<string | null> {
   const res = await fetch(url, {
-    headers: { "user-agent": "Mozilla/5.0 (EnergyIndex ETL)" },
+    headers: { "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(120_000),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.warn(`[mlibero-etl] HTTP ${res.status} per ${url}`);
+    return null;
+  }
   return res.text();
 }
 

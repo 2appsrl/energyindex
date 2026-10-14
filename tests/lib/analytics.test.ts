@@ -4,27 +4,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { trackEvent } from "@/lib/analytics";
 
-describe("trackEvent", () => {
+describe("trackEvent (Umami)", () => {
   beforeEach(() => {
-    delete (window as { plausible?: unknown }).plausible;
+    delete (window as { umami?: unknown }).umami;
   });
 
-  it("does nothing if plausible is not loaded", () => {
+  it("does nothing if umami is not loaded", () => {
     expect(() => trackEvent("foo")).not.toThrow();
   });
 
-  it("calls window.plausible with event name only when no props", () => {
-    const spy = vi.fn();
-    (window as { plausible?: unknown }).plausible = spy;
+  it("calls window.umami.track with event name only when no props", () => {
+    const track = vi.fn();
+    (window as { umami?: unknown }).umami = { track };
     trackEvent("test_event");
-    expect(spy).toHaveBeenCalledWith("test_event", undefined);
+    expect(track).toHaveBeenCalledWith("test_event", undefined);
   });
 
-  it("wraps props under { props } when passed", () => {
-    const spy = vi.fn();
-    (window as { plausible?: unknown }).plausible = spy;
+  it("passes props as event data", () => {
+    const track = vi.fn();
+    (window as { umami?: unknown }).umami = { track };
     trackEvent("zone_change", { zone: "nord" });
-    expect(spy).toHaveBeenCalledWith("zone_change", { props: { zone: "nord" } });
+    expect(track).toHaveBeenCalledWith("zone_change", { zone: "nord" });
   });
 
   it("is safe on SSR (no window)", () => {
