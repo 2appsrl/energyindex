@@ -81,6 +81,10 @@ function offersToRows(
         price_value: o.prezzo_energia,
         valid_from: `${vfIso}T00:00:00+01:00`,
         valid_to: vtIso ? `${vtIso}T23:59:59+01:00` : null,
+        // Timestamp dell'ultima volta che l'offerta e' comparsa nel file
+        // giornaliero: serve a chiudere le offerte sparite (vedi expiry in
+        // main) che altrimenti resterebbero attive per sempre.
+        last_seen_at: new Date().toISOString(),
         raw: o as unknown as Record<string, unknown>,
       };
     });
@@ -215,6 +219,15 @@ async function main() {
 
   const el = ((Date.now() - t0) / 1000).toFixed(0);
   console.log("DONE", { totalRows, totalDays, emptyDays, errorDays, elapsedSec: el });
+
+  // 0 righe su tutto il range = non e' un run riuscito: il portale sta
+  // rifiutando le richieste (es. 403 sugli IP GitHub/datacenter) o ha
+  // cambiato formato. Senza questo exit il cron "passava" per mesi
+  // lasciando le PLACET stantie in silenzio.
+  if (totalRows === 0) {
+    console.error("[arera-backfill] 0 righe scaricate su tutto il range: fallimento esplicito");
+    process.exit(1);
+  }
 }
 
 main().catch((e) => {

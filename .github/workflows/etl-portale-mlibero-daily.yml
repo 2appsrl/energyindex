@@ -16,15 +16,10 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      - name: Debug accesso portale (temporaneo)
-        run: |
-          D=$(date -u -d "yesterday" +%Y%m%d); Y=$(date -u +%Y); M=$(date -u +%-m)
-          echo "--- PLACET CSV (path che funziona nell'ETL ARERA):"
-          curl -s -o /dev/null -w "%{http_code}\n" -A "EnergyIndex/0.1 (commerciale@deagroup.biz; +https://energyindex.it)" "https://www.ilportaleofferte.it/portaleOfferte/resources/opendata/csv/offerte/${Y}_${M}/PO_Offerte_E_PLACET_${D}.csv"
-          echo "--- MLIBERO XML (UA onesto):"
-          curl -s -o /dev/null -w "%{http_code}\n" -A "EnergyIndex/0.1 (commerciale@deagroup.biz; +https://energyindex.it)" "https://www.ilportaleofferte.it/portaleOfferte/resources/opendata/csv/offerteML/${Y}_${M}/PO_Offerte_E_MLIBERO_${D}.xml"
-          echo "--- MLIBERO XML (UA browser completo + headers):"
-          curl -s -o /dev/null -w "%{http_code}\n" -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36" -H "Accept: application/xml,text/xml,*/*" -H "Accept-Language: it-IT,it;q=0.9" -H "Referer: https://www.ilportaleofferte.it/portaleOfferte/it/open-data.page" "https://www.ilportaleofferte.it/portaleOfferte/resources/opendata/csv/offerteML/${Y}_${M}/PO_Offerte_E_MLIBERO_${D}.xml"
+      # NB (14/10/2026): il portale risponde 403 a TUTTI gli IP dei runner
+      # GitHub (verificato: anche il path CSV PLACET, con qualsiasi UA).
+      # Questo cron fallira' finche' l'ETL non girera' da un IP italiano /
+      # non-datacenter (self-hosted runner o cron su server proprio).
       - name: Sync Portale Offerte mercato libero
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
