@@ -16,6 +16,17 @@ export interface PricingTierData {
   isFree?: boolean;
 }
 
+export interface PricingAddonData {
+  name: string;
+  monthlyPriceEur: number;
+  description: string;
+  features: string[];
+  /** Es. "Disponibile su Pro, Trading ed Enterprise. Non attivabile sul piano Free." */
+  availabilityNote: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
 export const ANNUAL_DISCOUNT_PCT = 0.15;
 
 const NUM = new Intl.NumberFormat("it-IT");
@@ -24,7 +35,13 @@ function formatEur(n: number): string {
   return NUM.format(Math.round(n));
 }
 
-export function PricingSection({ tiers }: { tiers: PricingTierData[] }) {
+export function PricingSection({
+  tiers,
+  addon,
+}: {
+  tiers: PricingTierData[];
+  addon?: PricingAddonData;
+}) {
   const [period, setPeriod] = useState<BillingPeriod>("mensile");
 
   function handleToggle(p: BillingPeriod) {
@@ -35,7 +52,7 @@ export function PricingSection({ tiers }: { tiers: PricingTierData[] }) {
   }
 
   return (
-    <section className="space-y-8">
+    <section id="pricing" className="space-y-8 scroll-mt-20">
       <div className="space-y-2 max-w-2xl">
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Pricing trasparente</h2>
         <p className="text-muted-foreground">
@@ -139,6 +156,59 @@ export function PricingSection({ tiers }: { tiers: PricingTierData[] }) {
           );
         })}
       </div>
+
+      {/* ADD-ON — attivabile solo sui piani a pagamento */}
+      {addon && (
+        <article
+          id="addon-benchmark"
+          className="rounded-2xl border-2 border-sky-500/40 bg-gradient-to-br from-sky-50/50 via-card to-card p-8 scroll-mt-20 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center"
+        >
+          <div className="space-y-4 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
+                Add-on
+              </span>
+              <h3 className="text-2xl font-bold">{addon.name}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground max-w-2xl">{addon.description}</p>
+            <ul className="grid gap-2 sm:grid-cols-2 text-sm">
+              {addon.features.map((f) => (
+                <li key={f} className="flex items-baseline gap-2">
+                  <span className="text-sky-600 mt-0.5" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">{addon.availabilityNote}</p>
+          </div>
+          <div className="space-y-3 lg:text-right lg:pl-8 lg:border-l lg:border-sky-500/20">
+            <div className="flex items-baseline gap-1 lg:justify-end">
+              <span className="text-sm text-muted-foreground">+</span>
+              <span className="text-4xl font-bold tabular-nums">
+                {formatEur(
+                  period === "annuale"
+                    ? (addon.monthlyPriceEur * 12 * (1 - ANNUAL_DISCOUNT_PCT)) / 12
+                    : addon.monthlyPriceEur,
+                )}
+              </span>
+              <span className="text-sm text-muted-foreground">€/mese</span>
+            </div>
+            {period === "annuale" && (
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                Fatturato annualmente insieme al piano · sconto 15%
+              </p>
+            )}
+            <a
+              href={addon.ctaHref}
+              className="inline-block rounded-md bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-600/25 transition-all hover:scale-[1.02]"
+            >
+              {addon.ctaLabel}
+            </a>
+          </div>
+        </article>
+      )}
 
       <p className="text-xs text-muted-foreground text-center pt-2">
         Tutti i prezzi al netto di IVA. Piano mensile disdicibile in qualsiasi momento; piano annuale con sconto 15%. Custom Research disponibile da 5.000€ a 25.000€ a progetto.

@@ -20,7 +20,7 @@ import type { LucideIcon } from "lucide-react";
 import { LeadCaptureForm } from "@/components/pro/LeadCaptureForm";
 import { ContactForm } from "@/components/pro/ContactForm";
 import { MegaCTACarousel } from "@/components/pro/MegaCTACarousel";
-import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData } from "@/components/pro/PricingSection";
+import { PricingSection, ANNUAL_DISCOUNT_PCT, type PricingTierData, type PricingAddonData } from "@/components/pro/PricingSection";
 import { breadcrumbList, jsonLdString, organization } from "@/lib/seo/jsonld";
 
 export const metadata: Metadata = {
@@ -266,6 +266,7 @@ const TIERS: PricingTierData[] = [
     description: "Per utility, top broker, PMI energivore. White-label e custom.",
     features: [
       "Tutto del piano Pro",
+      "Benchmark offerte canali di vendita incluso (add-on da 249€)",
       "Forecast 24 mesi",
       "Report Builder white-label (Modulo 3)",
       "Custom research on-demand",
@@ -276,6 +277,25 @@ const TIERS: PricingTierData[] = [
     ctaHref: "mailto:commerciale@deagroup.biz?subject=EIDX%20Pro%20Enterprise%20-%20Richiesta%20demo",
   },
 ];
+
+const BENCHMARK_ADDON: PricingAddonData = {
+  name: "Benchmark offerte canali di vendita",
+  monthlyPriceEur: 249,
+  description:
+    "I prezzi reali dei tre canali di vendita — agenzia, online, Portale Offerte — su una sola scala. Percentili p25/mediana/p75 per canale, ricalcolati ogni giorno su 3.000+ offerte di oltre 300 venditori.",
+  features: [
+    "3 canali a confronto: agenzia/broker, siti dei brand, Portale Offerte",
+    "3.000+ offerte domestiche da 300+ venditori, aggiornate ogni giorno",
+    "Posizionamento live del tuo spread nel Margin Simulator",
+    "Price ladder per canale nel Dynamic Pricing",
+    "Export CSV delle offerte filtrate",
+    "Alert su nuove offerte sotto soglia",
+  ],
+  availabilityNote:
+    "Attivabile come add-on dei piani Pro e Trading. Incluso senza costi aggiuntivi nel piano Enterprise. Non disponibile sul piano Free.",
+  ctaLabel: "Avvisami al lancio",
+  ctaHref: "#early-access",
+};
 
 export default function ProLandingPage() {
   return (
@@ -295,7 +315,22 @@ export default function ProLandingPage() {
               "@type": "ServiceChannel",
               serviceUrl: "https://energyindex.it/it/pro",
             },
-            offers: TIERS.filter((t) => !t.isFree).flatMap((t) => {
+            offers: [
+              {
+                "@type": "Offer",
+                name: `${BENCHMARK_ADDON.name} — add-on mensile`,
+                price: String(BENCHMARK_ADDON.monthlyPriceEur),
+                priceCurrency: "EUR",
+                priceSpecification: {
+                  "@type": "UnitPriceSpecification",
+                  price: String(BENCHMARK_ADDON.monthlyPriceEur),
+                  priceCurrency: "EUR",
+                  unitText: "MONTH",
+                },
+                availability: "https://schema.org/PreOrder",
+                url: "https://energyindex.it/it/pro#addon-benchmark",
+              },
+              ...TIERS.filter((t) => !t.isFree).flatMap((t) => {
               const annualTotal = Math.round(t.monthlyPriceEur * 12 * (1 - ANNUAL_DISCOUNT_PCT));
               return [
                 {
@@ -328,6 +363,7 @@ export default function ProLandingPage() {
                 },
               ];
             }),
+            ],
           }),
         }}
       />
@@ -382,6 +418,93 @@ export default function ProLandingPage() {
           </a>
         </p>
       </header>
+
+      {/* VIDEO INTRO — cosa fa EIDX Pro in 60 secondi */}
+      <section aria-label="Video di presentazione EIDX Pro" className="-mt-8 space-y-3">
+        <div className="relative overflow-hidden rounded-3xl border-2 border-primary/20 shadow-2xl shadow-primary/10 bg-stone-950">
+          <video
+            className="w-full aspect-video"
+            src="/video/eidx-pro-intro.mp4"
+            poster="/video/eidx-pro-intro-poster.jpg"
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+            preload="metadata"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          EIDX Pro in 60 secondi · attiva l&apos;audio per la voce narrante
+        </p>
+      </section>
+
+      {/* BENCHMARK CANALI DI VENDITA — la domanda che fa il mercato */}
+      <section aria-labelledby="benchmark-canali-title">
+        <article className="relative overflow-hidden rounded-3xl border-2 border-sky-500/40 bg-gradient-to-br from-sky-50/70 via-card to-card p-8 sm:p-12 space-y-8">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-400/15 blur-3xl"
+          />
+          <header className="relative space-y-4 max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sky-700 dark:text-sky-300">
+              Benchmark offerte · canali di vendita
+            </div>
+            <h2
+              id="benchmark-canali-title"
+              className="text-3xl md:text-5xl font-bold tracking-tight"
+            >
+              A quanto vende la concorrenza?
+              <br />
+              <span className="text-sky-700 dark:text-sky-400">Dipende dal canale.</span>
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground">
+              La stessa energia ha tre prezzi: quello negoziato dalle <strong className="text-foreground">agenzie</strong>,
+              quello di acquisizione dei siti <strong className="text-foreground">online</strong> dei brand, quello
+              regolato del <strong className="text-foreground">Portale Offerte</strong>. EIDX Pro li mette sulla stessa
+              scala — percentili ricalcolati ogni mattina su 3.000+ offerte di oltre 300 venditori — e ti mostra
+              esattamente dove cade il tuo.
+            </p>
+          </header>
+
+          {/* Le tre fasce: motivo visivo del benchmark */}
+          <div className="relative grid gap-3 md:grid-cols-3">
+            <ChannelTile
+              color="emerald"
+              label="Agenzia"
+              tagline="Il prezzo negoziato"
+              detail="Offerte del canale broker e consulenziale"
+            />
+            <ChannelTile
+              color="sky"
+              label="Online"
+              tagline="Il prezzo di acquisizione"
+              detail="Offerte pubblicate sui siti dei brand"
+            />
+            <ChannelTile
+              color="amber"
+              label="Portale Offerte"
+              tagline="Il prezzo regolato"
+              detail="PLACET ARERA, il pavimento di mercato"
+            />
+          </div>
+
+          <div className="relative flex flex-wrap items-center gap-4">
+            <Link
+              href="/it/pro/simulator"
+              className="inline-flex items-center justify-center rounded-md bg-sky-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-sky-600/30 transition-all hover:bg-sky-500 hover:scale-[1.02]"
+            >
+              Guarda il benchmark in azione
+            </Link>
+            <a
+              href="#addon-benchmark"
+              className="inline-flex items-center justify-center rounded-md border border-sky-500/40 bg-card px-8 py-4 text-base font-semibold hover:bg-accent transition-colors"
+            >
+              Add-on da 249 €/mese
+            </a>
+          </div>
+        </article>
+      </section>
 
       {/* DEPARTMENT SELECTOR — porta l'utente alla mega-card giusta */}
       <section className="space-y-5">
@@ -576,7 +699,7 @@ export default function ProLandingPage() {
       </section>
 
       {/* PRICING */}
-      <PricingSection tiers={TIERS} />
+      <PricingSection tiers={TIERS} addon={BENCHMARK_ADDON} />
 
       {/* EARLY ACCESS FORM */}
       <section id="early-access" className="rounded-2xl border border-primary/30 bg-primary/5 p-8 sm:p-12 space-y-6 max-w-2xl mx-auto scroll-mt-20">
@@ -618,6 +741,77 @@ export default function ProLandingPage() {
         Documento pubblicato il {PUBLISHED}. Piano e tempi indicativi, soggetti a aggiornamento.
         EIDX Pro e&apos; un sotto-brand di Energy Index, gestito da DEA Group.
       </footer>
+    </div>
+  );
+}
+
+// Superfici volutamente chiare in entrambi i temi (come le mega-card della
+// landing): niente varianti dark:, i colori sono scelti per fondo chiaro.
+const CHANNEL_TILE_STYLES = {
+  emerald: {
+    card: "border-emerald-500/30 bg-emerald-50/70",
+    dot: "bg-emerald-500",
+    band: "bg-emerald-500/30",
+    tick: "bg-emerald-600",
+    label: "text-emerald-800",
+  },
+  sky: {
+    card: "border-sky-500/30 bg-sky-50/70",
+    dot: "bg-sky-500",
+    band: "bg-sky-500/30",
+    tick: "bg-sky-600",
+    label: "text-sky-800",
+  },
+  amber: {
+    card: "border-amber-500/30 bg-amber-50/70",
+    dot: "bg-amber-500",
+    band: "bg-amber-500/30",
+    tick: "bg-amber-600",
+    label: "text-amber-800",
+  },
+} as const;
+
+/** Posizioni decorative delle fasce (p25→p75 + mediana), eco del benchmark reale. */
+const CHANNEL_TILE_BANDS = {
+  emerald: { left: "12%", right: "55%", tick: "26%" },
+  sky: { left: "8%", right: "62%", tick: "20%" },
+  amber: { left: "42%", right: "10%", tick: "68%" },
+} as const;
+
+function ChannelTile({
+  color,
+  label,
+  tagline,
+  detail,
+}: {
+  color: keyof typeof CHANNEL_TILE_STYLES;
+  label: string;
+  tagline: string;
+  detail: string;
+}) {
+  const s = CHANNEL_TILE_STYLES[color];
+  const b = CHANNEL_TILE_BANDS[color];
+  return (
+    <div className={`rounded-2xl border p-5 space-y-3 ${s.card}`}>
+      <div className="flex items-center gap-2">
+        <span className={`h-2.5 w-2.5 rounded-sm ${s.dot}`} aria-hidden />
+        <span className={`font-bold ${s.label}`}>{label}</span>
+      </div>
+      {/* fascia p25–p75 con tacca mediana, puramente illustrativa */}
+      <div className="relative h-6 rounded-md bg-stone-200/60" aria-hidden>
+        <div
+          className={`absolute top-1 bottom-1 rounded ${s.band}`}
+          style={{ left: b.left, right: b.right }}
+        />
+        <div
+          className={`absolute top-0.5 bottom-0.5 w-[3px] rounded ${s.tick}`}
+          style={{ left: b.tick }}
+        />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-stone-900">{tagline}</p>
+        <p className="text-xs text-stone-600">{detail}</p>
+      </div>
     </div>
   );
 }
