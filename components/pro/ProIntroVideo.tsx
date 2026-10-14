@@ -15,16 +15,28 @@ export function ProIntroVideo({ src, poster }: { src: string; poster: string }) 
   const ref = useRef<HTMLVideoElement>(null);
   const [preview, setPreview] = useState(false);
 
+  // Parte solo la prima volta che il video e' visibile per almeno meta':
+  // chi legge l'hero non sente la voce prima di vedere le immagini.
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
-    video.muted = false;
-    video.play().catch(() => {
-      video.muted = true;
-      video.loop = true;
-      setPreview(true);
-      video.play().catch(() => {});
-    });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // La prima notifica arriva anche sotto soglia: si controlla il rapporto.
+        if (entry.intersectionRatio < 0.5) return;
+        observer.disconnect();
+        video.muted = false;
+        video.play().catch(() => {
+          video.muted = true;
+          video.loop = true;
+          setPreview(true);
+          video.play().catch(() => {});
+        });
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
   }, []);
 
   function playWithSound() {
@@ -46,7 +58,7 @@ export function ProIntroVideo({ src, poster }: { src: string; poster: string }) 
         poster={poster}
         playsInline
         controls={!preview}
-        preload="auto"
+        preload="metadata"
       />
       {preview && (
         <button
