@@ -24,7 +24,7 @@ import { fetchLatestPrice, apiHeaders, ALL_ASSETS } from "@/lib/api/latest-price
  *
  * Note:
  *  - Gli asset senza dato disponibile vengono OMESSI (non null)
- *  - La data top-level e' quella del PUN (asset principale)
+ *  - La data top-level e' il giorno della media PUN (asset principale)
  */
 export const revalidate = 900;
 
@@ -35,7 +35,7 @@ export async function GET() {
   for (const r of results) {
     if (!r) continue;
     values[r.asset] = r;
-    if (r.asset === "PUN") topDate = r.date;
+    if (r.asset === "PUN") topDate = r.daily_average?.date ?? r.date;
   }
   if (Object.keys(values).length === 0) {
     return NextResponse.json(
@@ -52,6 +52,7 @@ export async function GET() {
       date: topDate ?? new Date().toISOString().slice(0, 10),
       values,
       attribution: "Energy Index — https://energyindex.it (gratis, attribuzione richiesta)",
+      // Ogni valore ha la propria attribution: i dati GME richiedono anche la citazione della fonte.
       source_page: "https://energyindex.it/it",
       docs: "https://energyindex.it/api/v1",
     },

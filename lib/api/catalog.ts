@@ -248,10 +248,12 @@ export interface ApiEndpoint {
 }
 
 const ATTR = "Energy Index — https://energyindex.it (gratis, attribuzione richiesta)";
+const GME_ATTR = "Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index (https://energyindex.it)";
+const GME_TERMS = "https://www.mercatoelettrico.org/en-us/Home/TermsOfUse";
 
 const LATEST_FIELDS: EndpointField[] = [
-  { name: "date", type: "string (YYYY-MM-DD)", description: "Giorno di mercato dell'osservazione." },
-  { name: "observed_at", type: "string (ISO 8601)", description: "Timestamp UTC dell'osservazione." },
+  { name: "date", type: "string (YYYY-MM-DD)", description: "Giorno di riferimento: giorno di mercato (Europe/Rome) per il PUN, giorno gas di consegna per il PSV." },
+  { name: "observed_at", type: "string (ISO 8601)", description: "Istante di riferimento dell'osservazione, in UTC." },
   { name: "value", type: "number", description: "Valore in unita' consumer (€/kWh per energia e gas, $/bbl per Brent, €/tCO2 per CO2)." },
   { name: "unit", type: "string", description: "Unita' del campo value." },
   { name: "value_native", type: "number?", description: "Valore nell'unita' nativa della fonte (€/MWh). Assente se coincide con value." },
@@ -260,8 +262,26 @@ const LATEST_FIELDS: EndpointField[] = [
   { name: "asset_name", type: "string", description: "Nome esteso dell'indice." },
   { name: "source", type: "string", description: "Fonte ufficiale del dato (GME, ICE Endex, EIA, EEX)." },
   { name: "source_url", type: "string", description: "URL della fonte ufficiale." },
-  { name: "attribution", type: "string", description: "Testo di attribuzione da mostrare accanto al dato." },
+  { name: "source_terms_url", type: "string?", description: "Condizioni d'uso della fonte che regolano il riuso del dato (presente per i dati GME)." },
+  { name: "attribution", type: "string", description: "Testo di attribuzione da mostrare accanto al dato: per i dati GME include la citazione della fonte richiesta dal GME." },
   { name: "page", type: "string", description: "Pagina di dettaglio su energyindex.it da linkare." },
+];
+
+const PUN_FIELDS: EndpointField[] = [
+  ...LATEST_FIELDS.slice(0, 6),
+  { name: "granularity", type: "string", description: "\"hourly\": value e' il prezzo di una singola ora di mercato." },
+  { name: "hour", type: "integer", description: "Ora di mercato GME (1..25) a cui si riferisce value." },
+  { name: "daily_average", type: "object | null", description: "Media aritmetica delle ore del giorno italiano (PUN Index GME): date, value (€/kWh), value_native (€/MWh), hours. E' il valore da usare come \"PUN di oggi\"." },
+  ...LATEST_FIELDS.slice(6),
+];
+
+const PSV_FIELDS: EndpointField[] = [
+  ...LATEST_FIELDS.slice(0, 6),
+  { name: "granularity", type: "string", description: "\"daily\": un valore per giorno gas." },
+  { name: "gas_day", type: "string (YYYY-MM-DD)", description: "Giorno gas di consegna (dalle 06:00 alle 06:00 del giorno successivo). Coincide con date." },
+  { name: "session_date", type: "string (YYYY-MM-DD)", description: "Giorno della sessione MGP-GAS in cui il prodotto e' stato negoziato." },
+  { name: "product", type: "string", description: "Codice del prodotto giornaliero MGP-GAS (MGP-YYYY-MM-DD)." },
+  ...LATEST_FIELDS.slice(6),
 ];
 
 export const ENDPOINTS: readonly ApiEndpoint[] = [
@@ -282,8 +302,8 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     response: {
       date: "2026-09-26",
       values: {
-        PUN: { date: "2026-09-26", value: 0.11873, unit: "€/kWh", value_native: 118.73, unit_native: "€/MWh", asset: "PUN", source: "GME" },
-        PSV: { date: "2026-09-26", value: 0.03902, unit: "€/kWh", value_native: 39.02, unit_native: "€/MWh", asset: "PSV", source: "GME" },
+        PUN: { date: "2026-09-27", value: 0.11873, unit: "€/kWh", value_native: 118.73, unit_native: "€/MWh", hour: 24, daily_average: { date: "2026-09-26", value: 0.12204, value_native: 122.04, hours: 24 }, asset: "PUN", source: "GME" },
+        PSV: { date: "2026-09-27", value: 0.03902, unit: "€/kWh", value_native: 39.02, unit_native: "€/MWh", gas_day: "2026-09-27", session_date: "2026-09-26", product: "MGP-2026-09-27", asset: "PSV", source: "GME" },
         TTF: { date: "2026-09-26", value: 0.03511, unit: "€/kWh", value_native: 35.11, unit_native: "€/MWh", asset: "TTF", source: "ICE Endex" },
         Brent: { date: "2026-09-26", value: 71.42, unit: "$/bbl", asset: "Brent", source: "EIA" },
         CO2: { date: "2026-09-26", value: 68.9, unit: "€/tCO2", asset: "CO2", source: "EEX" },
@@ -293,8 +313,8 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
       docs: "https://energyindex.it/api/v1",
     },
     fields: [
-      { name: "date", type: "string (YYYY-MM-DD)", description: "Giorno di mercato del PUN (indice principale)." },
-      { name: "values", type: "object", description: "Mappa sigla → oggetto con lo stesso schema di /pun/today." },
+      { name: "date", type: "string (YYYY-MM-DD)", description: "Giorno della media PUN (indice principale)." },
+      { name: "values", type: "object", description: "Mappa sigla → oggetto con lo schema di /pun/today o /psv/today, ognuno con la propria attribution." },
       { name: "attribution", type: "string", description: "Testo di attribuzione da mostrare." },
       { name: "source_page", type: "string", description: "Pagina Energy Index da linkare." },
     ],
@@ -306,29 +326,33 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     method: "GET",
     path: "/pun/today",
     title: "PUN di oggi",
-    summary: "Ultimo Prezzo Unico Nazionale, in €/kWh e €/MWh.",
+    summary: "PUN medio del giorno e ultimo prezzo orario, in €/kWh e €/MWh.",
     description:
-      "Ultimo PUN pubblicato dal GME dopo la chiusura del Mercato del Giorno Prima, di norma entro il primo pomeriggio. Il valore e' fornito sia in €/kWh, comodo per ragionare in bolletta, sia nell'unita' nativa €/MWh.",
+      "daily_average e' la media delle ore del giorno italiano, cioe' il PUN giornaliero (PUN Index GME): e' il valore da mostrare come \"PUN di oggi\". value e' invece l'ultima ora pubblicata dal GME dopo la chiusura del Mercato del Giorno Prima, quindi di norma un'ora di domani (vedi date e hour). Tutti i prezzi sono in €/kWh, comodi per ragionare in bolletta, e nell'unita' nativa €/MWh.",
     category: "prezzi",
     tier: "open",
     status: "live",
     params: [],
     exampleCall: "/pun/today",
     response: {
-      date: "2026-09-26",
-      observed_at: "2026-09-26T10:30:00.000Z",
+      date: "2026-09-27",
+      observed_at: "2026-09-27T21:00:00+00:00",
       value: 0.11873,
       unit: "€/kWh",
       value_native: 118.73,
       unit_native: "€/MWh",
+      granularity: "hourly",
+      hour: 24,
+      daily_average: { date: "2026-09-26", value: 0.12204, unit: "€/kWh", value_native: 122.04, unit_native: "€/MWh", hours: 24 },
       asset: "PUN",
       asset_name: "Prezzo Unico Nazionale energia elettrica Italia",
       source: "GME",
       source_url: "https://www.mercatoelettrico.org",
-      attribution: ATTR,
+      source_terms_url: GME_TERMS,
+      attribution: GME_ATTR,
       page: "https://energyindex.it/it/indice/pun",
     },
-    fields: LATEST_FIELDS,
+    fields: PUN_FIELDS,
     formats: ["json"],
     cache: "15 minuti",
   },
@@ -337,29 +361,34 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     method: "GET",
     path: "/psv/today",
     title: "PSV di oggi",
-    summary: "Ultimo prezzo del gas al Punto di Scambio Virtuale.",
+    summary: "Prezzo di riferimento MGP-GAS del GME per il giorno gas.",
     description:
-      "Ultimo PSV giornaliero pubblicato dal GME, in €/kWh e nell'unita' nativa €/MWh. Riferimento delle offerte gas a prezzo variabile.",
+      "Prezzo di riferimento del prodotto giornaliero negoziato sul Mercato del Giorno Prima del gas (MGP-GAS) del GME, pubblicato dopo la chiusura della sessione (circa le 18:00). date e gas_day indicano il giorno gas di consegna, session_date la sessione di negoziazione (di norma il giorno prima), product il codice MGP-GAS. Non e' l'IG Index (IGI), che il GME calcola come media delle transazioni concluse tra le 17:15 e le 17:30. Valori in €/kWh e nell'unita' nativa €/MWh.",
     category: "prezzi",
     tier: "open",
     status: "live",
     params: [],
     exampleCall: "/psv/today",
     response: {
-      date: "2026-09-26",
-      observed_at: "2026-09-26T16:00:00.000Z",
+      date: "2026-09-27",
+      observed_at: "2026-09-26T22:00:00+00:00",
       value: 0.03902,
       unit: "€/kWh",
       value_native: 39.02,
       unit_native: "€/MWh",
+      granularity: "daily",
+      gas_day: "2026-09-27",
+      session_date: "2026-09-26",
+      product: "MGP-2026-09-27",
       asset: "PSV",
-      asset_name: "Punto di Scambio Virtuale gas naturale Italia",
+      asset_name: "PSV — prezzo di riferimento MGP-GAS (GME), prodotto giornaliero",
       source: "GME",
-      source_url: "https://www.mercatoelettrico.org",
-      attribution: ATTR,
+      source_url: "https://www.mercatoelettrico.org/it-it/Home/Esiti/Gas/MGP/Esiti",
+      source_terms_url: GME_TERMS,
+      attribution: GME_ATTR,
       page: "https://energyindex.it/it/indice/psv",
     },
-    fields: LATEST_FIELDS,
+    fields: PSV_FIELDS,
     formats: ["json"],
     cache: "15 minuti",
   },

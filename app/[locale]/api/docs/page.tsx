@@ -200,7 +200,7 @@ export default function ApiDocsPage() {
                 ["Formato", "JSON UTF-8. Con format=csv: separatore ';', decimali con la virgola, intestazione nella prima riga."],
                 ["Prezzi energia e gas", "value in €/kWh (5 decimali) per la lettura in bolletta, value_native in €/MWh come pubblicato da GME."],
                 ["Brent e CO2", "$/bbl e €/tCO2, solo nel campo value."],
-                ["Giorni di mercato", "YYYY-MM-DD nel fuso Europe/Rome."],
+                ["Giorni di mercato", "YYYY-MM-DD nel fuso Europe/Rome. Per il PSV date e' il giorno gas di consegna; la sessione di negoziazione e' in session_date."],
                 ["Timestamp", "ISO 8601. observed_at in UTC (Z); gli orari del PUN orario con offset Europe/Rome (+01:00 / +02:00)."],
                 ["Cambio ora", "Nei giorni di passaggio ora legale/solare il PUN orario ha 23 o 25 ore."],
                 ["Numeri", "Numeri JSON, mai stringhe. Nessun valore mancante e' restituito come 0."],
@@ -313,10 +313,28 @@ export default function ApiDocsPage() {
 
           <DocSection id="licenza" title="Attribuzione e licenza">
             <p>
-              Nei piani Open e Developer i dati sono utilizzabili gratuitamente, anche a fini commerciali, a condizione
-              di mostrare accanto al dato la fonte con un link a energyindex.it. Ogni risposta contiene il testo pronto
-              nel campo <Code>attribution</Code>.
+              Le API restituiscono due tipi di dati, con regole diverse. Ogni risposta contiene il testo di
+              attribuzione pronto nel campo <Code>attribution</Code>.
             </p>
+            <ul className="list-disc space-y-1.5 pl-5">
+              <li>
+                <strong>Elaborazioni Energy Index</strong>{" "}(Energy Index delle offerte e statistiche calcolate da noi):
+                nei piani Open e Developer sono utilizzabili gratuitamente, anche a fini commerciali, mostrando accanto
+                al dato &quot;Fonte: Energy Index&quot; con un link a energyindex.it. I forecast hanno una{" "}
+                <Link href="/it/forecast/metodologia#licenza" className="underline">licenza dedicata</Link>.
+              </li>
+              <li>
+                <strong>Dati delle fonti</strong>{" "}(PUN, prezzi zonali e PSV dal GME; TTF, Brent e CO2 da ICE Endex,
+                EIA ed EEX): Energy Index li riporta a scopo informativo e non concede licenze su di essi. Il riuso
+                resta soggetto alle condizioni di ciascuna fonte. Per i dati GME le{" "}
+                <a href="https://www.mercatoelettrico.org/en-us/Home/TermsOfUse" target="_blank" rel="noopener" className="underline">
+                  condizioni di utilizzo
+                </a>{" "}
+                richiedono un&apos;autorizzazione scritta del GME per gli usi commerciali e la citazione &quot;Fonte:
+                Gestore dei Mercati Energetici S.p.A.&quot;, gia&apos; inclusa nel campo <Code>attribution</Code>{" "}
+                (il link alle condizioni e&apos; in <Code>source_terms_url</Code>).
+              </li>
+            </ul>
             <CodeTabs
               tabs={[
                 { id: "html", label: "HTML", code: `<p>Fonte: <a href="https://energyindex.it" target="_blank" rel="noopener">Energy Index</a></p>` },
@@ -325,10 +343,9 @@ export default function ApiDocsPage() {
               ]}
             />
             <ul className="list-disc space-y-1.5 pl-5">
-              <li>Dal piano API l&apos;attribuzione e&apos; facoltativa; Enterprise include l&apos;uso white-label.</li>
               <li>
-                I dati di origine restano soggetti alle condizioni delle rispettive fonti (GME, ARERA, ICE Endex, EIA,
-                EEX). Energy Index li ridistribuisce a scopo informativo.
+                Dal piano API l&apos;attribuzione a Energy Index e&apos; facoltativa ed Enterprise include l&apos;uso
+                white-label; restano le citazioni richieste dalle fonti.
               </li>
               <li>Non e&apos; consentito rivendere l&apos;API tale e quale come servizio concorrente.</li>
               <li>I forecast sono stime statistiche, non consulenza finanziaria o raccomandazioni di investimento.</li>
@@ -337,6 +354,17 @@ export default function ApiDocsPage() {
 
           <DocSection id="changelog" title="Changelog">
             <ol className="space-y-3 border-l-2 pl-5">
+              <li>
+                <span className="font-mono text-xs text-muted-foreground">2026-10-30</span>
+                <p>
+                  <Code>/pun/today</Code>: nuovi campi <Code>daily_average</Code> (media del giorno, PUN Index GME),{" "}
+                  <Code>hour</Code> e <Code>granularity</Code>. <Code>/psv/today</Code>: <Code>date</Code> ora indica
+                  il giorno gas di consegna (prima era la data UTC, un giorno indietro); nuovi campi{" "}
+                  <Code>gas_day</Code>, <Code>session_date</Code> e <Code>product</Code>. Sui dati GME,{" "}
+                  <Code>attribution</Code> cita la fonte e <Code>source_terms_url</Code> rimanda alle condizioni
+                  d&apos;uso. Licenza riscritta per distinguere le elaborazioni Energy Index dai dati delle fonti.
+                </p>
+              </li>
               <li>
                 <span className="font-mono text-xs text-muted-foreground">2026-09-27</span>
                 <p>Pubblicati documentazione, piani e contratti in anteprima di tutti gli endpoint. Spec OpenAPI 3.1.</p>

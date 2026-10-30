@@ -61,7 +61,7 @@ const FAQ = [
   {
     question: "Le API di Energy Index sono gratuite?",
     answer:
-      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave, anche per uso commerciale, con l'unico obbligo di citare Energy Index con un link. Il piano Developer e' gratuito con chiave e da' accesso a storico, zone e CSV. Il piano API costa 99 € al mese.",
+      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave. Le elaborazioni Energy Index si possono riusare anche a fini commerciali citando Energy Index con un link; i dati delle fonti, come PUN e PSV del GME, restano soggetti alle condizioni della fonte, che per gli usi commerciali richiedono l'autorizzazione del GME. Il piano Developer e' gratuito con chiave e da' accesso a storico, zone e CSV. Il piano API costa 99 € al mese.",
   },
   {
     question: "Da dove vengono i dati?",
@@ -129,6 +129,8 @@ const RANK: Record<TierId, number> = { open: 0, developer: 1, api: 2, pro: 3, tr
 
 export default async function ApiLandingPage() {
   const [pun, psv] = await Promise.all([fetchLatestPrice("pun"), fetchLatestPrice("psv")]);
+  // Media del giorno (PUN Index GME), non il prezzo dell'ultima ora pubblicata.
+  const punDay = pun?.daily_average ?? null;
 
   const heroResponse = JSON.stringify(
     pun ?? (ENDPOINTS.find((e) => e.id === "pun-today")!.response as object),
@@ -258,7 +260,7 @@ export default async function ApiLandingPage() {
         {/* KPI strip */}
         <div className="container relative mx-auto grid grid-cols-2 gap-3 px-4 pb-10 md:grid-cols-4">
           {[
-            { k: pun ? `${fmt(pun.value_native ?? pun.value)} €/MWh` : "PUN", l: pun ? `PUN del ${pun.date.split("-").reverse().join("/")}` : "Prezzo Unico Nazionale" },
+            { k: punDay ? `${fmt(punDay.value_native)} €/MWh` : "PUN", l: punDay ? `PUN medio del ${punDay.date.split("-").reverse().join("/")}` : "Prezzo Unico Nazionale" },
             { k: "7", l: "zone di mercato (nazionale + 6)" },
             { k: String(ENDPOINTS.length), l: "endpoint nel catalogo" },
             { k: "0 €", l: "per iniziare, senza registrazione" },
@@ -278,7 +280,7 @@ export default async function ApiLandingPage() {
           title="Otto idee, pronte da copiare"
           subtitle="Ogni esempio indica il piano e gli endpoint che servono. I valori di PUN e PSV nei riquadri sono quelli di oggi; il resto e' illustrativo."
         />
-        <UseCases pun={pun?.value_native ?? null} psv={psv?.value_native ?? null} />
+        <UseCases pun={punDay?.value_native ?? null} psv={psv?.value_native ?? null} />
       </section>
 
       {/* ============================================================ 3 STEPS */}

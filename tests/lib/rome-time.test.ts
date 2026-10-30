@@ -6,6 +6,7 @@ import {
   romeHourToIso,
   romeDayBoundsUtc,
   romeDateOf,
+  romeHourOf,
 } from "../../supabase/functions/_shared/rome-time.js";
 
 describe("romeHourToIso (ora GME 1..25 → istante UTC)", () => {
@@ -58,5 +59,21 @@ describe("romeDateOf", () => {
   });
   it("22:30Z d'estate e' gia' il giorno dopo", () => {
     expect(romeDateOf("2026-07-14T22:30:00Z")).toBe("2026-07-15");
+  });
+});
+
+describe("romeHourOf (istante UTC → ora GME 1..25)", () => {
+  it("inverno: 22:00Z = ora 24, 23:00Z = ora 1 del giorno dopo", () => {
+    expect(romeHourOf("2026-10-30T22:00:00Z")).toBe(24);
+    expect(romeHourOf("2026-10-30T23:00:00Z")).toBe(1);
+  });
+  it("estate: 21:00Z = ora 24", () => {
+    expect(romeHourOf("2026-07-15T21:00:00Z")).toBe(24);
+  });
+  it("25 ottobre 2026: l'ultima ora e' la 25", () => {
+    expect(romeHourOf("2026-10-25T22:00:00Z")).toBe(25);
+  });
+  it("e' l'inverso di romeHourToIso", () => {
+    expect(romeHourOf(romeHourToIso("2026-03-29", 23))).toBe(23);
   });
 });

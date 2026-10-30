@@ -58,7 +58,14 @@ export function romeDayBoundsUtc(isoDate: string): { start: string; end: string 
 }
 
 /** Data italiana (YYYY-MM-DD) di un istante. */
-export function romeDateOf(instant: string | Date): string {
-  const ms = typeof instant === "string" ? Date.parse(instant) : instant.getTime();
+export function romeDateOf(instant: string | Date | number): string {
+  const ms =
+    typeof instant === "number" ? instant : typeof instant === "string" ? Date.parse(instant) : instant.getTime();
   return new Date(ms + romeOffsetMs(ms)).toISOString().slice(0, 10);
+}
+
+/** Ora GME (1..25) a cui appartiene l'istante: inverso di `romeHourToIso`. */
+export function romeHourOf(instant: string | Date): number {
+  const ms = typeof instant === "string" ? Date.parse(instant) : instant.getTime();
+  return Math.floor((ms - romeMidnightMs(romeDateOf(ms))) / HOUR_MS) + 1;
 }

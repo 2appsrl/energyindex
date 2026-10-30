@@ -4,8 +4,11 @@ import { fetchLatestPrice, apiHeaders } from "@/lib/api/latest-price";
 /**
  * GET /api/v1/psv/today
  *
- * Endpoint pubblico JSON con l'ultimo PSV osservato (€/kWh + €/MWh nativo).
- * Schema identico a /api/v1/pun/today.
+ * Endpoint pubblico JSON con l'ultimo prezzo di riferimento MGP-GAS del GME
+ * (prodotto giornaliero, €/kWh + €/MWh nativo). Schema di /api/v1/pun/today
+ * con, al posto di hour/daily_average: `date` = `gas_day` (giorno gas di
+ * consegna), `session_date` (sessione di negoziazione) e `product`
+ * ("MGP-YYYY-MM-DD").
  */
 export const revalidate = 900;
 
