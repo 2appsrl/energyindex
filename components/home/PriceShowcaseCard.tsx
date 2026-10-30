@@ -24,6 +24,8 @@ export interface PriceShowcaseCardProps {
   /** Se specificato, sotto il big number mostra anche la conversione retail
    *  (€/kWh per luce, €/Smc per gas). */
   commodity?: Commodity;
+  /** Riga di contesto sotto il valore (es. cosa misura e rispetto a cosa varia). */
+  caption?: string;
 }
 
 export function PriceShowcaseCard({
@@ -35,6 +37,7 @@ export function PriceShowcaseCard({
   unit,
   ariaLabel,
   commodity,
+  caption,
 }: PriceShowcaseCardProps) {
   const Icon = ICONS[icon];
   const delta =
@@ -90,6 +93,11 @@ export function PriceShowcaseCard({
               {retail && (
                 <p className="text-sm sm:text-base tabular-nums text-muted-foreground">
                   ≈ {retail}
+                </p>
+              )}
+              {caption && (
+                <p className="text-xs sm:text-sm tabular-nums text-muted-foreground/80">
+                  {caption}
                 </p>
               )}
             </>

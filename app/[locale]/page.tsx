@@ -7,6 +7,8 @@ import { MarketBanner } from "@/components/home/MarketBanner";
 import { DriverCard } from "@/components/home/DriverCard";
 import { Droplets, Flame as FlameIcon, Leaf, Thermometer } from "lucide-react";
 import { jsonLdString, organization } from "@/lib/seo/jsonld";
+import { dailyAveragesRome } from "@/lib/prices/daily-average";
+import { romeDateOf, romeDayBoundsUtc } from "@/supabase/functions/_shared/rome-time";
 
 const SITE = "https://energyindex.it";
 
@@ -19,27 +21,73 @@ function formatValue(v: number | null): string {
   }).format(v);
 }
 
-/** Fetch del valore corrente PUN — wrappato in React.cache cosi' la
- *  stessa chiamata da generateMetadata e HomeIt non duplica la query. */
-const fetchPunLatest = cache(async (): Promise<{ value: number | null; unit: string; observedAt: string | null }> => {
-  const supabase = await createServerClient();
+interface DailyPair {
+  /** Media del giorno italiano piu' recente disponibile fino a oggi. */
+  value: number | null;
+  /** Media del giorno precedente, per la variazione. */
+  prevValue: number | null;
+  unit: string;
+  /** Giorno (YYYY-MM-DD, Europe/Rome) a cui si riferisce `value`. */
+  day: string | null;
+  /** Prezzo dell'ora in corso, se disponibile. */
+  currentHour: { value: number; startIso: string } | null;
+}
+
+/**
+ * PUN (o prezzo zonale) del giorno = media delle ore del giorno italiano,
+ * come il PUN Index GME. La variazione e' rispetto alla media di ieri.
+ */
+async function getDailyPair(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  slug: string,
+): Promise<DailyPair> {
+  const empty: DailyPair = { value: null, prevValue: null, unit: "€/MWh", day: null, currentHour: null };
   const { data: meta } = await supabase
     .from("mv_latest_price_per_asset")
-    .select("asset_id, unit, observed_at")
-    .eq("asset_slug", "pun")
+    .select("asset_id, unit")
+    .eq("asset_slug", slug)
     .maybeSingle();
-  if (!meta) return { value: null, unit: "€/MWh", observedAt: null };
+  if (!meta) return empty;
+
+  const now = new Date();
+  const today = romeDateOf(now);
+  const [y, m, d] = today.split("-").map(Number);
+  // 3 giorni di finestra: copre ieri + oggi anche se oggi non e' ancora pubblicato.
+  const from = romeDayBoundsUtc(new Date(Date.UTC(y, m - 1, d - 2)).toISOString().slice(0, 10)).start;
+  const to = romeDayBoundsUtc(today).end;
   const { data: rows } = await supabase
     .from("price_observations")
-    .select("value, observed_at")
+    .select("observed_at, value")
     .eq("asset_id", meta.asset_id)
-    .order("observed_at", { ascending: false })
-    .limit(1);
+    .gte("observed_at", from)
+    .lt("observed_at", to)
+    .order("observed_at", { ascending: true });
+  if (!rows || rows.length === 0) return { ...empty, unit: (meta.unit as string) ?? "€/MWh" };
+
+  const byDay = dailyAveragesRome(rows);
+  const days = [...byDay.keys()].filter((k) => k <= today).sort();
+  const day = days.at(-1) ?? null;
+  const prevDay = days.at(-2) ?? null;
+
+  const nowMs = now.getTime();
+  const current = [...rows].reverse().find((r) => Date.parse(r.observed_at) <= nowMs);
+
   return {
-    value: rows?.[0] ? Number(rows[0].value) : null,
+    value: day ? byDay.get(day)!.value : null,
+    prevValue: prevDay ? byDay.get(prevDay)!.value : null,
     unit: (meta.unit as string) ?? "€/MWh",
-    observedAt: rows?.[0]?.observed_at ?? (meta.observed_at as string | null),
+    day,
+    currentHour:
+      current && day === today
+        ? { value: Number(current.value), startIso: current.observed_at }
+        : null,
   };
+}
+
+/** PUN del giorno, in React.cache: generateMetadata e HomeIt condividono la query. */
+const fetchPunDaily = cache(async (): Promise<DailyPair> => {
+  const supabase = await createServerClient();
+  return getDailyPair(supabase, "pun");
 });
 
 /**
@@ -50,9 +98,9 @@ const fetchPunLatest = cache(async (): Promise<{ value: number | null; unit: str
  * sitemap explosion.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const pun = await fetchPunLatest();
-  const today = new Date();
-  const ddmm = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const pun = await fetchPunDaily();
+  const [, mm, dd] = romeDateOf(new Date()).split("-");
+  const ddmm = `${dd}/${mm}`;
   const valueStr = pun.value !== null ? formatValue(pun.value) : null;
   // Niente suffisso "| Energy Index": lo aggiunge gia' il template del root layout.
   const title = valueStr
@@ -207,7 +255,7 @@ async function getZonePrices(
 ): Promise<Array<{ label: string; code: string; value: number | null; prevValue: number | null }>> {
   const results = await Promise.all(
     ZONE_DEFS.map(async (z) => {
-      const pair = await getLatestPair(supabase, z.slug);
+      const pair = await getDailyPair(supabase, z.slug);
       return { label: z.label, code: z.code, value: pair.value, prevValue: pair.prevValue };
     }),
   );
@@ -216,11 +264,10 @@ async function getZonePrices(
 
 export default async function HomeIt() {
   const supabase = await createServerClient();
-  // fetchPunLatest e' cached → riutilizziamo la stessa fetch fatta da generateMetadata
-  const [punLatest, pun, psv, market, brent, co2, tempAnom, ttf, zones] =
+  // fetchPunDaily e' cached → riutilizziamo la stessa fetch fatta da generateMetadata
+  const [pun, psv, market, brent, co2, tempAnom, ttf, zones] =
     await Promise.all([
-      fetchPunLatest(),
-      getLatestPair(supabase, "pun"),
+      fetchPunDaily(),
       getLatestPair(supabase, "psv"),
       getMarketBannerData(supabase),
       getDriverLatest(supabase, "brent"),
@@ -231,14 +278,24 @@ export default async function HomeIt() {
     ]);
 
   const todayDate = new Date();
-  const todayIso = todayDate.toISOString().slice(0, 10);
+  const todayIso = romeDateOf(todayDate);
   const ddmmyyyy = todayDate.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
-  const observedIso = punLatest.observedAt ?? todayDate.toISOString();
+  const observedIso = pun.day ?? todayIso;
   const punStr = pun.value !== null ? formatValue(pun.value) : null;
+  const punCaption = (() => {
+    const base = "PUN medio del giorno · Δ vs ieri";
+    if (!pun.currentHour) return base;
+    const h = Number(
+      new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" })
+        .format(new Date(pun.currentHour.startIso)),
+    );
+    return `${base} · ora ${h}-${h + 1}: ${formatValue(pun.currentHour.value)} €/MWh`;
+  })();
   const psvStr = psv.value !== null ? formatValue(psv.value) : null;
   const ttfStr = ttf.value !== null ? formatValue(ttf.value) : null;
 
@@ -537,6 +594,7 @@ export default async function HomeIt() {
           prevValue={pun.prevValue}
           unit={pun.unit}
           commodity="luce"
+          caption={punCaption}
           ariaLabel="Apri analisi prezzi energia elettrica"
         />
         <PriceShowcaseCard
@@ -591,7 +649,7 @@ export default async function HomeIt() {
                   Valore (€/MWh)
                 </th>
                 <th scope="col" className="text-right px-4 py-2.5 font-semibold hidden sm:table-cell">
-                  Δ vs prec.
+                  Δ vs ieri
                 </th>
                 <th scope="col" className="text-right px-4 py-2.5 font-semibold w-16">
                   Vai

@@ -25,6 +25,7 @@ import {
   PHYSICAL_ZONES,
   type GmeRow,
 } from "../supabase/functions/_shared/parsers/gme-pun.js";
+import { romeHourToIso } from "../supabase/functions/_shared/rome-time.js";
 
 const PAGE_PATH = "/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN";
 const PAGE_URL = GME_BASE + PAGE_PATH;
@@ -56,11 +57,6 @@ function todayIso() {
 }
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
-}
-function hourToIso(date: string, hour: number) {
-  // hour 1..24 -> ISO con offset CEST. Stessa simplification del ETL day-to-day.
-  const h = String(hour - 1).padStart(2, "0");
-  return `${date}T${h}:00:00+02:00`;
 }
 
 async function fetchSeries(
@@ -217,7 +213,7 @@ async function main() {
         if (id) {
           rows.push({
             asset_id: id,
-            observed_at: hourToIso(date, p.hour),
+            observed_at: romeHourToIso(date, p.hour),
             value: p.value,
             granularity: "hourly",
             extra: { source_hour: p.hour, backfill: true },
@@ -230,7 +226,7 @@ async function main() {
           if (id) {
             rows.push({
               asset_id: id,
-              observed_at: hourToIso(date, p.hour),
+              observed_at: romeHourToIso(date, p.hour),
               value: p.value,
               granularity: "hourly",
               extra: { source_hour: p.hour, zone: z, backfill: true },

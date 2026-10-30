@@ -24,6 +24,7 @@ import {
   type GmeRow,
 } from "../_shared/parsers/gme-pun.ts";
 import { dbServiceRole, refreshLatestPriceView } from "../_shared/db.ts";
+import { romeHourToIso } from "../_shared/rome-time.ts";
 
 const PAGE_PATH = "/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN";
 const PAGE_URL = GME_BASE + PAGE_PATH;
@@ -153,7 +154,7 @@ Deno.serve(async () => {
       if (!id) throw new Error("asset 'pun' not seeded");
       rows.push({
         asset_id: id,
-        observed_at: hourToIso(date, point.hour),
+        observed_at: romeHourToIso(date, point.hour),
         value: point.value,
         granularity: "hourly",
         extra: { source_hour: point.hour },
@@ -166,7 +167,7 @@ Deno.serve(async () => {
       for (const point of series) {
         rows.push({
           asset_id: id,
-          observed_at: hourToIso(date, point.hour),
+          observed_at: romeHourToIso(date, point.hour),
           value: point.value,
           granularity: "hourly",
           extra: { source_hour: point.hour, zone: z },
@@ -186,11 +187,3 @@ Deno.serve(async () => {
     return { rows_ingested: rows.length, metadata: { date } };
   });
 });
-
-function hourToIso(date: string, hour: number): string {
-  // hour: 1..24 (o 25 nel giorno DST autunno). Convenzione: hour 1 = 00:00-01:00.
-  // Slice 1 simplification: assume CEST (+02:00) anno-rotondo.
-  // Sbagliato da fine-Ott a fine-Mar (CET +01:00). Slice 7 introdurrà tz DST-aware.
-  const h = String(hour - 1).padStart(2, "0");
-  return `${date}T${h}:00:00+02:00`;
-}
