@@ -14,6 +14,7 @@ import { findAttribution, isRenderedVisible, readModel, WIDGET_VARIANTS, type Wi
 /** Sostituita da esbuild (define): "https://energyindex.it", o WIDGET_BASE per le prove locali. */
 declare const __EIDX_BASE__: string;
 const BASE = __EIDX_BASE__;
+const FETCH_TIMEOUT_MS = 8000;
 
 const CSS = `:host{all:initial;display:block;font:14px/1.4 system-ui,-apple-system,sans-serif}
 .box{border:1px solid var(--b);border-radius:12px;padding:12px 14px;background:var(--bg);color:var(--fg)}
@@ -38,7 +39,9 @@ async function mount(root: HTMLElement) {
   const def = Object.prototype.hasOwnProperty.call(WIDGET_VARIANTS, variant) ? WIDGET_VARIANTS[variant] : null;
   if (!def) return;
 
-  const host = document.createElement("div");
+  // Elemento custom (non definito): i selettori generici della pagina come
+  // ".eidx-widget div" non lo colpiscono; display:block arriva da :host.
+  const host = document.createElement("eidx-box");
   root.insertBefore(host, root.firstChild);
   const shadow = host.attachShadow({ mode: "open" });
   const theme = root.dataset.theme === "dark" ? THEMES.dark : THEMES.light;
@@ -50,8 +53,11 @@ async function mount(root: HTMLElement) {
     paint(`<p class="e">Widget disattivato: manca il link di attribuzione a Energy Index.</p>`);
     return;
   }
+  // Timeout di 8 s su richiesta e lettura del body: poi "non disponibile".
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(apiUrl(def.endpoint));
+    const res = await fetch(apiUrl(def.endpoint), { signal: ctrl.signal });
     const model = res.ok ? readModel(variant, await res.json()) : null;
     if (!model) throw new Error("no data");
     const rows = model.rows
@@ -61,6 +67,8 @@ async function mount(root: HTMLElement) {
     paint(`<p class="t">${esc(model.title)}</p>${rows}${date}`);
   } catch {
     paint(`<p class="e">Dato momentaneamente non disponibile.</p>`);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
