@@ -7,6 +7,7 @@
  * la richiesta originale non ne risente: il log si perde e basta.
  */
 
+import { isEidxKey } from "../api-keys/keys";
 import { classifyAgent, type AgentKind } from "./classify";
 
 export interface TrafficRecord {
@@ -63,10 +64,14 @@ export function extractApiKey(headers: Headers, searchParams: URLSearchParams): 
   return bearer ?? searchParams.get("key");
 }
 
-/** Primi 14 caratteri della chiave (es. "eidx_live_ab12"): identifica senza esporre. */
+/**
+ * Primi 14 caratteri della chiave (es. "eidx_live_ab12"): identifica senza
+ * esporre. Un Bearer di un altro servizio non e' una nostra chiave: non si
+ * salva, come nel middleware che lo tratta da richiesta anonima.
+ */
 export function apiKeyPrefix(headers: Headers, searchParams: URLSearchParams): string | null {
   const key = extractApiKey(headers, searchParams);
-  return key ? key.slice(0, 14) : null;
+  return key && isEidxKey(key) ? key.slice(0, 14) : null;
 }
 
 /**

@@ -48,6 +48,12 @@ describe("traffic log record", () => {
     expect(apiKeyPrefix(new Headers(), new URLSearchParams())).toBeNull();
   });
 
+  it("non salva token che non sono chiavi Energy Index", () => {
+    const h = new Headers({ authorization: "Bearer ghp_altroservizio1234567890" });
+    expect(apiKeyPrefix(h, new URLSearchParams())).toBeNull();
+    expect(apiKeyPrefix(new Headers(), new URLSearchParams("key=qualcosa-di-lungo-123"))).toBeNull();
+  });
+
   it("legge il paese da x-country o da x-nf-geo", () => {
     expect(clientCountry(new Headers({ "x-country": "it" }))).toBe("IT");
     const geo = btoa(JSON.stringify({ country: { code: "de", name: "Germany" } }));
