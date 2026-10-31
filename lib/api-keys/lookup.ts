@@ -1,30 +1,52 @@
 /**
  * Letture del middleware su api_keys e api_throttle via PostgREST con la
  * service role (stesso schema di lib/traffic/log.ts: niente supabase-js su
- * edge). Cache in memoria per istanza, TTL 60 s. Su errore fail-open: un DB
- * lento non deve rompere le API pubbliche.
+ * edge). Cache in memoria per istanza, TTL 60 s, al massimo maxKeys chiavi.
+ * Su errore fail-open: un DB lento non deve rompere le API pubbliche, e per
+ * OUTAGE_MS non si riprova la rete, cosi' un DB giu' non aggiunge il timeout
+ * a ogni richiesta.
  */
 
 import type { KeyRecord } from "./gate";
 
 const TTL_MS = 60_000;
+const OUTAGE_MS = 15_000;
+const MAX_KEYS = 1000;
 
 interface Deps {
   url: string;
   serviceKey: string;
   fetchFn?: typeof fetch;
   now?: () => number;
+  /** Tetto della cache chiavi: anche le chiavi sconosciute restano in cache. */
+  maxKeys?: number;
 }
 
-export function createLookup({ url, serviceKey, fetchFn = fetch, now = Date.now }: Deps) {
+export function createLookup({ url, serviceKey, fetchFn = fetch, now = Date.now, maxKeys = MAX_KEYS }: Deps) {
   const keys = new Map<string, { key: KeyRecord | null; exp: number }>();
   let thr: { set: Set<string>; exp: number } | null = null;
+  let downUntil = 0;
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 
   async function get<T>(path: string): Promise<T> {
-    const res = await fetchFn(`${url}/rest/v1/${path}`, { headers, signal: AbortSignal.timeout(1500) });
-    if (!res.ok) throw new Error(`postgrest ${res.status}`);
-    return (await res.json()) as T;
+    if (downUntil > now()) throw new Error("postgrest down");
+    try {
+      const res = await fetchFn(`${url}/rest/v1/${path}`, { headers, signal: AbortSignal.timeout(1500) });
+      if (!res.ok) throw new Error(`postgrest ${res.status}`);
+      return (await res.json()) as T;
+    } catch (e) {
+      downUntil = now() + OUTAGE_MS;
+      throw e;
+    }
+  }
+
+  function remember(hash: string, key: KeyRecord | null) {
+    keys.delete(hash);
+    if (keys.size >= maxKeys) {
+      const oldest = keys.keys().next();
+      if (!oldest.done) keys.delete(oldest.value);
+    }
+    keys.set(hash, { key, exp: now() + TTL_MS });
   }
 
   return {
@@ -36,7 +58,7 @@ export function createLookup({ url, serviceKey, fetchFn = fetch, now = Date.now 
           `api_keys?key_hash=eq.${encodeURIComponent(hash)}&select=prefix,status,domain,plan&limit=1`,
         );
         const key = rows[0] ?? null;
-        keys.set(hash, { key, exp: now() + TTL_MS });
+        remember(hash, key);
         return { key, failed: false };
       } catch {
         return { key: null, failed: true };

@@ -35,8 +35,40 @@ describe("createLookup", () => {
     const fetchFn = vi.fn(async () => jsonResponse({ message: "boom" }, 500));
     const lk = createLookup({ ...env, fetchFn, now: () => now });
     expect((await lk.key("h1")).failed).toBe(true);
+    now += 16_000;
     await lk.key("h1");
     expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("dopo un errore DB salta la rete per 15 s (chiavi e throttle)", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ message: "boom" }, 500));
+    const lk = createLookup({ ...env, fetchFn, now: () => now });
+    await lk.key("h1");
+    now += 14_000;
+    expect(await lk.key("h2")).toEqual({ key: null, failed: true });
+    expect((await lk.throttled()).size).toBe(0);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("anche un errore del throttle apre il circuito per le chiavi", async () => {
+    const fetchFn = vi.fn(async () => { throw new Error("down"); });
+    const lk = createLookup({ ...env, fetchFn, now: () => now });
+    await lk.throttled();
+    expect((await lk.key("h1")).failed).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("cache chiavi limitata: oltre maxKeys esce la piu' vecchia", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse([]));
+    const lk = createLookup({ ...env, fetchFn, now: () => now, maxKeys: 3 });
+    for (const h of ["a", "b", "c", "d"]) await lk.key(h);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    await lk.key("b");
+    await lk.key("c");
+    await lk.key("d");
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    await lk.key("a");
+    expect(fetchFn).toHaveBeenCalledTimes(5);
   });
 
   it("throttled restituisce l'insieme dei soggetti attivi", async () => {
