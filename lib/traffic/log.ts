@@ -57,10 +57,15 @@ export function clientCountry(headers: Headers): string | null {
   }
 }
 
+/** Chiave API completa: header Bearer, poi ?key= (sconsigliato: spezza la cache CDN). */
+export function extractApiKey(headers: Headers, searchParams: URLSearchParams): string | null {
+  const bearer = headers.get("authorization")?.match(/^Bearer\s+(\S+)/i)?.[1];
+  return bearer ?? searchParams.get("key");
+}
+
 /** Primi 14 caratteri della chiave (es. "eidx_live_ab12"): identifica senza esporre. */
 export function apiKeyPrefix(headers: Headers, searchParams: URLSearchParams): string | null {
-  const bearer = headers.get("authorization")?.match(/^Bearer\s+(\S+)/i)?.[1];
-  const key = bearer ?? searchParams.get("key");
+  const key = extractApiKey(headers, searchParams);
   return key ? key.slice(0, 14) : null;
 }
 

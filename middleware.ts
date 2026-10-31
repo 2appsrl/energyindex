@@ -3,7 +3,10 @@ import createMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { defaultLocale, locales } from "./lib/i18n/config";
 import { classifyAgent, isLoggableBot } from "./lib/traffic/classify";
-import { buildRecord, hashSalt, writeRecord } from "./lib/traffic/log";
+import { buildRecord, clientIp, extractApiKey, hashIp, hashSalt, writeRecord } from "./lib/traffic/log";
+import { sharedLookup } from "./lib/api-keys/lookup";
+import { decideAccess } from "./lib/api-keys/gate";
+import { sha256Hex } from "./lib/api-keys/keys";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -90,15 +93,66 @@ async function withAdminSession(request: NextRequest, response: NextResponse): P
   return response;
 }
 
+/**
+ * Chiave, Origin e quote per /api/v1. Gira prima della cache CDN, quindi
+ * vale anche per le risposte servite dalla cache. Senza env (dev senza
+ * service key) lascia passare tutto.
+ */
+async function gateApi(request: NextRequest): Promise<NextResponse> {
+  const lookup = sharedLookup();
+  if (!lookup) return NextResponse.next();
+
+  const key = extractApiKey(request.headers, request.nextUrl.searchParams);
+  const originHeader = request.headers.get("origin");
+  let originHost: string | null = null;
+  try {
+    originHost = originHeader ? new URL(originHeader).host : null;
+  } catch {
+    originHost = null;
+  }
+
+  const [found, throttled, ipHash] = await Promise.all([
+    key ? lookup.key(await sha256Hex(key)) : Promise.resolve({ key: null, failed: false }),
+    lookup.throttled(),
+    hashIp(clientIp(request.headers), hashSalt()),
+  ]);
+
+  const decision = decideAccess({
+    hasKey: Boolean(key),
+    key: found.key,
+    lookupFailed: found.failed,
+    originHost,
+    throttledKey: found.key ? throttled.has(`key:${found.key.prefix}`) : false,
+    throttledIp: ipHash ? throttled.has(`ip:${ipHash}`) : false,
+  });
+
+  if (!decision.ok) {
+    return NextResponse.json(decision.body, {
+      status: decision.status,
+      headers: {
+        ...decision.headers,
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+  const res = NextResponse.next();
+  for (const [k, v] of Object.entries(decision.headers)) res.headers.set(k, v);
+  return res;
+}
+
 export default async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname: path } = request.nextUrl;
 
   // API pubbliche: si registra ogni chiamata (anche quelle che poi la CDN
-  // serve dalla cache, perche' il middleware gira prima) e si prosegue
-  // senza toccare nient'altro: niente redirect di host, niente i18n.
+  // serve dalla cache, perche' il middleware gira prima), poi si applicano
+  // chiave, Origin e quote. Niente redirect di host, niente i18n.
+  // Il log viene prima del gate: anche le richieste respinte (401/403/429)
+  // finiscono in traffic_log e contano per il throttle per IP.
   if (path === "/api/v1" || path.startsWith("/api/v1/")) {
-    if (request.method !== "OPTIONS") logTraffic("api", request, event);
-    return NextResponse.next();
+    if (request.method === "OPTIONS") return NextResponse.next();
+    logTraffic("api", request, event);
+    return gateApi(request);
   }
 
   // Pagine e file per crawler: si registrano solo i bot. I visitatori
