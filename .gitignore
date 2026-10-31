@@ -50,3 +50,6 @@ spikes/samples/raw/
 deploy/energiapro-cron/dist/
 deploy/energiapro-cron/logs/
 deploy/energiapro-cron/.env
+
+# Bundle del widget: generato dal prebuild (scripts/build-widget.ts)
+/public/widget.js
