@@ -52,8 +52,9 @@ function redirect(location: string, status = 302): Response {
 
 /** fetch finto: risponde in base all'URL, registra le chiamate. */
 function fakeFetch(routes: Record<string, () => Response>) {
-  return vi.fn(async (input: RequestInfo | URL) => {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    void init;
     const route = routes[url];
     if (!route) throw new Error(`fetch inatteso: ${url}`);
     return route();
