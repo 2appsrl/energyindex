@@ -1861,6 +1861,7 @@ git commit -m "feat(admin): scheda Integrazioni con chiavi, domini widget e lead
 - Modify: `app/api/v1/route.ts`: `rate_limit` coerente ("60/min per IP; con chiave il limite del piano; quote calcolate su finestre di 5 minuti"), `auth: "Authorization: Bearer eidx_live_…"`, voce `/api/v1/energy-index` e `widget: "https://energyindex.it/it/api/widget"`.
 - Modify: `app/llms.txt/route.ts`: riga sul widget e su `/api/v1/energy-index`.
 - Modify: `components/api/ApiKeyRequestForm.tsx`: il testo "entro 2 giorni lavorativi" resta solo per i piani manuali (fatto nel Task 9, ricontrolla).
+- Modify: `app/[locale]/api/page.tsx`: il pannello accanto al form (sezione `#chiave`) dice ancora "Risposta entro 2 giorni lavorativi" / "ti contattiamo". Per Developer ora la chiave è immediata dopo la conferma email: riscrivi il pannello distinguendo Developer (self-service, link di attribuzione verificato ogni settimana) dai piani a pagamento (su richiesta).
 
 **Step 1:** Applica le modifiche.
 
