@@ -1695,8 +1695,11 @@ function init() {
   document.querySelectorAll<HTMLElement>(".eidx-widget").forEach((el) => { void mount(el); });
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-else init();
+// Dopo "load": la verifica di visibilita' dell'attribuzione deve vedere i fogli
+// di stile della pagina applicati, non il layout senza stili di DOMContentLoaded.
+const start = () => requestAnimationFrame(init);
+if (document.readyState === "complete") start();
+else window.addEventListener("load", start, { once: true });
 ```
 
 **Step 2: Script di build**
