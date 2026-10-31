@@ -2,7 +2,15 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi } from "vitest";
-import { linkCheckEmail, runLinkChecks, widgetHostFilter, widgetSeenFromRows, type CheckableKey, type LinkCheckDeps } from "@/lib/api-keys/link-check-job";
+import {
+  linkCheckEmail,
+  linkCheckNotifier,
+  runLinkChecks,
+  widgetHostFilter,
+  widgetSeenFromRows,
+  type CheckableKey,
+  type LinkCheckDeps,
+} from "@/lib/api-keys/link-check-job";
 
 const NOW = new Date("2026-11-02T07:00:00Z");
 
@@ -152,5 +160,33 @@ describe("widgetHostFilter", () => {
   });
   it("rifiuta domini con caratteri fuori da [a-z0-9.-] (niente % _ , o parentesi nel filtro)", () => {
     for (const d of ["es%empio.it", "es_empio.it", "a.it,b.it", "a.it)", "*.it", "A.IT"]) expect(widgetHostFilter(d)).toBeNull();
+  });
+});
+
+describe("linkCheckNotifier", () => {
+  const opts = { from: "EIDX <x@energyindex.it>", replyTo: "pro@energyindex.pro" };
+
+  it("senza Resend: l'email necessaria non sparisce, conta come notifyErrors con un ::warning::", async () => {
+    const warn = vi.fn();
+    const notify = linkCheckNotifier(null, { ...opts, warn });
+    await expect(notify(key(), "downgraded")).rejects.toThrow(/RESEND_API_KEY/);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/^::warning::Email "downgraded" non inviata per la chiave k1 \(esempio\.it\): .*RESEND_API_KEY/);
+
+    const s = await runLinkChecks([key({ link_failures: 1 })], deps({ hasLink: vi.fn(async () => false), notify }));
+    expect(s).toMatchObject({ downgraded: 1, notifyErrors: 1 });
+  });
+
+  it("con Resend: invia l'email della chiave", async () => {
+    const send = vi.fn(async () => ({ error: null }));
+    await linkCheckNotifier(send, { ...opts, warn: vi.fn() })(key(), "restored");
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: "g@esempio.it", from: opts.from, replyTo: opts.replyTo }));
+  });
+
+  it("errore di Resend: ::warning:: e rilancia", async () => {
+    const warn = vi.fn();
+    const send = vi.fn(async () => ({ error: { message: "domain not verified" } }));
+    await expect(linkCheckNotifier(send, { ...opts, warn })(key(), "restored")).rejects.toThrow("domain not verified");
+    expect(warn.mock.calls[0][0]).toMatch(/^::warning::.*domain not verified/);
   });
 });

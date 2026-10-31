@@ -163,3 +163,37 @@ export function linkCheckEmail(k: CheckableKey, kind: LinkNotice): { subject: st
       `la chiave per ${k.domain} è di nuovo attiva con i limiti Developer. Grazie!`,
   };
 }
+
+export interface LinkCheckMail {
+  from: string;
+  to: string;
+  replyTo: string;
+  subject: string;
+  text: string;
+}
+
+/** Invio di un'email (Resend nello script). null = RESEND_API_KEY non configurata. */
+export type LinkCheckSender = (mail: LinkCheckMail) => Promise<{ error: { message: string } | null }>;
+
+/**
+ * notify() per runLinkChecks. Ogni email non partita, anche per la chiave
+ * Resend mancante, stampa un ::warning:: (visibile nel riepilogo di GitHub
+ * Actions) e rilancia: finisce in notifyErrors e il workflow esce con 1.
+ */
+export function linkCheckNotifier(
+  send: LinkCheckSender | null,
+  o: { from: string; replyTo: string; warn?: (line: string) => void },
+): LinkCheckDeps["notify"] {
+  const warn = o.warn ?? ((line: string) => console.log(line));
+  return async (k, kind) => {
+    try {
+      if (!send) throw new Error("RESEND_API_KEY non configurata, nessuna email inviata");
+      const { subject, text } = linkCheckEmail(k, kind);
+      const res = await send({ from: o.from, to: k.email, replyTo: o.replyTo, subject, text });
+      if (res.error) throw new Error(res.error.message);
+    } catch (e) {
+      warn(`::warning::Email "${kind}" non inviata per la chiave ${k.id} (${k.domain}): ${oneLine(message(e))}`);
+      throw e;
+    }
+  };
+}

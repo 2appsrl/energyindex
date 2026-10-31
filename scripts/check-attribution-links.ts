@@ -10,7 +10,7 @@
  *
  * La logica sta in lib/api-keys/link-check-job.ts (testata); qui solo
  * Supabase e Resend. Senza RESEND_API_KEY lo stato si aggiorna lo stesso,
- * ma non parte nessuna email.
+ * ma ogni email che serviva conta come non partita (::warning:: ed exit 1).
  *
  * Esce con codice 1 se non riesce a leggere le chiavi, se almeno una chiave
  * non e' stata verificata/aggiornata o se un'email non e' partita, cosi' il
@@ -22,7 +22,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { fetchHasLink, type KeyStatus } from "../lib/api-keys/link-check";
 import {
-  linkCheckEmail,
+  linkCheckNotifier,
   runLinkChecks,
   widgetHostFilter,
   widgetSeenFromRows,
@@ -43,7 +43,9 @@ async function main(): Promise<number> {
   }
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-  if (!resend) console.log("[link-check] RESEND_API_KEY non configurata: nessuna email verra' inviata");
+  if (!resend) {
+    console.log("[link-check] RESEND_API_KEY non configurata: le email necessarie risulteranno non inviate");
+  }
 
   const { data, error } = await db
     .from("api_keys")
@@ -95,19 +97,15 @@ async function main(): Promise<number> {
       return (rows?.length ?? 0) > 0;
     },
 
-    async notify(k, kind) {
-      if (!resend) return;
-      const { subject, text } = linkCheckEmail(k, kind);
-      try {
-        const res = await resend.emails.send({ from: SENDER, to: k.email, replyTo: REPLY_TO, subject, text });
-        if (res.error) throw new Error(res.error.message);
-      } catch (e) {
-        // Le email perse devono vedersi nel riepilogo di GitHub Actions.
-        const why = (e instanceof Error ? e.message : String(e)).replace(/[\r\n]+/g, " ");
-        console.log(`::warning::Email "${kind}" non inviata per la chiave ${k.id} (${k.domain}): ${why}`);
-        throw e;
-      }
-    },
+    notify: linkCheckNotifier(
+      resend
+        ? async (mail) => {
+            const res = await resend.emails.send(mail);
+            return { error: res.error ? { message: res.error.message } : null };
+          }
+        : null,
+      { from: SENDER, replyTo: REPLY_TO },
+    ),
   });
 
   console.log(JSON.stringify(summary));
