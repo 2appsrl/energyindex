@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
+import { cookies } from "next/headers";
 import { ActivateKeyForm } from "@/components/api/ActivateKeyForm";
+import { VERIFY_COOKIE, isVerifyToken } from "@/lib/api-keys/verify-redirect";
 
 export const metadata: Metadata = {
   title: "Attiva la chiave API",
@@ -12,17 +14,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * Pagina di atterraggio del link di verifica. Sul GET non succede niente:
- * l'attivazione parte solo dal pulsante (POST di una server action), cosi'
- * gli scanner delle email che aprono i link in anticipo non consumano il token.
+ * Pagina di atterraggio del link di verifica. Il middleware ha gia' spostato
+ * il token da ?t= al cookie HttpOnly eidx_verify (Umami e i log leggono
+ * l'URL). Sul GET non succede niente: l'attivazione parte solo dal pulsante
+ * (POST di una server action), cosi' gli scanner delle email che aprono i
+ * link in anticipo non consumano il token.
  */
-export default async function VerificaChiavePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const { t } = await searchParams;
-  const token = typeof t === "string" ? t.trim() : "";
+export default async function VerificaChiavePage() {
+  const token = (await cookies()).get(VERIFY_COOKIE)?.value ?? "";
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-12 space-y-6">
@@ -37,22 +36,9 @@ export default async function VerificaChiavePage({
           <KeyRound className="size-8 text-violet-600 dark:text-violet-400" />
           <h1 className="text-2xl font-black">Attiva la chiave Developer</h1>
         </div>
-        {token ? (
-          <ActivateKeyForm token={token} />
-        ) : (
-          <div className="space-y-3 text-sm">
-            <p className="text-rose-600 dark:text-rose-400">
-              Link incompleto: apri il link che ti abbiamo mandato per email, per intero.
-            </p>
-            <p className="text-muted-foreground">
-              Se il link è scaduto,{" "}
-              <Link href="/it/api#chiave" className="font-semibold text-violet-600 underline dark:text-violet-400">
-                ripeti la richiesta
-              </Link>
-              .
-            </p>
-          </div>
-        )}
+        {/* Sempre montato: dopo l'attivazione la server action cancella il
+            cookie e la pagina si ri-renderizza, ma lo stato con la chiave resta. */}
+        <ActivateKeyForm hasToken={isVerifyToken(token)} />
       </div>
     </div>
   );

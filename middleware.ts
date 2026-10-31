@@ -7,6 +7,12 @@ import { buildRecord, clientIp, extractApiKey, hashIp, hashSalt, writeRecord } f
 import { sharedLookup } from "./lib/api-keys/lookup";
 import { API_EXPOSE_HEADERS, decideAccess } from "./lib/api-keys/gate";
 import { isEidxKey, originHostFromHeader, sha256Hex } from "./lib/api-keys/keys";
+import {
+  VERIFY_COOKIE,
+  VERIFY_COOKIE_MAX_AGE,
+  VERIFY_COOKIE_PATH,
+  verifyTokenRedirect,
+} from "./lib/api-keys/verify-redirect";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -165,14 +171,32 @@ export default async function middleware(request: NextRequest, event: NextFetchE
     return gateApi(request);
   }
 
+  // Link di verifica della chiave: il token passa dall'URL a un cookie
+  // HttpOnly prima di qualsiasi script lato client (Umami manda l'URL) e
+  // prima del log dei bot, che salverebbe la querystring. Sugli host non
+  // canonici prima il 301 sotto, altrimenti il cookie resterebbe sull'host sbagliato.
+  const host = request.headers.get("host")?.toLowerCase() ?? "";
+  const verify = HOSTS_TO_REDIRECT.has(host) ? null : verifyTokenRedirect(path, request.nextUrl.searchParams);
+  if (verify) {
+    const res = NextResponse.redirect(new URL(verify.location, request.url), 303);
+    res.headers.set("Cache-Control", "no-store");
+    res.headers.set("Referrer-Policy", "no-referrer");
+    res.cookies.set(VERIFY_COOKIE, verify.token ?? "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: VERIFY_COOKIE_PATH,
+      maxAge: verify.token ? VERIFY_COOKIE_MAX_AGE : 0,
+    });
+    return res;
+  }
+
   // Pagine e file per crawler: si registrano solo i bot. I visitatori
   // umani li conta gia' Umami.
   if (isLoggableBot(classifyAgent(request.headers.get("user-agent")).kind)) {
     logTraffic("bot", request, event);
   }
   if (CRAWLER_FILES.has(path)) return NextResponse.next();
-
-  const host = request.headers.get("host")?.toLowerCase() ?? "";
 
   if (HOSTS_TO_REDIRECT.has(host)) {
     const url = new URL(request.url);

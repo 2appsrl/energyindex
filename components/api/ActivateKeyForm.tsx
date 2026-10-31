@@ -8,7 +8,7 @@ import { CodeBlock } from "@/components/api/code";
 
 const ATTRIBUTION_SNIPPET = '<a href="https://energyindex.it">Fonte: Energy Index</a>';
 
-export function ActivateKeyForm({ token }: { token: string }) {
+export function ActivateKeyForm({ hasToken }: { hasToken: boolean }) {
   const [state, formAction, pending] = useActionState<ActivateState, FormData>(activateApiKey, null);
 
   if (state?.ok) {
@@ -52,9 +52,25 @@ export function ActivateKeyForm({ token }: { token: string }) {
     );
   }
 
+  if (!hasToken && !state) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="text-rose-600 dark:text-rose-400">
+          Link incompleto o già usato: apri per intero il link che ti abbiamo mandato per email.
+        </p>
+        <p className="text-muted-foreground">
+          Se il link è scaduto,{" "}
+          <Link href="/it/api#chiave" className="font-semibold text-violet-600 underline dark:text-violet-400">
+            ripeti la richiesta
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-4">
-      <input type="hidden" name="t" value={token} />
       <p className="text-sm text-muted-foreground">
         Premi il pulsante per confermare l&apos;indirizzo email e generare la chiave. La vedrai una sola volta in
         questa pagina e la riceverai anche per email. Dopo l&apos;attivazione l&apos;API la riconosce entro un minuto.

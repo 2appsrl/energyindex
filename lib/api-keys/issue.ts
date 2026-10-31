@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { createServiceClient } from "@/lib/supabase/service";
 import { generateApiKey, hostMatchesDomain, keyDisplayPrefix, normalizeDomain, sha256Hex } from "./keys";
 import { fetchHasLink, isCheckableUrl } from "./link-check";
+import { isVerifyToken } from "./verify-redirect";
 
 /**
  * Rilascio self-service delle chiavi Developer: richiesta pending con token
@@ -22,7 +23,6 @@ export const CONTACT_EMAIL = "pro@energyindex.pro";
 const MAX_URL_LENGTH = 2048;
 const VERIFY_TTL_MS = 24 * 3600_000;
 const MAX_REQUESTS_PER_EMAIL_PER_DAY = 3;
-const TOKEN_RE = /^[0-9A-Za-z]{32}$/;
 
 export function validateDeveloperRequest(
   d: DeveloperRequest,
@@ -176,7 +176,7 @@ export type ActivateResult =
 
 /** Attiva la richiesta e restituisce la chiave in chiaro (unica volta). */
 export async function activateDeveloperKey(token: string): Promise<ActivateResult> {
-  if (!TOKEN_RE.test(token)) return { ok: false, error: "Link non valido o già usato" };
+  if (!isVerifyToken(token)) return { ok: false, error: "Link non valido o già usato" };
   const db = createServiceClient();
   if (!db) return { ok: false, error: UNAVAILABLE };
   const tokenHash = await sha256Hex(token);
