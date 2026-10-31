@@ -104,7 +104,14 @@ describe("activateDeveloperKey", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("<p>niente</p>", { status: 200 })));
     const { db } = fakeSupabase([
       { data: row, error: null },
-      { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } },
+      {
+        data: null,
+        error: {
+          code: "23505",
+          message: 'duplicate key value violates unique constraint "uq_api_keys_live_email_domain"',
+          details: "Key (lower(email), domain)=(g@esempio.it, esempio.it) already exists.",
+        },
+      },
     ]);
     createServiceClient.mockReturnValue(db);
     expect(await activateDeveloperKey(TOKEN)).toEqual({
@@ -112,6 +119,49 @@ describe("activateDeveloperKey", () => {
       error: "Esiste già una chiave attiva per questo dominio con questo indirizzo.",
     });
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  const prefixCollision = {
+    data: null,
+    error: {
+      code: "23505",
+      message: 'duplicate key value violates unique constraint "api_keys_prefix_key"',
+      details: "Key (prefix)=(eidx_live_ab12) already exists.",
+    },
+  };
+
+  function updatePatches(queries: { ops: [string, unknown[]][] }[]) {
+    return queries
+      .map((q) => q.ops.find(([op]) => op === "update")?.[1][0] as { prefix: string; key_hash: string } | undefined)
+      .filter((p): p is { prefix: string; key_hash: string } => Boolean(p));
+  }
+
+  it("collisione sul prefisso (api_keys_prefix_key): rigenera la chiave e riprova una volta", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<p>niente</p>", { status: 200 })));
+    const { db, queries } = fakeSupabase([{ data: row, error: null }, prefixCollision, { data: [{ id: "u1" }], error: null }]);
+    createServiceClient.mockReturnValue(db);
+    const r = await activateDeveloperKey(TOKEN);
+    expect(r).toMatchObject({ ok: true, domain: "esempio.it" });
+    const patches = updatePatches(queries);
+    expect(patches).toHaveLength(2);
+    expect(patches[1].key_hash).not.toBe(patches[0].key_hash);
+    expect(r.ok && r.key.startsWith(patches[1].prefix)).toBe(true);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect((sendMock.mock.calls[0][0] as { text: string }).text).toContain(r.ok ? r.key : "?");
+  });
+
+  it("due collisioni di fila sul prefisso: errore generico, nessuna email", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<p>niente</p>", { status: 200 })));
+    const { db, queries } = fakeSupabase([{ data: row, error: null }, prefixCollision, prefixCollision]);
+    createServiceClient.mockReturnValue(db);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await activateDeveloperKey(TOKEN)).toEqual({
+      ok: false,
+      error: "Attivazione non riuscita: riprova tra qualche minuto",
+    });
+    expect(updatePatches(queries)).toHaveLength(2);
+    expect(sendMock).not.toHaveBeenCalled();
+    err.mockRestore();
   });
 
   it("controlla il link con un budget di 5 s", async () => {

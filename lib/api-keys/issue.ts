@@ -228,6 +228,16 @@ export type ActivateResult =
   | { ok: true; key: string; domain: string; attributionUrl: string; linkFound: boolean }
   | { ok: false; error: string };
 
+/**
+ * 23505 su prefix o key_hash (vincoli UNIQUE di colonna, nomi di default di
+ * Postgres): la chiave generata collide con una esistente, non e' un
+ * duplicato email/dominio (uq_api_keys_live_email_domain).
+ */
+function isKeyCollision(error: { code?: string; message?: string; details?: string } | null): boolean {
+  if (error?.code !== "23505") return false;
+  return /api_keys_(prefix|key_hash)_key/.test(`${error.message ?? ""} ${error.details ?? ""}`);
+}
+
 /** Attiva la richiesta e restituisce la chiave in chiaro (unica volta). */
 export async function activateDeveloperKey(token: string): Promise<ActivateResult> {
   if (!isVerifyToken(token)) return { ok: false, error: "Link non valido o già usato" };
@@ -248,29 +258,38 @@ export async function activateDeveloperKey(token: string): Promise<ActivateResul
     return { ok: false, error: "Link scaduto: ripeti la richiesta dalla pagina API" };
   }
 
-  const key = generateApiKey();
   // Budget breve: l'utente aspetta davanti al pulsante. La verifica
   // settimanale ricontrolla comunque con il timeout pieno.
   const linkFound = await fetchHasLink(row.attribution_url, fetch, 5_000);
   const nowIso = new Date().toISOString();
   // Il filtro su token e stato rende l'attivazione atomica: con due clic
   // contemporanei solo uno aggiorna la riga, l'altro non vede la sua chiave.
-  const { data: updated, error } = await db
-    .from("api_keys")
-    .update({
-      prefix: keyDisplayPrefix(key),
-      key_hash: await sha256Hex(key),
-      status: "active",
-      activated_at: nowIso,
-      verify_token_hash: null,
-      link_checked_at: nowIso,
-      link_ok: linkFound,
-    })
-    .eq("id", row.id)
-    .eq("status", "pending")
-    .eq("verify_token_hash", tokenHash)
-    .select("id");
-  if (error?.code === "23505") {
+  const activate = async (k: string) =>
+    db
+      .from("api_keys")
+      .update({
+        prefix: keyDisplayPrefix(k),
+        key_hash: await sha256Hex(k),
+        status: "active",
+        activated_at: nowIso,
+        verify_token_hash: null,
+        link_checked_at: nowIso,
+        link_ok: linkFound,
+      })
+      .eq("id", row.id)
+      .eq("status", "pending")
+      .eq("verify_token_hash", tokenHash)
+      .select("id");
+
+  let key = generateApiKey();
+  let { data: updated, error } = await activate(key);
+  if (isKeyCollision(error)) {
+    // Il prefisso visibile ha solo 4 caratteri casuali: una collisione con
+    // una chiave esistente e' rara ma possibile. Si rigenera una volta.
+    key = generateApiKey();
+    ({ data: updated, error } = await activate(key));
+  }
+  if (error?.code === "23505" && !isKeyCollision(error)) {
     // Indice unico su (lower(email), domain) per le chiavi attive o declassate.
     return { ok: false, error: "Esiste già una chiave attiva per questo dominio con questo indirizzo." };
   }
