@@ -2,24 +2,33 @@
  * Verifica settimanale dell'attribuzione: per ogni chiave attiva o
  * declassata scarica la pagina dichiarata e cerca un link a energyindex.it.
  * Due fallimenti consecutivi → declassata ai limiti Open + email.
- * Eccezione: se il widget e' stato chiamato da quel dominio negli ultimi 7
- * giorni il link c'e' per forza (il widget non funziona senza).
+ * Eccezione: se il widget e' stato chiamato da quel dominio (o da un suo
+ * sottodominio) negli ultimi 7 giorni da almeno 2 visitatori distinti, il
+ * link c'e' per forza (il widget non funziona senza).
  *
  * La logica sta in lib/api-keys/link-check-job.ts (testata); qui solo
  * Supabase e Resend. Senza RESEND_API_KEY lo stato si aggiorna lo stesso,
  * ma non parte nessuna email.
  *
- * Esce con codice 1 se non riesce a leggere le chiavi o se almeno una chiave
- * non e' stata verificata/aggiornata, cosi' il workflow risulta fallito.
+ * Esce con codice 1 se non riesce a leggere le chiavi, se almeno una chiave
+ * non e' stata verificata/aggiornata o se un'email non e' partita, cosi' il
+ * workflow risulta fallito.
  *
  * Uso: SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... [RESEND_API_KEY=...] npx tsx scripts/check-attribution-links.ts
  */
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { fetchHasLink, type KeyStatus } from "../lib/api-keys/link-check";
-import { linkCheckEmail, runLinkChecks, type CheckableKey } from "../lib/api-keys/link-check-job";
+import {
+  linkCheckEmail,
+  runLinkChecks,
+  widgetHostFilter,
+  widgetSeenFromRows,
+  type CheckableKey,
+} from "../lib/api-keys/link-check-job";
 
 const WIDGET_WINDOW_DAYS = 7;
+const WIDGET_ROWS_LIMIT = 200;
 const REPLY_TO = "pro@energyindex.pro";
 const SENDER = process.env.RESEND_SENDER_EMAIL || "EIDX Pro <onboarding@resend.dev>";
 
@@ -53,33 +62,53 @@ async function main(): Promise<number> {
     hasLink: (pageUrl) => fetchHasLink(pageUrl),
 
     async widgetSeen(domain) {
+      const hosts = widgetHostFilter(domain);
+      if (!hosts) return false;
       const since = new Date(Date.now() - WIDGET_WINDOW_DAYS * 86_400_000).toISOString();
-      const { count, error: e } = await db
+      const { data: rows, error: e } = await db
         .from("traffic_log")
-        .select("id", { count: "exact", head: true })
-        .in("origin_host", [domain, `www.${domain}`])
+        .select("origin_host, ip_hash")
+        .eq("kind", "api")
+        .or(hosts)
         .ilike("query", "%src=widget%")
-        .gt("ts", since);
+        .not("ip_hash", "is", null)
+        .gt("ts", since)
+        .order("ts", { ascending: false })
+        .limit(WIDGET_ROWS_LIMIT);
       if (e) throw new Error(`traffic_log: ${e.message}`);
-      return (count ?? 0) > 0;
+      return widgetSeenFromRows(rows ?? [], domain);
     },
 
     async update(k, patch) {
       // .eq("status") evita di sovrascrivere una revoca arrivata durante il giro.
-      const { error: e } = await db.from("api_keys").update(patch).eq("id", k.id).eq("status", k.status);
+      // Un update filtrato che non trova righe non da' errore: lo dice data vuoto.
+      const { data: rows, error: e } = await db
+        .from("api_keys")
+        .update(patch)
+        .eq("id", k.id)
+        .eq("status", k.status)
+        .select("id");
       if (e) throw new Error(`update api_keys: ${e.message}`);
+      return (rows?.length ?? 0) > 0;
     },
 
     async notify(k, kind) {
       if (!resend) return;
       const { subject, text } = linkCheckEmail(k, kind);
-      const res = await resend.emails.send({ from: SENDER, to: k.email, replyTo: REPLY_TO, subject, text });
-      if (res.error) throw new Error(res.error.message);
+      try {
+        const res = await resend.emails.send({ from: SENDER, to: k.email, replyTo: REPLY_TO, subject, text });
+        if (res.error) throw new Error(res.error.message);
+      } catch (e) {
+        // Le email perse devono vedersi nel riepilogo di GitHub Actions.
+        const why = (e instanceof Error ? e.message : String(e)).replace(/[\r\n]+/g, " ");
+        console.log(`::warning::Email "${kind}" non inviata per la chiave ${k.id} (${k.domain}): ${why}`);
+        throw e;
+      }
     },
   });
 
   console.log(JSON.stringify(summary));
-  return summary.errors > 0 ? 1 : 0;
+  return summary.errors > 0 || summary.notifyErrors > 0 ? 1 : 0;
 }
 
 main().then(

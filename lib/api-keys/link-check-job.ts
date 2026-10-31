@@ -8,6 +8,7 @@
  * declassano la chiave ai limiti Open (vedi nextLinkState).
  */
 
+import { hostMatchesDomain } from "./keys";
 import { nextLinkState, type KeyStatus } from "./link-check";
 
 export interface CheckableKey {
@@ -32,7 +33,11 @@ export type LinkNotice = "downgraded" | "restored";
 export interface LinkCheckDeps {
   hasLink(url: string): Promise<boolean>;
   widgetSeen(domain: string): Promise<boolean>;
-  update(key: CheckableKey, patch: LinkCheckPatch): Promise<void>;
+  /**
+   * Salva il nuovo stato solo se la chiave ha ancora lo stato letto all'inizio.
+   * false = nessuna riga aggiornata (es. revocata durante il giro).
+   */
+  update(key: CheckableKey, patch: LinkCheckPatch): Promise<boolean>;
   notify(key: CheckableKey, kind: LinkNotice): Promise<void>;
   now?: () => Date;
   log?: (msg: string) => void;
@@ -48,6 +53,8 @@ export interface LinkCheckSummary {
   errors: number;
   /** Email non partite (lo stato della chiave e' comunque salvato). */
   notifyErrors: number;
+  /** Chiavi cambiate durante il giro (update senza righe): niente stato, niente email. */
+  skipped: number;
 }
 
 function message(e: unknown): string {
@@ -57,7 +64,7 @@ function message(e: unknown): string {
 export async function runLinkChecks(keys: CheckableKey[], deps: LinkCheckDeps): Promise<LinkCheckSummary> {
   const now = deps.now ?? (() => new Date());
   const log = deps.log ?? ((m: string) => console.error(m));
-  const s: LinkCheckSummary = { checked: 0, ok: 0, failed: 0, downgraded: 0, restored: 0, errors: 0, notifyErrors: 0 };
+  const s: LinkCheckSummary = { checked: 0, ok: 0, failed: 0, downgraded: 0, restored: 0, errors: 0, notifyErrors: 0, skipped: 0 };
 
   for (const k of keys) {
     s.checked++;
@@ -66,12 +73,17 @@ export async function runLinkChecks(keys: CheckableKey[], deps: LinkCheckDeps): 
     try {
       ok = (await deps.hasLink(k.attribution_url)) || (await deps.widgetSeen(k.domain));
       const next = nextLinkState({ status: k.status, link_failures: k.link_failures }, ok);
-      await deps.update(k, {
+      const saved = await deps.update(k, {
         status: next.status,
         link_failures: next.link_failures,
         link_ok: ok,
         link_checked_at: now().toISOString(),
       });
+      if (!saved) {
+        s.skipped++;
+        log(`[link-check] chiave ${k.id} (${k.domain}) cambiata durante la verifica: saltata`);
+        continue;
+      }
       notice = next.notify;
     } catch (e) {
       s.errors++;
@@ -94,6 +106,36 @@ export async function runLinkChecks(keys: CheckableKey[], deps: LinkCheckDeps): 
     }
   }
   return s;
+}
+
+export const WIDGET_MIN_VISITORS = 2;
+
+/**
+ * Filtro PostgREST (.or) per le righe di traffic_log del dominio: apex, www e
+ * sottodomini. null se il dominio ha caratteri fuori da [a-z0-9.-]: non
+ * dovrebbe succedere (normalizeDomain all'inserimento), ma cosi' nel filtro
+ * non finiscono mai %, _, virgole o parentesi.
+ */
+export function widgetHostFilter(domain: string): string | null {
+  if (!/^[a-z0-9.-]+$/.test(domain)) return null;
+  return `origin_host.in.(${domain},www.${domain}),origin_host.ilike.*.${domain}`;
+}
+
+/**
+ * Il widget "c'e'" se lo hanno caricato almeno WIDGET_MIN_VISITORS visitatori
+ * distinti (ip_hash) dal dominio: un solo curl con un Origin falso non basta a
+ * tenere viva la chiave. Ricontrolla l'host perche' il filtro SQL e' largo.
+ */
+export function widgetSeenFromRows(
+  rows: { origin_host: string | null; ip_hash: string | null }[],
+  domain: string,
+  min: number = WIDGET_MIN_VISITORS,
+): boolean {
+  const visitors = new Set<string>();
+  for (const r of rows) {
+    if (r.ip_hash && r.origin_host && hostMatchesDomain(r.origin_host, domain)) visitors.add(r.ip_hash);
+  }
+  return visitors.size >= min;
 }
 
 /** Il nome arriva da un form: niente a capo nel testo (difesa a costo zero). */

@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi } from "vitest";
-import { linkCheckEmail, runLinkChecks, type CheckableKey, type LinkCheckDeps } from "@/lib/api-keys/link-check-job";
+import { linkCheckEmail, runLinkChecks, widgetHostFilter, widgetSeenFromRows, type CheckableKey, type LinkCheckDeps } from "@/lib/api-keys/link-check-job";
 
 const NOW = new Date("2026-11-02T07:00:00Z");
 
@@ -23,7 +23,7 @@ function deps(over: Partial<LinkCheckDeps> = {}): LinkCheckDeps {
   return {
     hasLink: vi.fn(async () => true),
     widgetSeen: vi.fn(async () => false),
-    update: vi.fn(async () => {}),
+    update: vi.fn(async () => true),
     notify: vi.fn(async () => {}),
     now: () => NOW,
     log: () => {},
@@ -90,6 +90,7 @@ describe("runLinkChecks", () => {
       }),
       update: vi.fn(async (k: CheckableKey) => {
         if (k.id === "b") throw new Error("db giu'");
+        return true;
       }),
     });
     const s = await runLinkChecks([a, b, c], d);
@@ -102,6 +103,13 @@ describe("runLinkChecks", () => {
     const d = deps({ update: vi.fn(async () => { throw new Error("db"); }) });
     await runLinkChecks([key({ status: "downgraded" })], d);
     expect(d.notify).not.toHaveBeenCalled();
+  });
+
+  it("aggiornamento senza righe (chiave revocata nel frattempo): niente email, conta come saltata", async () => {
+    const d = deps({ update: vi.fn(async () => false) });
+    const s = await runLinkChecks([key({ status: "downgraded" }), key({ id: "k2", link_failures: 1 })], d);
+    expect(d.notify).not.toHaveBeenCalled();
+    expect(s).toMatchObject({ checked: 2, ok: 0, failed: 0, restored: 0, downgraded: 0, errors: 0, skipped: 2 });
   });
 
   it("un'email fallita non conta come errore della chiave", async () => {
@@ -120,5 +128,29 @@ describe("linkCheckEmail", () => {
   it("testi diversi per declassamento e riattivazione", () => {
     expect(linkCheckEmail(key(), "downgraded").text).toContain("https://esempio.it/prezzi");
     expect(linkCheckEmail(key(), "downgraded").subject).not.toBe(linkCheckEmail(key(), "restored").subject);
+  });
+});
+
+describe("widgetSeenFromRows", () => {
+  const row = (origin_host: string | null, ip_hash: string | null) => ({ origin_host, ip_hash });
+  it("servono almeno 2 visitatori distinti", () => {
+    expect(widgetSeenFromRows([row("esempio.it", "a"), row("esempio.it", "a"), row("esempio.it", "a")], "esempio.it")).toBe(false);
+    expect(widgetSeenFromRows([row("esempio.it", "a"), row("www.esempio.it", "b")], "esempio.it")).toBe(true);
+  });
+  it("conta apex, www e sottodomini, non i domini che finiscono uguale", () => {
+    expect(widgetSeenFromRows([row("blog.esempio.it", "a"), row("esempio.it", "b")], "esempio.it")).toBe(true);
+    expect(widgetSeenFromRows([row("altroesempio.it", "a"), row("esempio.it.evil.com", "b"), row("esempio.it", "c")], "esempio.it")).toBe(false);
+  });
+  it("ignora ip_hash e origin_host nulli", () => {
+    expect(widgetSeenFromRows([row("esempio.it", null), row("esempio.it", null), row(null, "b"), row("esempio.it", "a")], "esempio.it")).toBe(false);
+  });
+});
+
+describe("widgetHostFilter", () => {
+  it("filtro PostgREST per apex, www e sottodomini", () => {
+    expect(widgetHostFilter("esempio.it")).toBe("origin_host.in.(esempio.it,www.esempio.it),origin_host.ilike.*.esempio.it");
+  });
+  it("rifiuta domini con caratteri fuori da [a-z0-9.-] (niente % _ , o parentesi nel filtro)", () => {
+    for (const d of ["es%empio.it", "es_empio.it", "a.it,b.it", "a.it)", "*.it", "A.IT"]) expect(widgetHostFilter(d)).toBeNull();
   });
 });
