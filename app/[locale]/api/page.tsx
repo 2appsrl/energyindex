@@ -36,6 +36,7 @@ import { CodeBlock, CodeTabs } from "@/components/api/code";
 import { TryIt } from "@/components/api/TryIt";
 import { UseCases } from "@/components/api/UseCases";
 import { ApiKeyRequestForm } from "@/components/api/ApiKeyRequestForm";
+import { buildSnippet as buildWidgetSnippet } from "@/lib/widget/snippet";
 import { breadcrumbList, faqPage, jsonLdString, organization } from "@/lib/seo/jsonld";
 import { cn } from "@/lib/utils";
 
@@ -563,20 +564,23 @@ export default async function ApiLandingPage() {
             </span>
             <div className="flex gap-2">
               <TierBadge tier="open" />
-              <StatusBadge status="coming" />
+              <StatusBadge status="live" />
             </div>
           </div>
           <div>
             <h2 className="text-2xl font-black">Widget in una riga</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Per chi non programma: incolla lo snippet nel tuo sito e il riquadro con PUN e PSV si aggiorna da solo,
-              con l&apos;attribuzione gia&apos; inclusa.
+              Per chi non programma: incolla lo snippet nel tuo sito e il riquadro con l&apos;Energy Index delle
+              offerte, il PUN o il PSV si aggiorna da solo, con l&apos;attribuzione gia&apos; inclusa.
             </p>
           </div>
-          <CodeBlock
-            code={`<div data-eidx-widget="today" data-assets="pun,psv"></div>\n<script src="https://energyindex.it/widget.js" async></script>`}
-            title="index.html"
-          />
+          <CodeBlock code={buildWidgetSnippet("indice-luce", "light")} title="index.html" />
+          <Link
+            href="/it/api/widget"
+            className="inline-flex items-center gap-2 self-start rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-colors hover:bg-emerald-500"
+          >
+            Configura il widget <ArrowRight className="size-4" />
+          </Link>
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 rounded-3xl border bg-gradient-to-br from-violet-500/10 to-transparent p-7">
