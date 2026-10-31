@@ -195,7 +195,9 @@ export async function activateDeveloperKey(token: string): Promise<ActivateResul
   }
 
   const key = generateApiKey();
-  const linkFound = await fetchHasLink(row.attribution_url);
+  // Budget breve: l'utente aspetta davanti al pulsante. La verifica
+  // settimanale ricontrolla comunque con il timeout pieno.
+  const linkFound = await fetchHasLink(row.attribution_url, fetch, 5_000);
   const nowIso = new Date().toISOString();
   // Il filtro su token e stato rende l'attivazione atomica: con due clic
   // contemporanei solo uno aggiorna la riga, l'altro non vede la sua chiave.

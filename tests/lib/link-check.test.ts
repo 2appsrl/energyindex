@@ -149,6 +149,29 @@ describe("fetchHasLink", () => {
     expect(await fetchHasLink("https://esempio.it/b", f)).toBe(false);
   });
 
+  it("un solo segnale di timeout condiviso da tutti i salti", async () => {
+    const f = fakeFetch({
+      "https://esempio.it/1": () => redirect("/2"),
+      "https://esempio.it/2": () => redirect("/3"),
+      "https://esempio.it/3": () => new Response(PAGE_OK, { status: 200 }),
+    });
+    expect(await fetchHasLink("https://esempio.it/1", f, 5_000)).toBe(true);
+    const signals = f.mock.calls.map((c) => c[1]?.signal);
+    expect(signals).toHaveLength(3);
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
+    expect(new Set(signals).size).toBe(1);
+  });
+
+  it("budget esaurito: false", async () => {
+    const f = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    expect(await fetchHasLink("https://esempio.it/lenta", f, 20)).toBe(false);
+  });
+
   it("legge al massimo ~2 MB: un link oltre il limite non conta", async () => {
     const big = "x".repeat(2_100_000) + PAGE_OK;
     const f = fakeFetch({ "https://esempio.it/big": () => new Response(big, { status: 200 }) });

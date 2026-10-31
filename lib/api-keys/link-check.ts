@@ -81,10 +81,16 @@ async function readCapped(res: Response, maxBytes: number): Promise<string> {
 
 /**
  * Scarica la pagina di attribuzione e cerca il link. I redirect si seguono a
- * mano (massimo 3) per validare ogni salto prima di richiederlo. Non lancia:
+ * mano (massimo 3) per validare ogni salto prima di richiederlo. Un unico
+ * timeout (budgetMs) copre tutti i salti e la lettura del corpo. Non lancia:
  * qualsiasi errore vale "link non trovato".
  */
-export async function fetchHasLink(url: string, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+export async function fetchHasLink(
+  url: string,
+  fetchImpl: typeof fetch = fetch,
+  budgetMs: number = TIMEOUT_MS,
+): Promise<boolean> {
+  const signal = AbortSignal.timeout(budgetMs);
   let current: URL;
   try {
     current = new URL(url.trim());
@@ -97,7 +103,7 @@ export async function fetchHasLink(url: string, fetchImpl: typeof fetch = fetch)
       const res = await fetchImpl(current.toString(), {
         headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml" },
         redirect: "manual",
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal,
       });
       if (res.status >= 300 && res.status < 400) {
         res.body?.cancel().catch(() => {});
