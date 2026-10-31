@@ -63,7 +63,7 @@ export default function WidgetPage() {
           {
             icon: Link2,
             title: "Il link resta visibile",
-            text: "Lo snippet contiene il link \"Fonte: Energy Index\". Puoi cambiarne lo stile, ma deve restare visibile: senza un link visibile a energyindex.it il widget non mostra i dati.",
+            text: "Lo snippet contiene il link a Energy Index nella riga \"Fonte\". Puoi cambiarne lo stile, ma deve restare visibile: senza un link visibile a energyindex.it il widget non mostra i dati.",
           },
           {
             icon: ShieldCheck,

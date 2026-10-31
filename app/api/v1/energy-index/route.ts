@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const c = request.nextUrl.searchParams.get("commodity");
   if (c !== null && c !== "luce" && c !== "gas") {
     return NextResponse.json(
-      { error: "invalid_param", message: "commodity deve essere 'luce' o 'gas'." },
+      { error: "invalid_parameter", param: "commodity", message: "commodity deve essere 'luce' o 'gas'." },
       { status: 400, headers: errorHeaders },
     );
   }

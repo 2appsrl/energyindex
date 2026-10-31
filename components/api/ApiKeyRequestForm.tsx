@@ -77,7 +77,8 @@ export function ApiKeyRequestForm() {
         <CheckCircle2 className="mx-auto size-10 text-emerald-500" />
         <h3 className="text-xl font-bold">Richiesta ricevuta</h3>
         <p className="text-sm text-muted-foreground">
-          Ti mandiamo la chiave all&apos;indirizzo <strong className="text-foreground">{email}</strong> entro 2 giorni lavorativi.
+          Ti ricontattiamo all&apos;indirizzo <strong className="text-foreground">{email}</strong> entro 2 giorni lavorativi
+          per attivare il piano.
           Nel frattempo gli endpoint Open funzionano gia&apos; senza chiave.
         </p>
       </div>
@@ -185,7 +186,7 @@ export function ApiKeyRequestForm() {
             />
           </div>
           <p id="key-attribuzione-help" className="text-xs text-muted-foreground sm:col-span-2">
-            Lì deve comparire il link «Fonte: Energy Index». Lo verifichiamo ogni settimana.
+            Lì deve comparire un link a energyindex.it, per esempio «Fonte: Energy Index». Lo verifichiamo ogni settimana.
           </p>
         </div>
       )}

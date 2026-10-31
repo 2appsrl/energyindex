@@ -115,8 +115,10 @@ Il TTF (Title Transfer Facility) e' il benchmark europeo del gas naturale, quota
 - [GET /api/v1/pun/today](https://energyindex.it/api/v1/pun/today): valore PUN corrente in €/kWh e €/MWh nativo
 - [GET /api/v1/psv/today](https://energyindex.it/api/v1/psv/today): valore PSV corrente in €/kWh e €/MWh nativo
 - [GET /api/v1/today](https://energyindex.it/api/v1/today): snapshot di tutti gli indici (PUN, PSV, TTF, Brent, CO2) in una call
+- [GET /api/v1/energy-index](https://energyindex.it/api/v1/energy-index): Energy Index delle offerte luce e gas (Portale Offerte ARERA), mediana, quartili e range; per le variabili lo spread sopra PUN o PSV
+- [Widget embeddabile](https://energyindex.it/it/api/widget): snippet gratuito da incollare in un sito (Energy Index luce e gas, PUN, PSV), senza chiave, con il link di attribuzione nell'HTML
 
-CORS aperto, cache 15 min, license free per uso personale e commerciale con attribuzione "Fonte: Energy Index (https://energyindex.it)".
+CORS aperto, cache 15 min. Chiave facoltativa (header Authorization: Bearer eidx_live_…): alza il limite da 60 richieste/minuto per IP a quello del piano. Elaborazioni Energy Index libere anche per uso commerciale con attribuzione "Fonte: Energy Index (https://energyindex.it)"; i dati GME restano soggetti alle condizioni del GME.
 
 ## FAQ piu' comuni
 

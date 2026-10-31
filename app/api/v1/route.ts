@@ -32,8 +32,13 @@ export async function GET() {
         "Energy Index elaborations: free, including commercial use, with attribution. Source data (GME, ICE Endex, EIA, EEX) remain subject to the source's terms: commercial use of GME data requires GME's written authorization.",
       license_url: "https://energyindex.it/it/api/docs#licenza",
       cache: "15 minuti (Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=3600)",
+      widget: "https://energyindex.it/it/api/widget",
       cors: "* (Access-Control-Allow-Origin)",
-      rate_limit: "none (best-effort, abuse may trigger throttling)",
+      auth:
+        "Facoltativa sugli endpoint attivi (piano Open). Chiave: header Authorization: Bearer eidx_live_… (?key= accettato ma sconsigliato). Dal browser la chiave vale solo dal dominio registrato (Origin), le chiamate server senza Origin sono ammesse. Errori: 401 invalid_key, 403 origin_not_allowed.",
+      rate_limit:
+        "60/min per IP; con chiave il limite del piano (header X-RateLimit-Limit); quote calcolate su finestre di 5 minuti, oltre soglia 429 rate_limited con Retry-After: 900.",
+      key_request: "https://energyindex.it/it/api#chiave",
       endpoints: [
         {
           path: "/api/v1/pun/today",
@@ -80,6 +85,22 @@ export async function GET() {
             source_terms_url: "https://www.mercatoelettrico.org/en-us/Home/TermsOfUse",
             attribution: "Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index (https://energyindex.it)",
             page: "https://energyindex.it/it/indice/psv",
+          },
+        },
+        {
+          path: "/api/v1/energy-index",
+          method: "GET",
+          description:
+            "Energy Index delle offerte del mercato libero (Portale Offerte ARERA): mediana, quartili e range per luce e gas, fisse e variabili. Per le variabili (basis spread) le statistiche sono lo spread sopra reference (PUN o PSV). Filtro opzionale ?commodity=luce|gas.",
+          example_response: {
+            updated_at: "2026-10-30",
+            indices: [
+              { slug: "mercato-libero-luce-fissa", commodity: "luce", price_type: "fisso", basis: "prezzo", unit: "€/kWh", median: 0.3495, offers: 230 },
+              { slug: "mercato-libero-luce-variabile", commodity: "luce", price_type: "variabile", basis: "spread", reference: "PUN", unit: "€/kWh", median: 0.055, offers: 262 },
+            ],
+            source: "ARERA — Portale Offerte",
+            attribution: "Fonte: Energy Index (https://energyindex.it) — elaborazione su dati Portale Offerte ARERA",
+            page: "https://energyindex.it/it/mercato-libero",
           },
         },
         {
