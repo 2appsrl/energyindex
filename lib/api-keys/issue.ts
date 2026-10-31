@@ -23,10 +23,44 @@ export const CONTACT_EMAIL = "pro@energyindex.pro";
 const MAX_URL_LENGTH = 2048;
 const VERIFY_TTL_MS = 24 * 3600_000;
 const MAX_REQUESTS_PER_EMAIL_PER_DAY = 3;
+/** Tetto globale di richieste all'ora: oltre, il self-service si ferma. */
+const MAX_REQUESTS_PER_HOUR = 30;
+const MAX_NOME = 100;
+
+/** Nome usato nelle email: niente a capo o caratteri di controllo, max 100 caratteri. */
+export function sanitizeName(nome: string): string {
+  return nome.replace(/[\u0000-\u001f\u007f-\u009f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_NOME);
+}
+
+/**
+ * Controlli comuni a tutti i piani. Le server action ricevono payload
+ * arbitrari: ogni campo va verificato come stringa prima di usarlo.
+ */
+export function validateContactFields(d: unknown): string | null {
+  if (!d || typeof d !== "object") return "Richiesta non valida";
+  const r = d as Record<string, unknown>;
+  if (typeof r.nome !== "string" || r.nome.trim().length < 2) return "Nome troppo corto (min 2 caratteri)";
+  if (r.nome.trim().length > MAX_NOME) return `Nome troppo lungo (max ${MAX_NOME} caratteri)`;
+  if (typeof r.email !== "string") return "Indirizzo email non valido";
+  if (r.email.trim().length > 254) return "Indirizzo email troppo lungo";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email.trim())) return "Indirizzo email non valido";
+  if (r.azienda !== undefined && r.azienda !== null && typeof r.azienda !== "string") return "Azienda non valida";
+  if (typeof r.azienda === "string" && r.azienda.trim().length > 200) {
+    return "Nome dell'azienda troppo lungo (max 200 caratteri)";
+  }
+  if (typeof r.progetto !== "string" || r.progetto.trim().length < 10) {
+    return "Descrivi il progetto in almeno 10 caratteri";
+  }
+  if (r.progetto.length > 3000) return "Descrizione troppo lunga (max 3000 caratteri)";
+  if ((r.progetto.match(/https?:\/\//gi) ?? []).length > 3) return "Troppi link nella descrizione (max 3)";
+  return null;
+}
 
 export function validateDeveloperRequest(
   d: DeveloperRequest,
 ): { ok: true; domain: string } | { ok: false; error: string } {
+  const fieldErr = validateContactFields(d);
+  if (fieldErr) return { ok: false, error: fieldErr };
   if (typeof d.dominio !== "string" || typeof d.attributionUrl !== "string") {
     return { ok: false, error: "Indica il dominio del sito e la pagina dove mostri i dati" };
   }
@@ -86,7 +120,20 @@ export async function startDeveloperRequest(d: DeveloperRequest, domain: string)
   const db = createServiceClient();
   if (!db) return { ok: false, error: UNAVAILABLE, retry: true };
   const email = d.email.trim().toLowerCase();
+  const nome = sanitizeName(d.nome);
   const now = new Date();
+
+  // Tetto globale: un'ondata di richieste (bot su indirizzi diversi) ferma il
+  // self-service invece di far partire centinaia di email. Resta il fallback manuale.
+  const { count: hourly, error: hourlyErr } = await db
+    .from("api_keys")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", new Date(now.getTime() - 3600_000).toISOString());
+  if (hourlyErr || (hourly ?? 0) >= MAX_REQUESTS_PER_HOUR) {
+    if (hourlyErr) console.error("[startDeveloperRequest] conteggio globale:", hourlyErr.message);
+    else console.warn("[startDeveloperRequest] tetto orario raggiunto");
+    return { ok: false, error: UNAVAILABLE, retry: true };
+  }
 
   // Limite anti-abuso: poche richieste al giorno per indirizzo.
   const { count, error: countErr } = await db
@@ -129,7 +176,7 @@ export async function startDeveloperRequest(d: DeveloperRequest, domain: string)
     .from("api_keys")
     .insert({
       email,
-      nome: d.nome.trim(),
+      nome,
       azienda: d.azienda?.trim() || null,
       progetto: d.progetto.trim(),
       domain,
@@ -148,7 +195,7 @@ export async function startDeveloperRequest(d: DeveloperRequest, domain: string)
     email,
     "Conferma la tua chiave API Energy Index",
     [
-      `Ciao ${d.nome.trim()},`,
+      `Ciao ${nome},`,
       "",
       `per attivare la chiave Developer per ${domain} apri questo link entro 24 ore e premi "Attiva la chiave":`,
       `${SITE}/it/api/chiave/verifica?t=${token}`,
@@ -216,6 +263,10 @@ export async function activateDeveloperKey(token: string): Promise<ActivateResul
     .eq("status", "pending")
     .eq("verify_token_hash", tokenHash)
     .select("id");
+  if (error?.code === "23505") {
+    // Indice unico su (lower(email), domain) per le chiavi attive o declassate.
+    return { ok: false, error: "Esiste già una chiave attiva per questo dominio con questo indirizzo." };
+  }
   if (error) {
     console.error("[activateDeveloperKey] update:", error.message);
     return { ok: false, error: "Attivazione non riuscita: riprova tra qualche minuto" };
@@ -226,7 +277,7 @@ export async function activateDeveloperKey(token: string): Promise<ActivateResul
     row.email,
     "La tua chiave API Energy Index",
     [
-      `Ciao ${row.nome},`,
+      `Ciao ${sanitizeName(String(row.nome ?? ""))},`,
       "",
       `ecco la tua chiave Developer per ${row.domain}:`,
       key,

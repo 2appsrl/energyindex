@@ -11,7 +11,12 @@
 
 import { Resend } from "resend";
 import { saveLead } from "@/lib/admin/leads";
-import { startDeveloperRequest, validateDeveloperRequest } from "@/lib/api-keys/issue";
+import {
+  sanitizeName,
+  startDeveloperRequest,
+  validateContactFields,
+  validateDeveloperRequest,
+} from "@/lib/api-keys/issue";
 
 export type ApiKeyPlan = "developer" | "api" | "pro" | "enterprise";
 
@@ -25,6 +30,8 @@ export interface ApiKeyRequestData {
   dominio?: string;
   /** Solo Developer: pagina dove compare il link di attribuzione. */
   attributionUrl?: string;
+  /** Honeypot: campo nascosto che solo i bot compilano. */
+  hp?: string;
 }
 
 export type ApiKeyRequestResult =
@@ -43,12 +50,11 @@ const PLAN_LABELS: Record<ApiKeyPlan, string> = {
 };
 
 function validate(d: ApiKeyRequestData): string | null {
-  if (!d.nome || d.nome.trim().length < 2) return "Nome troppo corto (min 2 caratteri)";
-  if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return "Indirizzo email non valido";
-  if (!(d.piano in PLAN_LABELS)) return "Piano non valido";
-  if (!d.progetto || d.progetto.trim().length < 10) return "Descrivi il progetto in almeno 10 caratteri";
-  if (d.progetto.length > 3000) return "Descrizione troppo lunga (max 3000 caratteri)";
-  if ((d.progetto.match(/https?:\/\//gi) ?? []).length > 3) return "Troppi link nella descrizione (max 3)";
+  const fieldErr = validateContactFields(d);
+  if (fieldErr) return fieldErr;
+  if (typeof d.piano !== "string" || !Object.hasOwn(PLAN_LABELS, d.piano)) return "Piano non valido";
+  if (d.dominio !== undefined && typeof d.dominio !== "string") return "Dominio non valido (es. tuosito.it)";
+  if (d.attributionUrl !== undefined && typeof d.attributionUrl !== "string") return "Indirizzo della pagina non valido";
   return null;
 }
 
@@ -77,16 +83,18 @@ async function requestDeveloperKey(d: ApiKeyRequestData): Promise<ApiKeyRequestR
   const check = validateDeveloperRequest(dev);
   if (!check.ok) return { ok: false, error: check.error };
 
-  await saveLead({
-    source: "api_key",
-    nome: d.nome,
-    email: d.email,
-    azienda: d.azienda,
-    piano: d.piano,
-    messaggio: `${d.progetto}\n\n${developerLines(d)}`,
-  });
-
   const res = await startDeveloperRequest(dev, check.domain);
+  // Lead solo per richieste vere: non per quelle respinte da limite o duplicato.
+  if (res.ok || res.retry) {
+    await saveLead({
+      source: "api_key",
+      nome: d.nome,
+      email: d.email,
+      azienda: d.azienda,
+      piano: d.piano,
+      messaggio: `${d.progetto}\n\n${developerLines(d)}`,
+    });
+  }
   if (res.ok) return { ok: true, mode: "verify" };
   // Su un guasto del servizio resta la strada manuale via email.
   return res.retry
@@ -103,9 +111,16 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+export async function requestApiKey(input: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+  let d = input;
+  // Honeypot: ai bot rispondiamo come se fosse andata bene, senza salvare o inviare nulla.
+  if (d && typeof d === "object" && typeof d.hp === "string" && d.hp.trim() !== "") {
+    return { ok: true, mode: d.piano === "developer" ? "verify" : "manual" };
+  }
   const err = validate(d);
   if (err) return { ok: false, error: err };
+  // Il nome finisce nell'oggetto e nel corpo delle email: niente a capo.
+  d = { ...d, nome: sanitizeName(d.nome) };
   if (d.piano === "developer") return requestDeveloperKey(d);
 
   await saveLead({

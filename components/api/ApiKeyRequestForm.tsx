@@ -24,6 +24,7 @@ export function ApiKeyRequestForm() {
   const [progetto, setProgetto] = useState("");
   const [dominio, setDominio] = useState("");
   const [attributionUrl, setAttributionUrl] = useState("");
+  const [sitoWeb, setSitoWeb] = useState("");
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
     { type: "success"; mode: "verify" | "manual" } | { type: "error"; message: string; mailto?: string } | null
@@ -48,6 +49,7 @@ export function ApiKeyRequestForm() {
         piano,
         progetto: progetto.trim(),
         ...(isDeveloper ? { dominio: dominio.trim(), attributionUrl: attributionUrl.trim() } : {}),
+        ...(sitoWeb ? { hp: sitoWeb } : {}),
       });
       setResult(
         res.ok ? { type: "success", mode: res.mode } : { type: "error", message: res.error, mailto: res.fallbackMailto },
@@ -84,6 +86,19 @@ export function ApiKeyRequestForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Honeypot: fuori schermo, invisibile ai lettori di schermo e al tab. Solo i bot lo compilano. */}
+      <div aria-hidden="true" className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden">
+        <label htmlFor="key-sito-web">Sito web</label>
+        <input
+          id="key-sito-web"
+          name="sito_web"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={sitoWeb}
+          onChange={(e) => setSitoWeb(e.target.value)}
+        />
+      </div>
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Piano</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

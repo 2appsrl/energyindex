@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS api_keys (
 );
 CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys (status);
 CREATE INDEX IF NOT EXISTS idx_api_keys_email ON api_keys (lower(email));
+-- Una sola chiave viva per email e dominio: chiude la corsa tra due
+-- attivazioni quasi simultanee (il controllo dei duplicati e' solo applicativo).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_api_keys_live_email_domain
+  ON api_keys (lower(email), domain) WHERE status IN ('active', 'downgraded');
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
 -- ===== api_throttle =====
