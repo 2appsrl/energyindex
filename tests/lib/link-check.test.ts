@@ -2,7 +2,13 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi } from "vitest";
-import { fetchHasLink, hasEnergyIndexLink, isCheckableUrl, nextLinkState } from "@/lib/api-keys/link-check";
+import {
+  fetchHasLink,
+  hasEnergyIndexLink,
+  isCheckableUrl,
+  nextLinkState,
+  nextManualLinkState,
+} from "@/lib/api-keys/link-check";
 
 describe("hasEnergyIndexLink", () => {
   it.each([
@@ -60,6 +66,42 @@ function fakeFetch(routes: Record<string, () => Response>) {
     return route();
   });
 }
+
+describe("nextManualLinkState", () => {
+  it("attiva, link assente: nulla cambia (decide la verifica settimanale)", () => {
+    expect(nextManualLinkState({ status: "active", link_failures: 1 }, false)).toEqual({
+      status: "active",
+      link_failures: 1,
+      notify: null,
+    });
+  });
+  it("declassata, link assente: resta declassata con gli stessi fallimenti", () => {
+    expect(nextManualLinkState({ status: "downgraded", link_failures: 3 }, false)).toEqual({
+      status: "downgraded",
+      link_failures: 3,
+      notify: null,
+    });
+  });
+  it("declassata, link trovato: torna attiva e azzera i fallimenti", () => {
+    expect(nextManualLinkState({ status: "downgraded", link_failures: 2 }, true)).toEqual({
+      status: "active",
+      link_failures: 0,
+      notify: "restored",
+    });
+  });
+  it("attiva, link trovato: azzera i fallimenti, nessuna notifica", () => {
+    expect(nextManualLinkState({ status: "active", link_failures: 1 }, true)).toEqual({
+      status: "active",
+      link_failures: 0,
+      notify: null,
+    });
+  });
+  it.each(["revoked", "pending"] as const)("%s: invariata in entrambi i casi", (status) => {
+    for (const ok of [true, false]) {
+      expect(nextManualLinkState({ status, link_failures: 1 }, ok)).toEqual({ status, link_failures: 1, notify: null });
+    }
+  });
+});
 
 describe("isCheckableUrl", () => {
   it.each([

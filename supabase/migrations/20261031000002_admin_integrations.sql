@@ -2,6 +2,7 @@
 -- le API senza chiave (lead) e quante chiamate fa ogni chiave. Aggregazioni
 -- lato DB per non scaricare righe di traffic_log nel server Next.
 -- Come le altre funzioni admin: SECURITY DEFINER, eseguibili solo da service_role.
+-- Dai domini sono esclusi i nostri host (sito, anteprime Netlify, sviluppo locale).
 
 -- Domini da cui viene caricato il widget (chiamate API con ?src=widget).
 CREATE OR REPLACE FUNCTION admin_widget_domains(p_days INT)
@@ -12,6 +13,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   WHERE t.kind = 'api'
     AND t.ts >= now() - make_interval(days => p_days)
     AND t.origin_host IS NOT NULL
+    AND t.origin_host NOT IN ('energyindex.it', 'www.energyindex.it', 'energyindex.pro', 'www.energyindex.pro')
+    AND t.origin_host NOT LIKE '%.netlify.app'
+    AND split_part(t.origin_host, ':', 1) NOT IN ('localhost', '127.0.0.1')
     AND t.query ILIKE '%src=widget%'
   GROUP BY t.origin_host
   ORDER BY 2 DESC
@@ -28,6 +32,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   WHERE t.kind = 'api'
     AND t.ts >= now() - make_interval(days => p_days)
     AND t.origin_host IS NOT NULL
+    AND t.origin_host NOT IN ('energyindex.it', 'www.energyindex.it', 'energyindex.pro', 'www.energyindex.pro')
+    AND t.origin_host NOT LIKE '%.netlify.app'
+    AND split_part(t.origin_host, ':', 1) NOT IN ('localhost', '127.0.0.1')
     AND t.api_key_prefix IS NULL
     AND COALESCE(t.query, '') NOT ILIKE '%src=widget%'
   GROUP BY t.origin_host

@@ -198,6 +198,8 @@ describe("recheckApiKeyLink", () => {
     expect(typeof patchOf(upd).link_checked_at).toBe("string");
     expect(upd.ops).toContainEqual(["eq", ["id", ID]]);
     expect(upd.ops).toContainEqual(["eq", ["status", "downgraded"]]);
+    expect(upd.ops).toContainEqual(["eq", ["link_failures", 2]]);
+    expect(r).toEqual({ ok: true, message: expect.stringMatching(/riattivata/i) });
     expect(revalidatePath).toHaveBeenCalledWith("/it/admin");
   });
 
@@ -222,7 +224,7 @@ describe("recheckApiKeyLink", () => {
     expect(patchOf(queries[2])).toMatchObject({ status: "active", link_failures: 0, link_ok: true });
   });
 
-  it("link assente due volte: declassata, nessuna email", async () => {
+  it("link assente: scrive solo link_ok e link_checked_at, stato e fallimenti invariati", async () => {
     const { db, queries } = fakeSupabase([
       { data: key({ link_failures: 1 }), error: null },
       { data: [], error: null },
@@ -232,8 +234,25 @@ describe("recheckApiKeyLink", () => {
     fetchHasLink.mockResolvedValueOnce(false);
 
     const r = await recheckApiKeyLink(ID);
-    expect(r).toEqual({ ok: true, message: expect.stringMatching(/declassata/i) });
-    expect(patchOf(queries[2])).toMatchObject({ status: "downgraded", link_failures: 2, link_ok: false });
+    expect(r).toEqual({ ok: true, message: "Link non trovato. Lo stato non cambia: decide la verifica settimanale." });
+    const patch = patchOf(queries[2]);
+    expect(Object.keys(patch).sort()).toEqual(["link_checked_at", "link_ok"]);
+    expect(patch.link_ok).toBe(false);
+    expect(queries[2].ops).toContainEqual(["eq", ["status", "active"]]);
+  });
+
+  it("chiave declassata, link assente: resta declassata", async () => {
+    const { db, queries } = fakeSupabase([
+      { data: key({ status: "downgraded", link_failures: 3 }), error: null },
+      { data: [], error: null },
+      { data: [{ id: ID }], error: null },
+    ]);
+    createServiceClient.mockReturnValue(db);
+    fetchHasLink.mockResolvedValueOnce(false);
+
+    expect((await recheckApiKeyLink(ID)).ok).toBe(true);
+    expect(Object.keys(patchOf(queries[2])).sort()).toEqual(["link_checked_at", "link_ok"]);
+    expect(queries[2].ops).toContainEqual(["eq", ["status", "downgraded"]]);
   });
 
   it("lettura di traffic_log fallita: nessun update (non conta un fallimento a vuoto)", async () => {

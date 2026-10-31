@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { RefreshCw, ShieldOff } from "lucide-react";
 import { recheckApiKeyLink, revokeApiKey, type AdminKeyResult } from "@/app/actions/admin-api-keys";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,9 @@ export function ApiKeyActions({ id, domain, canRecheck, canRevoke }: {
     start(async () => {
       try {
         setResult(await fn(id));
-      } catch {
+      } catch (e) {
+        // Sessione scaduta: requireAdmin fa redirect al login, Next deve gestirlo.
+        unstable_rethrow(e);
         setResult({ ok: false, error: "Operazione non riuscita." });
       }
     });

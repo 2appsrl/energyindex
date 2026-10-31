@@ -41,6 +41,20 @@ export function nextLinkState(
   return { status: cur.status, link_failures: failures, notify: null };
 }
 
+/**
+ * Verifica manuale dal pannello admin: puo' solo riattivare. Un link trovato
+ * vale come nella verifica settimanale; un link assente non conta come
+ * fallimento e non declassa (decide la verifica settimanale).
+ */
+export function nextManualLinkState(
+  cur: LinkState,
+  ok: boolean,
+): LinkState & { notify: "restored" | null } {
+  if (!ok || cur.status === "revoked" || cur.status === "pending") return { ...cur, notify: null };
+  const next = nextLinkState(cur, true);
+  return { status: next.status, link_failures: next.link_failures, notify: next.notify === "restored" ? "restored" : null };
+}
+
 const MAX_REDIRECTS = 3;
 const MAX_BODY_BYTES = 2_000_000;
 const TIMEOUT_MS = 10_000;

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { isUuid } from "@/lib/admin/integrations";
-import { fetchHasLink, nextLinkState, type KeyStatus } from "@/lib/api-keys/link-check";
+import { fetchHasLink, nextManualLinkState, type KeyStatus } from "@/lib/api-keys/link-check";
 import { widgetHostFilter, widgetSeenFromRows } from "@/lib/api-keys/link-check-job";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -47,10 +47,13 @@ export async function revokeApiKey(id: string): Promise<AdminKeyResult> {
 }
 
 /**
- * Ricontrolla subito l'attribuzione di una chiave, come la verifica
- * settimanale: link nella pagina dichiarata oppure widget caricato dal
- * dominio. L'update e' protetto dallo stato letto, cosi' una revoca arrivata
- * nel frattempo non viene sovrascritta.
+ * Ricontrolla subito l'attribuzione di una chiave, con la stessa regola della
+ * verifica settimanale: link nella pagina dichiarata oppure widget caricato
+ * dal dominio. A differenza della verifica settimanale puo' solo riattivare:
+ * un link assente aggiorna link_ok e link_checked_at ma non conta come
+ * fallimento e non declassa. Una riattivazione manuale non manda email.
+ * Gli update sono protetti dallo stato letto, cosi' una revoca (o la verifica
+ * settimanale) arrivata nel frattempo non viene sovrascritta.
  */
 export async function recheckApiKeyLink(id: string): Promise<AdminKeyResult> {
   await requireAdmin();
@@ -91,23 +94,19 @@ export async function recheckApiKeyLink(id: string): Promise<AdminKeyResult> {
     }
   }
 
-  const next = nextLinkState({ status, link_failures: Number(key.link_failures ?? 0) }, ok);
-  const { data: saved, error: updErr } = await db
+  const next = nextManualLinkState({ status, link_failures: Number(key.link_failures ?? 0) }, ok);
+  const checked = { link_ok: ok, link_checked_at: new Date().toISOString() };
+  let update = db
     .from("api_keys")
-    .update({
-      status: next.status,
-      link_failures: next.link_failures,
-      link_ok: ok,
-      link_checked_at: new Date().toISOString(),
-    })
+    .update(ok ? { ...checked, status: next.status, link_failures: next.link_failures } : checked)
     .eq("id", id)
-    .eq("status", status)
-    .select("id");
+    .eq("status", status);
+  if (ok) update = update.eq("link_failures", key.link_failures);
+  const { data: saved, error: updErr } = await update.select("id");
   if (updErr) return { ok: false, error: `Aggiornamento non riuscito: ${updErr.message}` };
   if ((saved?.length ?? 0) === 0) return { ok: false, error: "La chiave e' cambiata nel frattempo: ricarica la pagina." };
   revalidatePath("/it/admin");
 
-  if (ok) return { ok: true, message: next.notify === "restored" ? "Link trovato: chiave riattivata." : "Link trovato." };
-  if (next.notify === "downgraded") return { ok: true, message: "Link non trovato: chiave declassata ai limiti Open." };
-  return { ok: true, message: `Link non trovato (${next.link_failures} verifiche fallite di fila).` };
+  if (!ok) return { ok: true, message: "Link non trovato. Lo stato non cambia: decide la verifica settimanale." };
+  return { ok: true, message: next.notify === "restored" ? "Link trovato: chiave riattivata." : "Link trovato." };
 }

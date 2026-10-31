@@ -399,12 +399,14 @@ async function IntegrationsTab({ days }: { days: number }) {
                             <span className="block truncate text-xs text-muted-foreground">{k.attribution_url}</span>
                           )}
                         </td>
-                        <td className="space-y-1 p-3 [&>span]:block">
-                          <StatusPill badge={keyStatusBadge(k.status)} />
-                          <StatusPill badge={linkBadge(k.link_ok, k.link_checked_at)} />
-                          <div className="text-[11px] text-muted-foreground">
-                            {k.link_checked_at ? `verificato ${fmtAgo(k.link_checked_at)}` : "verifica settimanale"}
-                            {k.link_failures > 0 && ` · ${k.link_failures} fallite di fila`}
+                        <td className="p-3">
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusPill badge={keyStatusBadge(k.status)} />
+                            <StatusPill badge={linkBadge(k.link_ok, k.link_checked_at)} />
+                            <div className="text-[11px] text-muted-foreground">
+                              {k.link_checked_at ? `verificato ${fmtAgo(k.link_checked_at)}` : "verifica settimanale"}
+                              {k.link_failures > 0 && ` · ${k.link_failures} fallite di fila`}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3 text-right tabular-nums">{k.calls_30d === null ? "—" : fmtInt(k.calls_30d)}</td>
