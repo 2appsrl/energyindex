@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Bundle generato da scripts/build-widget.ts.
     "public/widget.js",
+    // Worktree e file locali di Claude Code.
+    ".claude/**",
   ]),
 ]);
 
