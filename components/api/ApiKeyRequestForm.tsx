@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, MailCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 import { requestApiKey, type ApiKeyPlan } from "@/app/actions/request-api-key";
@@ -22,13 +22,19 @@ export function ApiKeyRequestForm() {
   const [azienda, setAzienda] = useState("");
   const [piano, setPiano] = useState<ApiKeyPlan>("developer");
   const [progetto, setProgetto] = useState("");
+  const [dominio, setDominio] = useState("");
+  const [attributionUrl, setAttributionUrl] = useState("");
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
-    { type: "success" } | { type: "error"; message: string; mailto?: string } | null
+    { type: "success"; mode: "verify" | "manual" } | { type: "error"; message: string; mailto?: string } | null
   >(null);
 
+  const isDeveloper = piano === "developer";
   const isValid =
-    nome.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && progetto.trim().length >= 10;
+    nome.trim().length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    progetto.trim().length >= 10 &&
+    (!isDeveloper || (dominio.trim().length >= 4 && /^https?:\/\/\S+$/i.test(attributionUrl.trim())));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,9 +47,26 @@ export function ApiKeyRequestForm() {
         azienda: azienda.trim() || undefined,
         piano,
         progetto: progetto.trim(),
+        ...(isDeveloper ? { dominio: dominio.trim(), attributionUrl: attributionUrl.trim() } : {}),
       });
-      setResult(res.ok ? { type: "success" } : { type: "error", message: res.error, mailto: res.fallbackMailto });
+      setResult(
+        res.ok ? { type: "success", mode: res.mode } : { type: "error", message: res.error, mailto: res.fallbackMailto },
+      );
     });
+  }
+
+  if (result?.type === "success" && result.mode === "verify") {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-8 text-center space-y-3">
+        <MailCheck className="mx-auto size-10 text-emerald-500" />
+        <h3 className="text-xl font-bold">Controlla la posta</h3>
+        <p className="text-sm text-muted-foreground">
+          Ti abbiamo mandato all&apos;indirizzo <strong className="text-foreground">{email}</strong> il link per attivare
+          la chiave (valido 24 ore). Dopo l&apos;attivazione l&apos;API riconosce la chiave entro un minuto.
+        </p>
+        <p className="text-xs text-muted-foreground">Non trovi l&apos;email? Controlla anche nello spam.</p>
+      </div>
+    );
   }
 
   if (result?.type === "success") {
@@ -113,6 +136,44 @@ export function ApiKeyRequestForm() {
         </label>
         <input id="key-azienda" value={azienda} onChange={(e) => setAzienda(e.target.value)} className={inputClass} autoComplete="organization" />
       </div>
+      {isDeveloper && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label htmlFor="key-dominio" className="block text-sm font-medium">Dominio del sito</label>
+            <input
+              id="key-dominio"
+              required
+              placeholder="tuosito.it"
+              value={dominio}
+              onChange={(e) => setDominio(e.target.value)}
+              className={inputClass}
+              autoComplete="url"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="key-attribuzione" className="block text-sm font-medium">Pagina dove mostri i dati</label>
+            <input
+              id="key-attribuzione"
+              type="url"
+              required
+              placeholder="https://tuosito.it/prezzi-energia"
+              value={attributionUrl}
+              onChange={(e) => setAttributionUrl(e.target.value)}
+              className={inputClass}
+              aria-describedby="key-attribuzione-help"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </div>
+          <p id="key-attribuzione-help" className="text-xs text-muted-foreground sm:col-span-2">
+            Lì deve comparire il link «Fonte: Energy Index». Lo verifichiamo ogni settimana.
+          </p>
+        </div>
+      )}
       <div className="space-y-1">
         <label htmlFor="key-progetto" className="block text-sm font-medium">Cosa vuoi costruire?</label>
         <textarea

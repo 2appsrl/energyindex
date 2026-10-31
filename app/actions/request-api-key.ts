@@ -3,13 +3,15 @@
 /**
  * Server Action per le richieste di API key dal form di /it/api.
  *
- * In attesa del rilascio automatico delle chiavi, la richiesta arriva via
- * Resend a pro@energyindex.pro e la chiave viene emessa a mano. Stesso
- * setup e stesso fallback mailto di send-contact-email.ts.
+ * Piano Developer: rilascio self-service (riga pending + email di verifica,
+ * vedi lib/api-keys/issue.ts). Gli altri piani restano su richiesta manuale:
+ * arriva via Resend a pro@energyindex.pro e la chiave viene emessa a mano.
+ * Stesso setup e stesso fallback mailto di send-contact-email.ts.
  */
 
 import { Resend } from "resend";
 import { saveLead } from "@/lib/admin/leads";
+import { startDeveloperRequest, validateDeveloperRequest } from "@/lib/api-keys/issue";
 
 export type ApiKeyPlan = "developer" | "api" | "pro" | "enterprise";
 
@@ -19,10 +21,15 @@ export interface ApiKeyRequestData {
   azienda?: string;
   piano: ApiKeyPlan;
   progetto: string;
+  /** Solo Developer: dominio del sito che usera' la chiave. */
+  dominio?: string;
+  /** Solo Developer: pagina dove compare il link di attribuzione. */
+  attributionUrl?: string;
 }
 
 export type ApiKeyRequestResult =
-  | { ok: true }
+  /** verify: email di verifica inviata (Developer); manual: richiesta inoltrata al team. */
+  | { ok: true; mode: "verify" | "manual" }
   | { ok: false; error: string; fallbackMailto?: string };
 
 const RECIPIENT = "pro@energyindex.pro";
@@ -48,9 +55,43 @@ function validate(d: ApiKeyRequestData): string | null {
 function mailtoFallback(d: ApiKeyRequestData): string {
   const subject = encodeURIComponent(`Richiesta API key — ${PLAN_LABELS[d.piano] ?? d.piano}`);
   const body = encodeURIComponent(
-    `Nome: ${d.nome}\nEmail: ${d.email}\nAzienda: ${d.azienda || "(non indicata)"}\nPiano: ${PLAN_LABELS[d.piano] ?? d.piano}\n\nProgetto:\n${d.progetto}`,
+    `Nome: ${d.nome}\nEmail: ${d.email}\nAzienda: ${d.azienda || "(non indicata)"}\nPiano: ${PLAN_LABELS[d.piano] ?? d.piano}\n${developerLines(d)}\nProgetto:\n${d.progetto}`,
   );
   return `mailto:${RECIPIENT}?subject=${subject}&body=${body}`;
+}
+
+function developerLines(d: ApiKeyRequestData): string {
+  if (d.piano !== "developer") return "";
+  return `Dominio: ${d.dominio ?? ""}\nPagina con l'attribuzione: ${d.attributionUrl ?? ""}\n`;
+}
+
+async function requestDeveloperKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+  const dev = {
+    nome: d.nome,
+    email: d.email,
+    azienda: d.azienda,
+    progetto: d.progetto,
+    dominio: d.dominio ?? "",
+    attributionUrl: d.attributionUrl ?? "",
+  };
+  const check = validateDeveloperRequest(dev);
+  if (!check.ok) return { ok: false, error: check.error };
+
+  await saveLead({
+    source: "api_key",
+    nome: d.nome,
+    email: d.email,
+    azienda: d.azienda,
+    piano: d.piano,
+    messaggio: `${d.progetto}\n\n${developerLines(d)}`,
+  });
+
+  const res = await startDeveloperRequest(dev, check.domain);
+  if (res.ok) return { ok: true, mode: "verify" };
+  // Su un guasto del servizio resta la strada manuale via email.
+  return res.retry
+    ? { ok: false, error: res.error, fallbackMailto: mailtoFallback(d) }
+    : { ok: false, error: res.error };
 }
 
 function escapeHtml(str: string): string {
@@ -65,6 +106,7 @@ function escapeHtml(str: string): string {
 export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
   const err = validate(d);
   if (err) return { ok: false, error: err };
+  if (d.piano === "developer") return requestDeveloperKey(d);
 
   await saveLead({
     source: "api_key",
@@ -130,7 +172,7 @@ export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequest
       console.error("[requestApiKey] Resend error:", result.error);
       return { ok: false, error: `Errore invio: ${result.error.message}`, fallbackMailto: mailtoFallback(d) };
     }
-    return { ok: true };
+    return { ok: true, mode: "manual" };
   } catch (e) {
     console.error("[requestApiKey] Exception:", e);
     return {
