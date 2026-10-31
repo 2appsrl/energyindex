@@ -1516,12 +1516,16 @@ describe("readModel", () => {
     const m = readModel("pun", { daily_average: { date: "2026-10-30", value_native: 274.04, unit_native: "€/MWh" } });
     expect(m).toEqual({ title: "PUN medio", rows: [{ label: "30/10/2026", value: "274,04 €/MWh" }] });
   });
-  it("indice luce: mediana fisso e variabile", () => {
+  it("indice luce: fisso come prezzo, variabile come spread sull'indice", () => {
     const m = readModel("indice-luce", { indices: [
-      { slug: "mercato-libero-luce-fissa", median: 0.129, unit: "€/kWh", date: "2026-10-30" },
-      { slug: "mercato-libero-luce-variabile", median: 0.137, unit: "€/kWh", date: "2026-10-30" },
+      { slug: "mercato-libero-luce-variabile", median: 0.055, unit: "€/kWh", date: "2026-10-30", basis: "spread", reference: "PUN" },
+      { slug: "mercato-libero-luce-fissa", median: 0.3495, unit: "€/kWh", date: "2026-10-30", basis: "prezzo" },
     ] });
-    expect(m?.rows.map((r) => r.label)).toEqual(["Prezzo fisso", "Prezzo variabile"]);
+    expect(m?.rows).toEqual([
+      { label: "Prezzo fisso", value: "0,350 €/kWh" },
+      { label: "Prezzo variabile", value: "PUN + 0,055 €/kWh" },
+    ]);
+    expect(m?.date).toBe("30/10/2026");
   });
   it("risposta inattesa: null", () => {
     expect(readModel("pun", {})).toBeNull();
@@ -1578,6 +1582,8 @@ const itDate = (iso: string) => iso.split("-").reverse().join("/");
 
 export interface WidgetModel {
   title: string;
+  /** Data del dato (gg/mm/aaaa), mostrata nel widget: gli indici offerte possono essere di qualche giorno fa. */
+  date?: string;
   rows: { label: string; value: string }[];
 }
 
@@ -1594,12 +1600,17 @@ export function readModel(variant: WidgetVariant, body: Json): WidgetModel | nul
     if (typeof v !== "number" || typeof day !== "string") return null;
     return { title: "PSV giorno gas", rows: [{ label: itDate(day), value: formatEuro(v, String(body.unit_native ?? "€/MWh"), 2) }] };
   }
-  const indices = body.indices as { slug: string; median: number; unit: string }[] | undefined;
+  // Per le variabili le statistiche sono lo spread sull'indice (PUN/PSV), non un prezzo.
+  const indices = body.indices as { slug: string; median: number; unit: string; date: string; basis?: string; reference?: string }[] | undefined;
   if (!Array.isArray(indices) || indices.length === 0) return null;
-  const rows = indices
-    .sort((a, b) => (a.slug.endsWith("fissa") ? -1 : 1) - (b.slug.endsWith("fissa") ? -1 : 1))
-    .map((i) => ({ label: i.slug.endsWith("fissa") ? "Prezzo fisso" : "Prezzo variabile", value: formatEuro(i.median, i.unit, 3) }));
-  return { title: variant === "indice-luce" ? "Offerte luce · mediana" : "Offerte gas · mediana", rows };
+  const rows = [...indices]
+    .sort((a, b) => Number(b.basis !== "spread") - Number(a.basis !== "spread"))
+    .map((i) =>
+      i.basis === "spread"
+        ? { label: "Prezzo variabile", value: `${i.reference ?? "indice"} + ${formatEuro(i.median, i.unit, 3)}` }
+        : { label: "Prezzo fisso", value: formatEuro(i.median, i.unit, 3) },
+    );
+  return { title: variant === "indice-luce" ? "Offerte luce · mediana" : "Offerte gas · mediana", date: itDate(indices[0].date), rows };
 }
 ```
 
