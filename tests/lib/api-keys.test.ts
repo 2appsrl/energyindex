@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect } from "vitest";
-import { generateApiKey, sha256Hex, keyDisplayPrefix, normalizeDomain, originAllowed, KEY_PREFIX } from "@/lib/api-keys/keys";
+import { generateApiKey, sha256Hex, keyDisplayPrefix, normalizeDomain, originAllowed, hostMatchesDomain, KEY_PREFIX } from "@/lib/api-keys/keys";
 
 describe("generateApiKey", () => {
   it("formato eidx_live_ + 32 caratteri base62", () => {
@@ -39,6 +39,12 @@ describe("normalizeDomain", () => {
   it.each(["", "localhost", "non un dominio", "http://", "192.168.1.1"])("rifiuta %s", (input) => {
     expect(normalizeDomain(input)).toBeNull();
   });
+  it.each(["github.io", "co.uk", "https://www.netlify.app/"])("rifiuta il suffisso condiviso %s", (input) => {
+    expect(normalizeDomain(input)).toBeNull();
+  });
+  it("accetta un sito ospitato su un suffisso condiviso", () => {
+    expect(normalizeDomain("miosito.github.io")).toBe("miosito.github.io");
+  });
 });
 
 describe("originAllowed", () => {
@@ -55,5 +61,19 @@ describe("originAllowed", () => {
     expect(originAllowed("altro.it", "esempio.it")).toBe(false);
     expect(originAllowed("fintoesempio.it", "esempio.it")).toBe(false);
     expect(originAllowed("esempio.it.attacker.com", "esempio.it")).toBe(false);
+  });
+});
+
+describe("hostMatchesDomain", () => {
+  it("nessuna eccezione per localhost: vale solo il dominio", () => {
+    expect(hostMatchesDomain("127.0.0.1", "esempio.it")).toBe(false);
+    expect(hostMatchesDomain("localhost:3000", "esempio.it")).toBe(false);
+  });
+  it("accetta i sottodomini, anche con porta e maiuscole", () => {
+    expect(hostMatchesDomain("sub.esempio.it", "esempio.it")).toBe(true);
+    expect(hostMatchesDomain("Sub.Esempio.it:443", "esempio.it")).toBe(true);
+  });
+  it("rifiuta i suffissi falsi", () => {
+    expect(hostMatchesDomain("fintoesempio.it", "esempio.it")).toBe(false);
   });
 });

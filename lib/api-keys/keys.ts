@@ -29,6 +29,18 @@ export function keyDisplayPrefix(key: string): string {
   return key.slice(0, 14);
 }
 
+/**
+ * Suffissi condivisi da piu' siti (hosting multi-tenant e ccSLD a due livelli):
+ * una chiave legata a uno di questi varrebbe per tutti i siti sotto di esso.
+ * Si rifiuta solo il suffisso nudo: miosito.github.io resta valido.
+ */
+export const SHARED_SUFFIXES: ReadonlySet<string> = new Set([
+  "github.io", "gitlab.io", "netlify.app", "vercel.app", "pages.dev", "web.app",
+  "firebaseapp.com", "herokuapp.com", "onrender.com", "blogspot.com", "wordpress.com",
+  "wixsite.com", "altervista.org",
+  "co.uk", "org.uk", "com.br", "com.au", "co.jp",
+]);
+
 /** Host normalizzato (minuscolo, senza www., senza porta e path) o null se non e' un dominio pubblico. */
 export function normalizeDomain(input: string): string | null {
   const raw = input.trim().toLowerCase();
@@ -41,14 +53,21 @@ export function normalizeDomain(input: string): string | null {
   }
   host = host.replace(/^www\./, "");
   if (!/^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host)) return null;
+  if (SHARED_SUFFIXES.has(host)) return null;
   return host;
 }
 
+// Il controllo dell'Origin vincola solo i browser, non e' autenticazione.
 const DEV_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+/** Confronto stretto host[:porta] contro dominio (esatto o sottodominio), senza eccezioni di sviluppo. */
+export function hostMatchesDomain(host: string, domain: string): boolean {
+  const h = host.toLowerCase().split(":")[0];
+  return h === domain || h.endsWith(`.${domain}`);
+}
 
 /** originHost come in traffic_log (host[:porta]). */
 export function originAllowed(originHost: string, domain: string): boolean {
-  const host = originHost.toLowerCase().split(":")[0];
-  if (DEV_HOSTS.has(host)) return true;
-  return host === domain || host.endsWith(`.${domain}`);
+  if (DEV_HOSTS.has(originHost.toLowerCase().split(":")[0])) return true;
+  return hostMatchesDomain(originHost, domain);
 }

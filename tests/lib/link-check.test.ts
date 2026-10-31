@@ -38,4 +38,8 @@ describe("nextLinkState", () => {
     expect(nextLinkState({ status: "active", link_failures: 1 }, false)).toEqual({ status: "downgraded", link_failures: 2, notify: "downgraded" });
     expect(nextLinkState({ status: "downgraded", link_failures: 2 }, false)).toEqual({ status: "downgraded", link_failures: 3, notify: null });
   });
+  it.each(["revoked", "pending"] as const)("chiave %s: stato invariato, nessun avviso", (status) => {
+    expect(nextLinkState({ status, link_failures: 1 }, true)).toEqual({ status, link_failures: 1, notify: null });
+    expect(nextLinkState({ status, link_failures: 1 }, false)).toEqual({ status, link_failures: 1, notify: null });
+  });
 });

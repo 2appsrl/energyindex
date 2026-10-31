@@ -25,6 +25,8 @@ export function nextLinkState(
   cur: LinkState,
   ok: boolean,
 ): LinkState & { notify: "downgraded" | "restored" | null } {
+  // Le chiavi revocate o non ancora confermate non cambiano per effetto del link.
+  if (cur.status === "revoked" || cur.status === "pending") return { ...cur, notify: null };
   if (ok) {
     return { status: "active", link_failures: 0, notify: cur.status === "downgraded" ? "restored" : null };
   }
