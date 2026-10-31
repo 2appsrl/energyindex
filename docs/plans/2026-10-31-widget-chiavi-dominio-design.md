@@ -182,7 +182,7 @@ di funzionare senza link.
 - il middleware legge `api_throttle` con cache di 60 s e risponde `429`
   con `Retry-After`.
 - Soglie, uguali a quelle della documentazione: Open 60/min per IP,
-  Developer 600/min per chiave.
+  Developer 120/min, API 600/min, Pro 1.200/min, Trading 3.000/min per chiave (valori di `TIERS` in `lib/api/catalog.ts`).
 
 Il limite è "morbido": chi sfora può passare per qualche minuto, ma il
 costo è zero latenza e nessun nuovo fornitore. Se arrivano abusi si passa a
