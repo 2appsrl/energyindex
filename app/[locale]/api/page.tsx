@@ -36,6 +36,7 @@ import { CodeBlock, CodeTabs } from "@/components/api/code";
 import { TryIt } from "@/components/api/TryIt";
 import { UseCases } from "@/components/api/UseCases";
 import { ApiKeyRequestForm } from "@/components/api/ApiKeyRequestForm";
+import { buildSnippet as buildWidgetSnippet } from "@/lib/widget/snippet";
 import { breadcrumbList, faqPage, jsonLdString, organization } from "@/lib/seo/jsonld";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,7 @@ const FAQ = [
   {
     question: "Le API di Energy Index sono gratuite?",
     answer:
-      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave. Le elaborazioni Energy Index si possono riusare anche a fini commerciali citando Energy Index con un link; i dati delle fonti, come PUN e PSV del GME, restano soggetti alle condizioni della fonte, che per gli usi commerciali richiedono l'autorizzazione del GME. Il piano Developer e' gratuito con chiave e da' accesso a storico, zone e CSV. Il piano API costa 99 € al mese.",
+      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave. Le elaborazioni Energy Index si possono riusare anche a fini commerciali citando Energy Index con un link; i dati delle fonti, come PUN e PSV del GME, restano soggetti alle condizioni della fonte, che per gli usi commerciali richiedono l'autorizzazione del GME. Il piano Developer e' gratuito: la chiave arriva subito dopo la conferma via email e alza il limite a 120 richieste al minuto; storico, zone e CSV arriveranno con i prossimi endpoint. Il piano API costa 99 € al mese.",
   },
   {
     question: "Da dove vengono i dati?",
@@ -76,7 +77,7 @@ const FAQ = [
   {
     question: "Come devo citare Energy Index?",
     answer:
-      "Accanto al dato basta la dicitura 'Fonte: Energy Index' con un link a https://energyindex.it. Ogni risposta include il testo pronto nel campo attribution. Dal piano API in su l'attribuzione e' facoltativa.",
+      "Accanto al dato basta la dicitura 'Fonte: Energy Index' con un link a https://energyindex.it, con qualsiasi rel. Ogni risposta include il testo pronto nel campo attribution. Con una chiave Developer verifichiamo ogni lunedi' il link nella pagina dichiarata: dopo 2 verifiche fallite di seguito la chiave torna ai limiti del piano Open, fino alla prima verifica in cui il link ricompare. Dal piano API in su l'attribuzione a Energy Index e' facoltativa.",
   },
   {
     question: "Posso usare le API dentro un agente AI o un chatbot?",
@@ -563,20 +564,23 @@ export default async function ApiLandingPage() {
             </span>
             <div className="flex gap-2">
               <TierBadge tier="open" />
-              <StatusBadge status="coming" />
+              <StatusBadge status="live" />
             </div>
           </div>
           <div>
             <h2 className="text-2xl font-black">Widget in una riga</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Per chi non programma: incolla lo snippet nel tuo sito e il riquadro con PUN e PSV si aggiorna da solo,
-              con l&apos;attribuzione gia&apos; inclusa.
+              Per chi non programma: incolla lo snippet nel tuo sito e il riquadro con l&apos;Energy Index delle
+              offerte, il PUN o il PSV si aggiorna da solo, con l&apos;attribuzione gia&apos; inclusa.
             </p>
           </div>
-          <CodeBlock
-            code={`<div data-eidx-widget="today" data-assets="pun,psv"></div>\n<script src="https://energyindex.it/widget.js" async></script>`}
-            title="index.html"
-          />
+          <CodeBlock code={buildWidgetSnippet("indice-luce", "light")} title="index.html" />
+          <Link
+            href="/it/api/widget"
+            className="inline-flex items-center gap-2 self-start rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-colors hover:bg-emerald-500"
+          >
+            Configura il widget <ArrowRight className="size-4" />
+          </Link>
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 rounded-3xl border bg-gradient-to-br from-violet-500/10 to-transparent p-7">
@@ -615,7 +619,7 @@ export default async function ApiLandingPage() {
           {[
             { icon: ShieldCheck, title: "Fonti ufficiali", text: "GME, ARERA, ICE Endex, EIA, EEX. Ogni risposta cita la sua fonte." },
             { icon: Link2, title: "Attribuzione semplice", text: "“Fonte: Energy Index” con un link. Facoltativa dal piano API." },
-            { icon: Zap, title: "Limiti chiari", text: "Header X-RateLimit-* su ogni risposta, errore 429 con Retry-After." },
+            { icon: Zap, title: "Limiti chiari", text: "Header X-RateLimit-Limit su ogni risposta, errore 429 con Retry-After." },
             { icon: BookOpen, title: "Versioni stabili", text: "/v1 non cambia in modo incompatibile. 12 mesi di preavviso per deprecazioni." },
           ].map((x) => (
             <div key={x.title} className="rounded-2xl border bg-card p-5">
@@ -633,16 +637,24 @@ export default async function ApiLandingPage() {
           <div className="relative space-y-5 bg-gradient-to-br from-violet-700 to-violet-950 p-8 text-white lg:p-10">
             <KeyRound className="size-10 text-violet-200" />
             <h2 className="text-3xl font-black">Richiedi la tua chiave</h2>
-            <p className="text-violet-100">
-              Developer e&apos; gratis. Per il piano API e per EIDX Pro ti contattiamo per attivare l&apos;accesso.
-            </p>
-            <ul className="space-y-2 text-sm text-violet-100">
-              {["Risposta entro 2 giorni lavorativi", "Nessuna carta di credito per Developer", "Avviso appena gli endpoint 'in arrivo' vanno live"].map((t) => (
-                <li key={t} className="flex gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-300" /> {t}
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-2">
+              <h3 className="font-bold">Developer: gratis e subito</h3>
+              <ul className="space-y-2 text-sm text-violet-100">
+                {[
+                  "Confermi l'email e attivi la chiave: la vedi una volta e te la mandiamo per email",
+                  "Legata al dominio del tuo sito, nessuna carta di credito",
+                  "Il link a Energy Index nella pagina dichiarata viene verificato ogni settimana",
+                ].map((t) => (
+                  <li key={t} className="flex gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-emerald-300" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold">API, Pro ed Enterprise: su richiesta</h3>
+              <p className="text-sm text-violet-100">Ti ricontattiamo entro 2 giorni lavorativi per attivare il piano.</p>
+            </div>
             <div className="rounded-xl bg-white/10 p-4 font-mono text-xs">
               <div className="text-violet-200"># poi, in ogni richiesta:</div>
               <div>Authorization: Bearer eidx_live_••••••••</div>

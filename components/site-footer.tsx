@@ -17,7 +17,7 @@ export function SiteFooter() {
       <footer className="border-t border-emerald-400/20 bg-black">
         <div className="container mx-auto px-4 py-6 text-xs text-emerald-300/50 font-mono space-y-1">
           <p>
-            Fonte: GME (Gestore dei Mercati Energetici) · ARERA (Portale Offerte).
+            Fonte: Gestore dei Mercati Energetici S.p.A. (GME) · ARERA (Portale Offerte).
             Dati riprodotti per uso informativo.
           </p>
           <p>
@@ -112,7 +112,7 @@ export function SiteFooter() {
         {/* Bottom: info legali */}
         <div className="border-t border-border/60 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground">
           <p>
-            Fonte: GME — Gestore dei Mercati Energetici · ARERA. Dati riprodotti per uso
+            Fonte: Gestore dei Mercati Energetici S.p.A. (GME) · ARERA. Dati riprodotti per uso
             informativo.
           </p>
           <p>© 2026 Energy Index</p>

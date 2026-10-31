@@ -11,6 +11,8 @@
  * possono ancora cambiare prima del rilascio.
  */
 
+import { ENERGY_INDEX_ATTRIBUTION } from "@/lib/api/energy-index";
+
 export const API_BASE_URL = "https://energyindex.it/api/v1";
 export const API_DOCS_URL = "https://energyindex.it/it/api/docs";
 export const API_LANDING_URL = "https://energyindex.it/it/api";
@@ -565,31 +567,43 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     method: "GET",
     path: "/energy-index",
     title: "Energy Index delle offerte",
-    summary: "Media, mediana e range delle offerte luce e gas del mercato libero.",
+    summary: "Mediana, quartili e range delle offerte luce e gas del mercato libero.",
     description:
-      "I quattro indici proprietari Energy Index (Fisse Luce, Variabili Luce, Fisse Gas, Variabili Gas) calcolati sulle offerte pubblicate sul Portale Offerte ARERA. Aggregati di mercato: nessun dato di singolo fornitore.",
+      "I quattro indici proprietari Energy Index (Fisse Luce, Variabili Luce, Fisse Gas, Variabili Gas) calcolati sulle offerte pubblicate sul Portale Offerte ARERA. Aggregati di mercato: nessun dato di singolo fornitore. Per gli indici a prezzo fisso (basis \"prezzo\") le statistiche sono il prezzo della materia prima. Per gli indici variabili (basis \"spread\") sono lo spread applicato sopra il riferimento all'ingrosso indicato in reference (PUN per la luce, PSV per il gas), nella stessa unita': una mediana di 0,055 €/kWh significa \"PUN + 0,055 €/kWh\".",
     category: "indici",
     tier: "open",
-    status: "coming",
+    status: "live",
     params: [
       { name: "commodity", in: "query", type: "string", required: false, description: "Filtra per commodity.", enum: ["luce", "gas"] },
     ],
     exampleCall: "/energy-index?commodity=luce",
     response: {
-      updated_at: "2026-09-26",
+      updated_at: "2026-10-30",
       indices: [
-        { slug: "mercato-libero-luce-fissa", name: "Energy Index · Fisse Luce", unit: "€/kWh", mean: 0.1342, median: 0.129, min: 0.0989, max: 0.1995, offers: 212 },
-        { slug: "mercato-libero-luce-variabile", name: "Energy Index · Variabili Luce", unit: "€/kWh", mean: 0.1407, median: 0.1376, min: 0.1201, max: 0.1788, offers: 248, spread_vs_reference: 0.0219 },
+        { slug: "mercato-libero-luce-fissa", name: "Energy Index · Luce — Prezzo Fisso", commodity: "luce", price_type: "fisso", basis: "prezzo", unit: "€/kWh", date: "2026-10-30", median: 0.3495, p25: 0.2659, p75: 0.53, min: 0.145, max: 2, offers: 230, page: "https://energyindex.it/it/mercato-libero" },
+        { slug: "mercato-libero-luce-variabile", name: "Energy Index · Luce — Prezzo Variabile", commodity: "luce", price_type: "variabile", basis: "spread", reference: "PUN", unit: "€/kWh", date: "2026-10-30", median: 0.055, p25: 0.0375, p75: 0.1, min: 0.008, max: 1, offers: 262, page: "https://energyindex.it/it/mercato-libero" },
       ],
       source: "ARERA — Portale Offerte",
-      attribution: ATTR,
+      attribution: ENERGY_INDEX_ATTRIBUTION,
+      page: "https://energyindex.it/it/mercato-libero",
     },
     fields: [
+      { name: "updated_at", type: "string (YYYY-MM-DD) | null", description: "Data dello snapshot piu' recente tra gli indici restituiti." },
       { name: "indices[].slug", type: "string", description: "Identificativo stabile dell'indice." },
-      { name: "indices[].mean / median", type: "number", description: "Media e mediana del prezzo materia prima delle offerte attive." },
-      { name: "indices[].min / max", type: "number", description: "Estremi del range di mercato." },
+      { name: "indices[].name", type: "string", description: "Nome esteso dell'indice, da mostrare con il marchio Energy Index." },
+      { name: "indices[].commodity", type: "\"luce\" | \"gas\"", description: "Commodity dell'indice." },
+      { name: "indices[].price_type", type: "\"fisso\" | \"variabile\"", description: "Tipologia di prezzo delle offerte aggregate." },
+      { name: "indices[].unit", type: "string", description: "Unita' di misura delle statistiche: €/kWh per la luce, €/Smc per il gas." },
+      { name: "indices[].basis", type: "\"prezzo\" | \"spread\"", description: "\"prezzo\" per i fissi: le statistiche sono il prezzo della materia prima. \"spread\" per i variabili: le statistiche sono lo spread sopra reference, nella stessa unita' (0,055 €/kWh = PUN + 0,055 €/kWh)." },
+      { name: "indices[].reference", type: "\"PUN\" | \"PSV\"?", description: "Solo variabili: riferimento all'ingrosso a cui si somma lo spread, \"PUN\" (luce) o \"PSV\" (gas)." },
+      { name: "indices[].median", type: "number", description: "Mediana delle offerte attive (prezzo o spread secondo basis), arrotondata a 4 decimali." },
+      { name: "indices[].p25 / p75", type: "number | null", description: "Primo e terzo quartile (prezzo o spread secondo basis), arrotondati a 4 decimali; null se non calcolati." },
+      { name: "indices[].min / max", type: "number", description: "Estremi del range di mercato (prezzo o spread secondo basis), arrotondati a 4 decimali." },
       { name: "indices[].offers", type: "integer", description: "Numero di offerte considerate." },
-      { name: "indices[].spread_vs_reference", type: "number?", description: "Solo variabili: spread medio sopra PUN o PSV." },
+      { name: "indices[].date", type: "string (YYYY-MM-DD)", description: "Giorno dello snapshot dell'indice." },
+      { name: "indices[].spread_vs_reference_pct", type: "number?", description: "Solo variabili: spread sopra PUN o PSV in percentuale, arrotondato a 2 decimali. Assente se non calcolato." },
+      { name: "indices[].page", type: "string (URL)", description: "Pagina Energy Index dell'indice, da usare come link di attribuzione." },
+      { name: "attribution", type: "string", description: "Riga di attribuzione da riportare accanto ai dati riusati." },
     ],
     formats: ["json"],
     cache: "6 ore",

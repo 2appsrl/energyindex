@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { API_EXPOSE_HEADERS } from "@/lib/api-keys/gate";
 import {
   API_BASE_URL,
   API_CONTACT_EMAIL,
@@ -58,12 +59,16 @@ function operation(e: ApiEndpoint, docsAnchor = e.id) {
         },
       },
       "400": { $ref: "#/components/responses/Error" },
-      ...(e.tier !== "open" ? { "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } } : {}),
-      "429": { $ref: "#/components/responses/Error" },
+      // Anche gli endpoint Open accettano una chiave facoltativa: con una
+      // chiave non valida 401, da un Origin non ammesso 403.
+      "401": { $ref: "#/components/responses/Error" },
+      "403": { $ref: "#/components/responses/Error" },
+      "429": { $ref: "#/components/responses/RateLimited" },
       "503": { $ref: "#/components/responses/Error" },
     },
   };
-  if (e.tier === "open") op.security = [];
+  // {} = chiamata anonima ammessa; la chiave resta facoltativa.
+  if (e.tier === "open") op.security = [{}, { bearerAuth: [] }];
   if (body.length > 0) {
     op.requestBody = {
       required: true,
@@ -118,26 +123,33 @@ function buildSpec() {
     paths,
     components: {
       securitySchemes: {
-        bearerAuth: { type: "http", scheme: "bearer", description: "API key eidx_live_… nell'header Authorization." },
+        bearerAuth: { type: "http", scheme: "bearer", description: "API key eidx_live_… nell'header Authorization. Facoltativa sugli endpoint Open." },
+      },
+      schemas: {
+        Error: {
+          type: "object",
+          required: ["error", "message"],
+          properties: {
+            error: { type: "string", example: "rate_limited" },
+            message: { type: "string" },
+            param: { type: "string", description: "Parametro non valido (solo errori 400)." },
+            attribution: { type: "string", description: "Riga di attribuzione, presente in alcuni errori." },
+            required_tier: { type: "string", description: "Piano necessario (403 tier_required, endpoint dei piani superiori)." },
+          },
+        },
       },
       responses: {
         Error: {
           description: "Errore",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["error", "message"],
-                properties: {
-                  error: { type: "string", example: "rate_limited" },
-                  message: { type: "string" },
-                  required_tier: { type: "string" },
-                  param: { type: "string" },
-                  docs: { type: "string" },
-                },
-              },
-            },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+        },
+        RateLimited: {
+          description: "Limite di richieste superato",
+          headers: {
+            "Retry-After": { description: "Secondi da attendere prima di riprovare.", schema: { type: "integer", example: 900 } },
+            "X-RateLimit-Limit": { description: "Limite al minuto applicato alla richiesta.", schema: { type: "integer", example: 60 } },
           },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
         },
       },
     },
@@ -148,8 +160,15 @@ const headers = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "public, max-age=3600, s-maxage=3600",
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Expose-Headers": API_EXPOSE_HEADERS,
 } as const;
 
 export function GET() {
   return NextResponse.json(buildSpec(), { status: 200, headers });
+}
+
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers });
 }

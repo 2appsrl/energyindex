@@ -70,8 +70,10 @@ tema chiaro/scuro e formato compatto/esteso:
 - `pun`: `daily_average` di `/pun/today`;
 - `psv`: il giorno gas di `/psv/today`.
 
-Per `pun` e `psv` lo snippet contiene anche, nell'HTML statico, la riga
-"Dati: Gestore dei Mercati Energetici S.p.A.".
+Per `pun` e `psv` la riga di fonte nell'HTML statico è
+"Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index" (con il
+link su "Energy Index"), la dicitura richiesta dalle condizioni GME e uguale
+al campo `attribution` delle API.
 
 **Script** (`app/widget.js/route.ts`, JS vanilla, meno di 5 KB minificato,
 cache 1 giorno):

@@ -3,13 +3,20 @@
 /**
  * Server Action per le richieste di API key dal form di /it/api.
  *
- * In attesa del rilascio automatico delle chiavi, la richiesta arriva via
- * Resend a pro@energyindex.pro e la chiave viene emessa a mano. Stesso
- * setup e stesso fallback mailto di send-contact-email.ts.
+ * Piano Developer: rilascio self-service (riga pending + email di verifica,
+ * vedi lib/api-keys/issue.ts). Gli altri piani restano su richiesta manuale:
+ * arriva via Resend a pro@energyindex.pro e la chiave viene emessa a mano.
+ * Stesso setup e stesso fallback mailto di send-contact-email.ts.
  */
 
 import { Resend } from "resend";
 import { saveLead } from "@/lib/admin/leads";
+import {
+  sanitizeName,
+  startDeveloperRequest,
+  validateContactFields,
+  validateDeveloperRequest,
+} from "@/lib/api-keys/issue";
 
 export type ApiKeyPlan = "developer" | "api" | "pro" | "enterprise";
 
@@ -19,10 +26,17 @@ export interface ApiKeyRequestData {
   azienda?: string;
   piano: ApiKeyPlan;
   progetto: string;
+  /** Solo Developer: dominio del sito che usera' la chiave. */
+  dominio?: string;
+  /** Solo Developer: pagina dove compare il link di attribuzione. */
+  attributionUrl?: string;
+  /** Honeypot: campo nascosto che solo i bot compilano. */
+  hp?: string;
 }
 
 export type ApiKeyRequestResult =
-  | { ok: true }
+  /** verify: email di verifica inviata (Developer); manual: richiesta inoltrata al team. */
+  | { ok: true; mode: "verify" | "manual" }
   | { ok: false; error: string; fallbackMailto?: string };
 
 const RECIPIENT = "pro@energyindex.pro";
@@ -36,21 +50,57 @@ const PLAN_LABELS: Record<ApiKeyPlan, string> = {
 };
 
 function validate(d: ApiKeyRequestData): string | null {
-  if (!d.nome || d.nome.trim().length < 2) return "Nome troppo corto (min 2 caratteri)";
-  if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return "Indirizzo email non valido";
-  if (!(d.piano in PLAN_LABELS)) return "Piano non valido";
-  if (!d.progetto || d.progetto.trim().length < 10) return "Descrivi il progetto in almeno 10 caratteri";
-  if (d.progetto.length > 3000) return "Descrizione troppo lunga (max 3000 caratteri)";
-  if ((d.progetto.match(/https?:\/\//gi) ?? []).length > 3) return "Troppi link nella descrizione (max 3)";
+  const fieldErr = validateContactFields(d);
+  if (fieldErr) return fieldErr;
+  if (typeof d.piano !== "string" || !Object.hasOwn(PLAN_LABELS, d.piano)) return "Piano non valido";
+  if (d.dominio !== undefined && typeof d.dominio !== "string") return "Dominio non valido (es. tuosito.it)";
+  if (d.attributionUrl !== undefined && typeof d.attributionUrl !== "string") return "Indirizzo della pagina non valido";
   return null;
 }
 
 function mailtoFallback(d: ApiKeyRequestData): string {
   const subject = encodeURIComponent(`Richiesta API key — ${PLAN_LABELS[d.piano] ?? d.piano}`);
   const body = encodeURIComponent(
-    `Nome: ${d.nome}\nEmail: ${d.email}\nAzienda: ${d.azienda || "(non indicata)"}\nPiano: ${PLAN_LABELS[d.piano] ?? d.piano}\n\nProgetto:\n${d.progetto}`,
+    `Nome: ${d.nome}\nEmail: ${d.email}\nAzienda: ${d.azienda || "(non indicata)"}\nPiano: ${PLAN_LABELS[d.piano] ?? d.piano}\n${developerLines(d)}\nProgetto:\n${d.progetto}`,
   );
   return `mailto:${RECIPIENT}?subject=${subject}&body=${body}`;
+}
+
+function developerLines(d: ApiKeyRequestData): string {
+  if (d.piano !== "developer") return "";
+  return `Dominio: ${d.dominio ?? ""}\nPagina con l'attribuzione: ${d.attributionUrl ?? ""}\n`;
+}
+
+async function requestDeveloperKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+  const dev = {
+    nome: d.nome,
+    email: d.email,
+    azienda: d.azienda,
+    progetto: d.progetto,
+    dominio: d.dominio ?? "",
+    attributionUrl: d.attributionUrl ?? "",
+  };
+  const check = validateDeveloperRequest(dev);
+  if (!check.ok) return { ok: false, error: check.error };
+
+  const res = await startDeveloperRequest(dev, check.domain);
+  // Lead solo per richieste vere: non per quelle respinte da limite o
+  // duplicato, ne' durante un'ondata che ha fatto scattare il tetto globale.
+  if (res.ok || (res.retry && !res.capped)) {
+    await saveLead({
+      source: "api_key",
+      nome: d.nome,
+      email: d.email,
+      azienda: d.azienda,
+      piano: d.piano,
+      messaggio: `${d.progetto}\n\n${developerLines(d)}`,
+    });
+  }
+  if (res.ok) return { ok: true, mode: "verify" };
+  // Su un guasto del servizio resta la strada manuale via email.
+  return res.retry
+    ? { ok: false, error: res.error, fallbackMailto: mailtoFallback(d) }
+    : { ok: false, error: res.error };
 }
 
 function escapeHtml(str: string): string {
@@ -62,9 +112,17 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+export async function requestApiKey(input: ApiKeyRequestData): Promise<ApiKeyRequestResult> {
+  let d = input;
+  // Honeypot: ai bot rispondiamo come se fosse andata bene, senza salvare o inviare nulla.
+  if (d && typeof d === "object" && typeof d.hp === "string" && d.hp.trim() !== "") {
+    return { ok: true, mode: d.piano === "developer" ? "verify" : "manual" };
+  }
   const err = validate(d);
   if (err) return { ok: false, error: err };
+  // Il nome finisce nell'oggetto e nel corpo delle email: niente a capo.
+  d = { ...d, nome: sanitizeName(d.nome) };
+  if (d.piano === "developer") return requestDeveloperKey(d);
 
   await saveLead({
     source: "api_key",
@@ -130,7 +188,7 @@ export async function requestApiKey(d: ApiKeyRequestData): Promise<ApiKeyRequest
       console.error("[requestApiKey] Resend error:", result.error);
       return { ok: false, error: `Errore invio: ${result.error.message}`, fallbackMailto: mailtoFallback(d) };
     }
-    return { ok: true };
+    return { ok: true, mode: "manual" };
   } catch (e) {
     console.error("[requestApiKey] Exception:", e);
     return {

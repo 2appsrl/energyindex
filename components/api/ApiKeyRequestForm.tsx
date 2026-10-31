@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, MailCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 import { requestApiKey, type ApiKeyPlan } from "@/app/actions/request-api-key";
@@ -22,13 +22,20 @@ export function ApiKeyRequestForm() {
   const [azienda, setAzienda] = useState("");
   const [piano, setPiano] = useState<ApiKeyPlan>("developer");
   const [progetto, setProgetto] = useState("");
+  const [dominio, setDominio] = useState("");
+  const [attributionUrl, setAttributionUrl] = useState("");
+  const [sitoWeb, setSitoWeb] = useState("");
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
-    { type: "success" } | { type: "error"; message: string; mailto?: string } | null
+    { type: "success"; mode: "verify" | "manual" } | { type: "error"; message: string; mailto?: string } | null
   >(null);
 
+  const isDeveloper = piano === "developer";
   const isValid =
-    nome.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && progetto.trim().length >= 10;
+    nome.trim().length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    progetto.trim().length >= 10 &&
+    (!isDeveloper || (dominio.trim().length >= 4 && /^https?:\/\/\S+$/i.test(attributionUrl.trim())));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,9 +48,27 @@ export function ApiKeyRequestForm() {
         azienda: azienda.trim() || undefined,
         piano,
         progetto: progetto.trim(),
+        ...(isDeveloper ? { dominio: dominio.trim(), attributionUrl: attributionUrl.trim() } : {}),
+        ...(sitoWeb ? { hp: sitoWeb } : {}),
       });
-      setResult(res.ok ? { type: "success" } : { type: "error", message: res.error, mailto: res.fallbackMailto });
+      setResult(
+        res.ok ? { type: "success", mode: res.mode } : { type: "error", message: res.error, mailto: res.fallbackMailto },
+      );
     });
+  }
+
+  if (result?.type === "success" && result.mode === "verify") {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-8 text-center space-y-3">
+        <MailCheck className="mx-auto size-10 text-emerald-500" />
+        <h3 className="text-xl font-bold">Controlla la posta</h3>
+        <p className="text-sm text-muted-foreground">
+          Ti abbiamo mandato all&apos;indirizzo <strong className="text-foreground">{email}</strong> il link per attivare
+          la chiave (valido 24 ore). Dopo l&apos;attivazione l&apos;API riconosce la chiave entro un minuto.
+        </p>
+        <p className="text-xs text-muted-foreground">Non trovi l&apos;email? Controlla anche nello spam.</p>
+      </div>
+    );
   }
 
   if (result?.type === "success") {
@@ -52,7 +77,8 @@ export function ApiKeyRequestForm() {
         <CheckCircle2 className="mx-auto size-10 text-emerald-500" />
         <h3 className="text-xl font-bold">Richiesta ricevuta</h3>
         <p className="text-sm text-muted-foreground">
-          Ti mandiamo la chiave all&apos;indirizzo <strong className="text-foreground">{email}</strong> entro 2 giorni lavorativi.
+          Ti ricontattiamo all&apos;indirizzo <strong className="text-foreground">{email}</strong> entro 2 giorni lavorativi
+          per attivare il piano.
           Nel frattempo gli endpoint Open funzionano gia&apos; senza chiave.
         </p>
       </div>
@@ -61,6 +87,19 @@ export function ApiKeyRequestForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Honeypot: fuori schermo, invisibile ai lettori di schermo e al tab. Solo i bot lo compilano. */}
+      <div aria-hidden="true" className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden">
+        <label htmlFor="key-sito-web">Sito web</label>
+        <input
+          id="key-sito-web"
+          name="sito_web"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={sitoWeb}
+          onChange={(e) => setSitoWeb(e.target.value)}
+        />
+      </div>
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Piano</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -113,6 +152,44 @@ export function ApiKeyRequestForm() {
         </label>
         <input id="key-azienda" value={azienda} onChange={(e) => setAzienda(e.target.value)} className={inputClass} autoComplete="organization" />
       </div>
+      {isDeveloper && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label htmlFor="key-dominio" className="block text-sm font-medium">Dominio del sito</label>
+            <input
+              id="key-dominio"
+              required
+              placeholder="tuosito.it"
+              value={dominio}
+              onChange={(e) => setDominio(e.target.value)}
+              className={inputClass}
+              autoComplete="url"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="key-attribuzione" className="block text-sm font-medium">Pagina dove mostri i dati</label>
+            <input
+              id="key-attribuzione"
+              type="url"
+              required
+              placeholder="https://tuosito.it/prezzi-energia"
+              value={attributionUrl}
+              onChange={(e) => setAttributionUrl(e.target.value)}
+              className={inputClass}
+              aria-describedby="key-attribuzione-help"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </div>
+          <p id="key-attribuzione-help" className="text-xs text-muted-foreground sm:col-span-2">
+            Lì deve comparire un link a energyindex.it, per esempio «Fonte: Energy Index». Lo verifichiamo ogni settimana.
+          </p>
+        </div>
+      )}
       <div className="space-y-1">
         <label htmlFor="key-progetto" className="block text-sm font-medium">Cosa vuoi costruire?</label>
         <textarea

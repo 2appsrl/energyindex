@@ -18,12 +18,13 @@ import {
 } from "@/lib/api/catalog";
 import { MethodBadge, StatusBadge, TierBadge, TIER_STYLE } from "@/components/api/badges";
 import { CodeBlock, CodeTabs } from "@/components/api/code";
+import { buildSnippet as buildWidgetSnippet } from "@/lib/widget/snippet";
 import { breadcrumbList, jsonLdString, techArticle } from "@/lib/seo/jsonld";
 import { cn } from "@/lib/utils";
 
 const TITLE = "Documentazione API Energy Index — riferimento tecnico v1";
 const DESCRIPTION =
-  "Riferimento completo delle API Energy Index v1: autenticazione, limiti, errori, formati, webhook e schema di ogni endpoint per PUN, PSV, zone, Energy Index e forecast.";
+  "Riferimento completo delle API Energy Index v1: autenticazione, limiti, errori, formati, widget e schema di ogni endpoint per PUN, PSV, zone, Energy Index e forecast.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -43,6 +44,7 @@ const GUIDE_SECTIONS = [
   { id: "errori", title: "Errori" },
   { id: "cache", title: "Cache e CORS" },
   { id: "webhook", title: "Webhook" },
+  { id: "widget", title: "Widget" },
   { id: "licenza", title: "Attribuzione e licenza" },
   { id: "changelog", title: "Changelog" },
 ] as const;
@@ -62,7 +64,7 @@ export default function ApiDocsPage() {
               url: API_DOCS_URL,
               author: "Energy Index",
               datePublished: "2026-06-28",
-              dateModified: "2026-09-27",
+              dateModified: "2026-10-31",
               keywords: ["API PUN", "API PSV", "API prezzi energia", "PUN JSON", "GME API", "OpenAPI"],
             }),
           ),
@@ -148,32 +150,52 @@ export default function ApiDocsPage() {
             <CodeBlock code={`curl ${API_BASE_URL}/pun/today`} title="terminale" />
             <p>Con una chiave (piani Developer e superiori), passala nell&apos;header <Code>Authorization</Code>:</p>
             <CodeBlock
-              code={`export EIDX_API_KEY="eidx_live_••••••••"\n\ncurl "${API_BASE_URL}/pun/zones?date=2026-09-26" \\\n  -H "Authorization: Bearer $EIDX_API_KEY"`}
+              code={`export EIDX_API_KEY="eidx_live_••••••••"\n\ncurl "${API_BASE_URL}/energy-index?commodity=luce" \\\n  -H "Authorization: Bearer $EIDX_API_KEY"`}
               title="terminale"
             />
           </DocSection>
 
           <DocSection id="autenticazione" title="Autenticazione">
             <p>
-              Gli endpoint del piano Open sono pubblici. Tutti gli altri richiedono una API key, che ha il formato{" "}
-              <Code>eidx_live_</Code> seguito da 32 caratteri. La chiave va inviata in ogni richiesta:
+              Gli endpoint attivi oggi sono tutti del piano Open e rispondono anche senza chiave. La chiave alza il
+              limite di richieste al minuto e servira&apos; per gli endpoint dei piani superiori. Ha il formato{" "}
+              <Code>eidx_live_</Code> seguito da 32 caratteri e va inviata in ogni richiesta:
             </p>
             <Table
               head={["Metodo", "Esempio", "Quando usarlo"]}
               rows={[
-                [<Code key="a">Authorization</Code>, <Code key="b">Bearer eidx_live_…</Code>, "Sempre, e' il metodo consigliato."],
-                [<Code key="c">?key=</Code>, <Code key="d">…/series?format=csv&key=eidx_live_…</Code>, "Solo per CSV in strumenti che non permettono header (IMPORTDATA, Power Query)."],
+                [<Code key="a">Authorization</Code>, <Code key="b">Bearer eidx_live_…</Code>, "Sempre: e' il metodo consigliato."],
+                [<Code key="c">?key=</Code>, <Code key="d">…/pun/today?key=eidx_live_…</Code>, "Sconsigliato. Resta accettato per gli strumenti che non permettono header, ma crea una copia separata in cache per ogni chiave e la chiave resta visibile nell'URL."],
               ]}
             />
+            <p>
+              Un token <Code>Bearer</Code> che non inizia con <Code>eidx_live_</Code> viene ignorato e la richiesta
+              vale come anonima, con i limiti del piano Open.
+            </p>
+            <p>
+              La chiave Developer e&apos; legata al dominio che indichi nella richiesta. Le chiamate dal browser con la
+              chiave devono arrivare da quel dominio o da un suo sottodominio (header <Code>Origin</Code>);{" "}
+              <Code>localhost</Code> e <Code>127.0.0.1</Code> sono ammessi per lo sviluppo. Un{" "}
+              <Code>Origin: null</Code> (iframe sandbox, file locali) con la chiave viene respinto. Le chiamate dal
+              tuo server, senza <Code>Origin</Code>, sono sempre ammesse.
+            </p>
+            <Table
+              head={["HTTP", "error", "Quando"]}
+              rows={[
+                ["401", "invalid_key", "Chiave sconosciuta o revocata."],
+                ["403", "origin_not_allowed", "Chiamata dal browser con un Origin diverso dal dominio della chiave."],
+              ].map(([a, b, c]) => [<Code key="h">{a}</Code>, <Code key="e">{b}</Code>, c])}
+            />
             <Callout kind="warn">
-              La chiave e&apos; personale: non inserirla nel codice JavaScript di pagine pubbliche. Per mostrare dati in
-              un sito usa gli endpoint Open, oppure chiama l&apos;API dal tuo server. Se una chiave e&apos; stata
-              esposta, scrivi a <a className="underline" href={`mailto:${API_CONTACT_EMAIL}`}>{API_CONTACT_EMAIL}</a> e la
-              revochiamo.
+              Nel JavaScript di una pagina pubblica la chiave e&apos; leggibile da chiunque: il vincolo sul dominio ne
+              limita l&apos;uso dai browser, non dai server. Per mostrare dati in un sito bastano gli endpoint Open
+              senza chiave, oppure il <a href="#widget" className="underline">widget</a>. Se una chiave e&apos; stata
+              esposta, scrivi a <a className="underline" href={`mailto:${API_CONTACT_EMAIL}`}>{API_CONTACT_EMAIL}</a> e
+              la revochiamo: l&apos;API la rifiuta entro circa un minuto.
             </Callout>
             <p>
-              Una chiave usata su un endpoint di un piano superiore riceve <Code>403 tier_required</Code>, con il piano
-              necessario nel campo <Code>required_tier</Code>.
+              Quando saranno attivi, gli endpoint dei piani superiori risponderanno <Code>403 tier_required</Code> a
+              una chiave di piano inferiore, con il piano necessario nel campo <Code>required_tier</Code>.
             </p>
           </DocSection>
 
@@ -216,60 +238,101 @@ export default function ApiDocsPage() {
                 return [<TierBadge key={id} tier={id} />, t.rateLimit, t.quota, t.history];
               })}
             />
-            <p>Ogni risposta include lo stato dei limiti:</p>
-            <CodeBlock
-              code={`X-RateLimit-Limit: 600\nX-RateLimit-Remaining: 587\nX-RateLimit-Reset: 1790502000\nX-Quota-Remaining: 94210`}
-              title="header di risposta"
+            <p>
+              Senza chiave il limite vale per indirizzo IP; con una chiave attiva vale per chiave. Oggi si applica in
+              automatico il limite al minuto: la quota mensile e&apos; il riferimento d&apos;uso del piano e non
+              blocca le richieste.
+            </p>
+            <ul className="list-disc space-y-1.5 pl-5">
+              <li>
+                Le chiamate si contano su finestre di 5 minuti, comprese quelle servite dalla cache e quelle respinte.
+                Chi in 5 minuti fa piu&apos; di 5 volte il limite al minuto (300 richieste senza chiave, 600 con
+                Developer) riceve <Code>429 rate_limited</Code> con <Code>Retry-After: 900</Code> per 15 minuti; se
+                continua a chiamare durante il blocco, il blocco si rinnova.
+              </li>
+              <li>
+                Il conteggio e&apos; asincrono e il blocco scatta entro qualche minuto: il limite e&apos; morbido,
+                quindi qualche richiesta oltre la soglia puo&apos; passare. Non contare su questo margine.
+              </li>
+              <li>
+                Attivazioni, revoche e declassamenti delle chiavi sono riconosciuti entro circa un minuto.
+              </li>
+            </ul>
+            <p>Header di risposta:</p>
+            <CodeBlock code={`X-RateLimit-Limit: 120\nX-EIDX-Key-Status: active`} title="header di risposta" />
+            <Table
+              head={["Header", "Contenuto"]}
+              rows={[
+                ["X-RateLimit-Limit", "Limite al minuto applicato alla richiesta: quello del piano con una chiave attiva, 60 altrimenti."],
+                ["X-EIDX-Key-Status", "Solo con chiave: active, oppure downgraded se la chiave e' stata declassata."],
+                ["X-EIDX-Notice", "attribution-missing quando la chiave e' declassata perche' manca il link di attribuzione (vedi Licenza)."],
+                ["Retry-After", "Solo sulle risposte 429: secondi da attendere."],
+              ].map(([a, b]) => [<Code key="h">{a}</Code>, b])}
             />
             <p>
-              Oltre il limite la risposta e&apos; <Code>429 rate_limited</Code> con l&apos;header{" "}
-              <Code>Retry-After</Code> in secondi. Riprova dopo quel tempo con un backoff esponenziale. I dati cambiano
-              al massimo qualche volta al giorno: se interroghi lo stesso endpoint piu&apos; di una volta ogni 15
-              minuti, stai solo consumando quota.
+              Non c&apos;e&apos; un header con le richieste rimanenti, perche&apos; il conteggio non e&apos; in tempo
+              reale. Dopo un 429 riprova dopo il tempo indicato, con un backoff esponenziale. I dati cambiano al
+              massimo qualche volta al giorno: interrogare lo stesso endpoint piu&apos; di una volta ogni 15 minuti
+              non porta valori nuovi.
             </p>
           </DocSection>
 
           <DocSection id="errori" title="Errori">
-            <p>Gli errori usano i codici HTTP standard e un corpo JSON sempre uguale:</p>
+            <p>
+              Gli errori dell&apos;API usano i codici HTTP standard e un corpo JSON con <Code>error</Code> (codice
+              leggibile) e <Code>message</Code>. Alcuni errori aggiungono <Code>param</Code> (il parametro non
+              valido), <Code>attribution</Code> o <Code>required_tier</Code>.
+            </p>
             <CodeBlock
               json
               code={JSON.stringify(
                 {
-                  error: "tier_required",
-                  message: "Questo endpoint richiede il piano API o superiore.",
-                  required_tier: "api",
-                  docs: `${API_DOCS_URL}#limiti`,
+                  error: "invalid_key",
+                  message: "Chiave API non valida o revocata.",
+                  attribution: "Energy Index — https://energyindex.it",
                 },
                 null,
                 2,
               )}
-              title="403 Forbidden"
+              title="401 Unauthorized"
             />
             <Table
               head={["HTTP", "error", "Significato"]}
               rows={[
                 ["400", "invalid_parameter", "Parametro mancante o non valido. Il campo param indica quale."],
-                ["401", "missing_key / invalid_key", "Chiave assente, errata o revocata."],
-                ["403", "tier_required", "L'endpoint o l'intervallo richiesto non e' incluso nel tuo piano."],
-                ["404", "not_found", "Endpoint o risorsa inesistente."],
-                ["429", "rate_limited / quota_exceeded", "Limite al minuto o quota mensile superati."],
-                ["500", "internal_error", "Errore nostro. Riprova; se persiste, scrivici con l'header X-Request-Id."],
+                ["401", "invalid_key", "Chiave sconosciuta o revocata."],
+                ["403", "origin_not_allowed", "Chiamata dal browser da un dominio diverso da quello della chiave."],
+                ["403", "tier_required", "Endpoint dei piani superiori, quando saranno attivi: l'endpoint non e' incluso nel tuo piano."],
+                ["429", "rate_limited", "Limite di richieste superato: attendi i secondi indicati in Retry-After."],
                 ["503", "no_data", "La fonte non ha ancora pubblicato il dato (es. PUN richiesto prima dell'esito del MGP)."],
               ].map(([a, b, c]) => [<Code key="h">{a}</Code>, <Code key="e">{b}</Code>, c])}
             />
+            <p>
+              Un path inesistente o un errore imprevisto del server possono rispondere 404 o 500 senza corpo JSON.
+              Controlla sempre il codice HTTP prima di leggere la risposta; se un 500 persiste, scrivici indicando URL
+              e ora della richiesta.
+            </p>
           </DocSection>
 
           <DocSection id="cache" title="Cache e CORS">
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
-                Le risposte sono servite da CDN con <Code>Cache-Control: public, max-age=900, stale-while-revalidate=3600</Code>:
-                un nuovo valore compare al massimo 15 minuti dopo la pubblicazione della fonte.
+                Le risposte sono servite da CDN: 15 minuti per PUN, PSV e <Code>/today</Code>, 6 ore per{" "}
+                <Code>/energy-index</Code>. Con <Code>stale-while-revalidate</Code>{" "}la prima richiesta dopo la scadenza
+                puo&apos; ricevere ancora il valore precedente, mentre la cache si aggiorna.
               </li>
               <li>
-                Gli endpoint Open hanno <Code>Access-Control-Allow-Origin: *</Code> e rispondono a <Code>OPTIONS</Code>:
-                si possono chiamare direttamente da JavaScript nel browser.
+                Gli endpoint hanno <Code>Access-Control-Allow-Origin: *</Code> e rispondono a <Code>OPTIONS</Code>:
+                si possono chiamare direttamente da JavaScript nel browser. Header ammessi:{" "}
+                <Code>Content-Type</Code> e <Code>Authorization</Code>. Header leggibili dal tuo script:{" "}
+                <Code>X-RateLimit-Limit</Code>, <Code>X-EIDX-Key-Status</Code>, <Code>X-EIDX-Notice</Code> e{" "}
+                <Code>Retry-After</Code>.
               </li>
-              <li>Gli endpoint con chiave vanno chiamati lato server: il browser esporrebbe la chiave.</li>
+              <li>
+                Dal browser la chiave funziona solo dal suo dominio (vedi{" "}
+                <a href="#autenticazione" className="underline">Autenticazione</a>). Per i piani a pagamento chiama
+                l&apos;API dal tuo server.
+              </li>
             </ul>
           </DocSection>
 
@@ -299,7 +362,7 @@ export default function ApiDocsPage() {
             />
             <p>
               Ogni chiamata ha l&apos;header <Code>X-EIDX-Signature</Code>: HMAC-SHA256 del corpo grezzo con il{" "}
-              <Code>signing_secret</Code> dell&apos;alert. Verificalo prima di fidarti del contenuto:
+              <Code>signing_secret</Code>{" "}dell&apos;alert. Verificalo prima di fidarti del contenuto:
             </p>
             <CodeBlock
               title="verifica.js"
@@ -309,6 +372,38 @@ export default function ApiDocsPage() {
               Rispondi con un 2xx entro 10 secondi. In caso di errore ritentiamo 5 volte in 24 ore con backoff
               esponenziale; dopo 20 fallimenti consecutivi l&apos;alert viene sospeso e ti avvisiamo via email.
             </p>
+          </DocSection>
+
+          <DocSection id="widget" title="Widget">
+            <p>
+              Per mostrare i dati in un sito senza programmare c&apos;e&apos; il widget: nel{" "}
+              <Link href="/it/api/widget" className="font-semibold text-violet-700 underline dark:text-violet-400">
+                configuratore
+              </Link>{" "}
+              scegli variante e tema, poi incolli lo snippet nella pagina. Non serve una chiave.
+            </p>
+            <CodeBlock code={buildWidgetSnippet("indice-luce", "light")} title="index.html" />
+            <Table
+              head={["Variante", "Dati", "Endpoint"]}
+              rows={[
+                [<span key="v" className="whitespace-nowrap"><Code>indice-luce</Code></span>, "Energy Index delle offerte luce, fisse e variabili", <Code key="e">/energy-index?commodity=luce</Code>],
+                [<span key="v" className="whitespace-nowrap"><Code>indice-gas</Code></span>, "Energy Index delle offerte gas, fisse e variabili", <Code key="e">/energy-index?commodity=gas</Code>],
+                [<Code key="v">pun</Code>, "PUN, media del giorno (GME)", <Code key="e">/pun/today</Code>],
+                [<Code key="v">psv</Code>, "PSV del giorno gas (GME)", <Code key="e">/psv/today</Code>],
+              ]}
+            />
+            <ul className="list-disc space-y-1.5 pl-5">
+              <li>
+                Lo snippet contiene gia&apos; nell&apos;HTML il link a Energy Index nella riga &quot;Fonte&quot;. Puoi
+                cambiarne lo stile, ma deve restare visibile: se il link manca o e&apos; nascosto, il widget si
+                disattiva e non mostra i dati.
+              </li>
+              <li>
+                Nelle varianti <Code>pun</Code> e <Code>psv</Code>{" "}la riga e&apos; &quot;Fonte: Gestore dei Mercati
+                Energetici S.p.A. — via Energy Index&quot; e non va rimossa. Le condizioni del GME restano valide anche
+                nel widget (vedi <a href="#licenza" className="underline">Attribuzione e licenza</a>).
+              </li>
+            </ul>
           </DocSection>
 
           <DocSection id="licenza" title="Attribuzione e licenza">
@@ -342,6 +437,26 @@ export default function ApiDocsPage() {
                 { id: "txt", label: "Testo", code: "Fonte: Energy Index (https://energyindex.it)" },
               ]}
             />
+            <h3 className="pt-2 text-lg font-bold">Verifica del link per le chiavi Developer</h3>
+            <p>
+              Quando chiedi una chiave Developer indichi la pagina in cui mostri i dati. Ogni lunedi&apos;
+              controlliamo che quella pagina contenga un link a energyindex.it. Vale qualsiasi <Code>rel</Code>,
+              anche <Code>nofollow</Code> o <Code>sponsored</Code>: chiediamo un link visibile, non un link che
+              trasmetta ranking.
+            </p>
+            <ul className="list-disc space-y-1.5 pl-5">
+              <li>
+                Dopo 2 verifiche fallite di seguito la chiave viene declassata ai limiti del piano Open e ti avvisiamo
+                via email. Le risposte portano <Code>X-EIDX-Key-Status: downgraded</Code> e{" "}
+                <Code>X-EIDX-Notice: attribution-missing</Code>.
+              </li>
+              <li>Quando il link torna, la prima verifica successiva riattiva la chiave in automatico.</li>
+              <li>
+                In ogni caso conta anche il widget: se negli ultimi 7 giorni e&apos; stato caricato dal tuo dominio da
+                almeno 2 visitatori diversi (contati per indirizzo IP e giorno), il link si considera presente. Vale anche per le pagine che mostrano il
+                link solo via JavaScript, che la verifica non vede nell&apos;HTML.
+              </li>
+            </ul>
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
                 Dal piano API l&apos;attribuzione a Energy Index e&apos; facoltativa ed Enterprise include l&apos;uso
@@ -355,13 +470,24 @@ export default function ApiDocsPage() {
           <DocSection id="changelog" title="Changelog">
             <ol className="space-y-3 border-l-2 pl-5">
               <li>
+                <span className="font-mono text-xs text-muted-foreground">2026-10-31</span>
+                <p>
+                  <Code>/energy-index</Code> attivo. Chiavi Developer self-service, legate al dominio, con verifica
+                  settimanale del link di attribuzione. Limiti al minuto applicati (<Code>429</Code> con{" "}
+                  <Code>Retry-After</Code>), nuovi header <Code>X-EIDX-Key-Status</Code> e{" "}
+                  <Code>X-EIDX-Notice</Code>, errori <Code>invalid_key</Code> e <Code>origin_not_allowed</Code>.
+                  Widget embeddabile con configuratore. Tolti dagli esempi gli header <Code>X-RateLimit-Remaining</Code>,{" "}
+                  <Code>X-RateLimit-Reset</Code> e <Code>X-Quota-Remaining</Code>, che l&apos;API non ha mai inviato.
+                </p>
+              </li>
+              <li>
                 <span className="font-mono text-xs text-muted-foreground">2026-10-30</span>
                 <p>
                   <Code>/pun/today</Code>: nuovi campi <Code>daily_average</Code> (media del giorno, PUN Index GME),{" "}
                   <Code>hour</Code> e <Code>granularity</Code>. <Code>/psv/today</Code>: <Code>date</Code> ora indica
                   il giorno gas di consegna (prima era la data UTC, un giorno indietro); nuovi campi{" "}
                   <Code>gas_day</Code>, <Code>session_date</Code> e <Code>product</Code>. Sui dati GME,{" "}
-                  <Code>attribution</Code> cita la fonte e <Code>source_terms_url</Code> rimanda alle condizioni
+                  <Code>attribution</Code> cita la fonte e <Code>source_terms_url</Code>{" "}rimanda alle condizioni
                   d&apos;uso. Licenza riscritta per distinguere le elaborazioni Energy Index dai dati delle fonti.
                 </p>
               </li>

@@ -48,6 +48,12 @@ describe("traffic log record", () => {
     expect(apiKeyPrefix(new Headers(), new URLSearchParams())).toBeNull();
   });
 
+  it("non salva token che non sono chiavi Energy Index", () => {
+    const h = new Headers({ authorization: "Bearer ghp_altroservizio1234567890" });
+    expect(apiKeyPrefix(h, new URLSearchParams())).toBeNull();
+    expect(apiKeyPrefix(new Headers(), new URLSearchParams("key=qualcosa-di-lungo-123"))).toBeNull();
+  });
+
   it("legge il paese da x-country o da x-nf-geo", () => {
     expect(clientCountry(new Headers({ "x-country": "it" }))).toBe("IT");
     const geo = btoa(JSON.stringify({ country: { code: "de", name: "Germany" } }));
@@ -92,5 +98,16 @@ describe("traffic log record", () => {
       api_key_prefix: null,
     });
     expect(r.ip_hash).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("override del prefisso: null toglie la chiave dal record (chiave non valida)", async () => {
+    const request = {
+      method: "GET",
+      headers: new Headers({ authorization: "Bearer eidx_live_abcd1234" }),
+      nextUrl: { pathname: "/api/v1/pun/today", searchParams: new URLSearchParams() },
+    };
+    expect((await buildRecord("api", request, "salt")).api_key_prefix).toBe("eidx_live_abcd");
+    expect((await buildRecord("api", request, "salt", { apiKeyPrefix: null })).api_key_prefix).toBeNull();
+    expect((await buildRecord("api", request, "salt", {})).api_key_prefix).toBe("eidx_live_abcd");
   });
 });

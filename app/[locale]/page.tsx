@@ -713,7 +713,7 @@ export default async function HomeIt() {
           </table>
         </div>
         <p className="text-xs text-muted-foreground italic max-w-3xl">
-          Fonte: GME (Gestore dei Mercati Energetici) · Aggiornato giornalmente
+          Fonte: Gestore dei Mercati Energetici S.p.A. (GME) · Aggiornato giornalmente
           dopo la chiusura della sessione MGP.
         </p>
       </section>

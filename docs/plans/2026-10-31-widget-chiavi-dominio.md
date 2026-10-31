@@ -25,7 +25,7 @@ Il middleware esistente (`middleware.ts`, ramo `/api/v1`) legge chiave e lista "
 - **Tabelle admin.** `traffic_log` e `leads` sono definite in `supabase/migrations/20260927000001_admin_traffic_leads.sql`. `traffic_log.api_key_prefix` contiene i primi 14 caratteri della chiave (`lib/traffic/log.ts: apiKeyPrefix`), quindi `eidx_live_` più 4 caratteri.
 - **Pattern del log.** Il middleware non usa supabase-js: fa fetch a PostgREST con la service role (`lib/traffic/log.ts: writeRecord`). Va seguito lo stesso schema, perché il middleware gira su edge.
 - **Email.** Resend, come in `app/actions/request-api-key.ts` (`RESEND_API_KEY`, `RESEND_SENDER_EMAIL`, fallback mailto).
-- **Licenza GME.** Le varianti `pun` e `psv` del widget devono riportare la riga "Dati: Gestore dei Mercati Energetici S.p.A." nell'HTML statico (vedi la memoria `gme-licenza-dati`).
+- **Licenza GME.** Le varianti `pun` e `psv` del widget devono riportare nell'HTML statico la riga "Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index" (dicitura richiesta dalle condizioni GME, uguale al campo `attribution` delle API; mai "Dati: ...") (vedi la memoria `gme-licenza-dati`).
 - **Commit.** Ogni commit termina con `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Tutte le stringhe visibili all'utente sono in italiano.
 - **Test.** `npx vitest run` (353 test verdi prima di iniziare), `npx tsc --noEmit -p .`, `npx eslint <file>`.
 
@@ -1160,6 +1160,10 @@ describe("validateDeveloperRequest", () => {
     expect(validateDeveloperRequest({ ...ok, dominio: "localhost" }).ok).toBe(false);
     expect(validateDeveloperRequest({ ...ok, attributionUrl: "ftp://esempio.it" }).ok).toBe(false);
   });
+  it("rifiuta pagine su loopback anche se il dominio e' valido", () => {
+    expect(validateDeveloperRequest({ ...ok, attributionUrl: "http://127.0.0.1/x" }).ok).toBe(false);
+    expect(validateDeveloperRequest({ ...ok, attributionUrl: "http://localhost:3000/x" }).ok).toBe(false);
+  });
 });
 ```
 
@@ -1171,7 +1175,7 @@ Run. Expected: FAIL.
 import "server-only";
 import { Resend } from "resend";
 import { createServiceClient } from "@/lib/supabase/service";
-import { generateApiKey, keyDisplayPrefix, normalizeDomain, originAllowed, sha256Hex } from "./keys";
+import { generateApiKey, hostMatchesDomain, keyDisplayPrefix, normalizeDomain, sha256Hex } from "./keys";
 import { hasEnergyIndexLink } from "./link-check";
 
 export interface DeveloperRequest {
@@ -1193,7 +1197,9 @@ export function validateDeveloperRequest(d: DeveloperRequest): { ok: true; domai
     return { ok: false, error: "Indirizzo della pagina non valido" };
   }
   if (page.protocol !== "https:" && page.protocol !== "http:") return { ok: false, error: "La pagina deve essere http o https" };
-  if (!originAllowed(page.host, domain) || page.hostname === "localhost") {
+  // hostMatchesDomain, non originAllowed: niente eccezione localhost/127.0.0.1,
+  // altrimenti il link checker scaricherebbe indirizzi di loopback (SSRF).
+  if (!hostMatchesDomain(page.host, domain)) {
     return { ok: false, error: `La pagina deve stare su ${domain}` };
   }
   return { ok: true, domain };
@@ -1516,12 +1522,16 @@ describe("readModel", () => {
     const m = readModel("pun", { daily_average: { date: "2026-10-30", value_native: 274.04, unit_native: "€/MWh" } });
     expect(m).toEqual({ title: "PUN medio", rows: [{ label: "30/10/2026", value: "274,04 €/MWh" }] });
   });
-  it("indice luce: mediana fisso e variabile", () => {
+  it("indice luce: fisso come prezzo, variabile come spread sull'indice", () => {
     const m = readModel("indice-luce", { indices: [
-      { slug: "mercato-libero-luce-fissa", median: 0.129, unit: "€/kWh", date: "2026-10-30" },
-      { slug: "mercato-libero-luce-variabile", median: 0.137, unit: "€/kWh", date: "2026-10-30" },
+      { slug: "mercato-libero-luce-variabile", median: 0.055, unit: "€/kWh", date: "2026-10-30", basis: "spread", reference: "PUN" },
+      { slug: "mercato-libero-luce-fissa", median: 0.3495, unit: "€/kWh", date: "2026-10-30", basis: "prezzo" },
     ] });
-    expect(m?.rows.map((r) => r.label)).toEqual(["Prezzo fisso", "Prezzo variabile"]);
+    expect(m?.rows).toEqual([
+      { label: "Prezzo fisso", value: "0,350 €/kWh" },
+      { label: "Prezzo variabile", value: "PUN + 0,055 €/kWh" },
+    ]);
+    expect(m?.date).toBe("30/10/2026");
   });
   it("risposta inattesa: null", () => {
     expect(readModel("pun", {})).toBeNull();
@@ -1578,6 +1588,8 @@ const itDate = (iso: string) => iso.split("-").reverse().join("/");
 
 export interface WidgetModel {
   title: string;
+  /** Data del dato (gg/mm/aaaa), mostrata nel widget: gli indici offerte possono essere di qualche giorno fa. */
+  date?: string;
   rows: { label: string; value: string }[];
 }
 
@@ -1594,12 +1606,17 @@ export function readModel(variant: WidgetVariant, body: Json): WidgetModel | nul
     if (typeof v !== "number" || typeof day !== "string") return null;
     return { title: "PSV giorno gas", rows: [{ label: itDate(day), value: formatEuro(v, String(body.unit_native ?? "€/MWh"), 2) }] };
   }
-  const indices = body.indices as { slug: string; median: number; unit: string }[] | undefined;
+  // Per le variabili le statistiche sono lo spread sull'indice (PUN/PSV), non un prezzo.
+  const indices = body.indices as { slug: string; median: number; unit: string; date: string; basis?: string; reference?: string }[] | undefined;
   if (!Array.isArray(indices) || indices.length === 0) return null;
-  const rows = indices
-    .sort((a, b) => (a.slug.endsWith("fissa") ? -1 : 1) - (b.slug.endsWith("fissa") ? -1 : 1))
-    .map((i) => ({ label: i.slug.endsWith("fissa") ? "Prezzo fisso" : "Prezzo variabile", value: formatEuro(i.median, i.unit, 3) }));
-  return { title: variant === "indice-luce" ? "Offerte luce · mediana" : "Offerte gas · mediana", rows };
+  const rows = [...indices]
+    .sort((a, b) => Number(b.basis !== "spread") - Number(a.basis !== "spread"))
+    .map((i) =>
+      i.basis === "spread"
+        ? { label: "Prezzo variabile", value: `${i.reference ?? "indice"} + ${formatEuro(i.median, i.unit, 3)}` }
+        : { label: "Prezzo fisso", value: formatEuro(i.median, i.unit, 3) },
+    );
+  return { title: variant === "indice-luce" ? "Offerte luce · mediana" : "Offerte gas · mediana", date: itDate(indices[0].date), rows };
 }
 ```
 
@@ -1668,7 +1685,7 @@ async function mount(root: HTMLElement) {
     const res = await fetch(`${BASE}${def.endpoint}${sep}src=widget`);
     const model = res.ok ? readModel(variant, await res.json()) : null;
     if (!model) throw new Error("no data");
-    paint(`<p class="t">${esc(model.title)}</p>${model.rows.map((r) => `<div class="r"><span>${esc(r.label)}</span><span class="v">${esc(r.value)}</span></div>`).join("")}`);
+    paint(`<p class="t">${esc(model.title)}</p>${model.rows.map((r) => `<div class="r"><span>${esc(r.label)}</span><span class="v">${esc(r.value)}</span></div>`).join("")}${model.date ? `<p class="e">Dato del ${esc(model.date)}</p>` : ""}`);
   } catch {
     paint(`<p class="e">Dato momentaneamente non disponibile.</p>`);
   }
@@ -1678,8 +1695,11 @@ function init() {
   document.querySelectorAll<HTMLElement>(".eidx-widget").forEach((el) => { void mount(el); });
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-else init();
+// Dopo "load": la verifica di visibilita' dell'attribuzione deve vedere i fogli
+// di stile della pagina applicati, non il layout senza stili di DOMContentLoaded.
+const start = () => requestAnimationFrame(init);
+if (document.readyState === "complete") start();
+else window.addEventListener("load", start, { once: true });
 ```
 
 **Step 2: Script di build**
@@ -1777,10 +1797,12 @@ import { WIDGET_VARIANTS, type WidgetVariant } from "./core";
 /** Snippet da incollare. I link stanno nell'HTML statico: Google li vede anche se lo script non gira. */
 export function buildSnippet(variant: WidgetVariant, theme: "light" | "dark"): string {
   const def = WIDGET_VARIANTS[variant];
-  const gme = def.gme ? `\n  <p class="eidx-src">Dati: Gestore dei Mercati Energetici S.p.A.</p>` : "";
+  const source = def.gme
+    ? `Fonte: Gestore dei Mercati Energetici S.p.A. — via <a href="https://energyindex.it">Energy Index</a>`
+    : `Fonte: <a href="https://energyindex.it">Energy Index</a>`;
   return `<div class="eidx-widget" data-eidx="${variant}" data-theme="${theme}">
   <a href="${def.page}?ref=widget">${def.label}</a>
-  <p class="eidx-src">Fonte: <a href="https://energyindex.it">Energy Index</a></p>${gme}
+  <p class="eidx-src">${source}</p>
 </div>
 <script src="https://energyindex.it/widget.js" async></script>`;
 }
@@ -1844,6 +1866,7 @@ git commit -m "feat(admin): scheda Integrazioni con chiavi, domini widget e lead
 - Modify: `app/api/v1/route.ts`: `rate_limit` coerente ("60/min per IP; con chiave il limite del piano; quote calcolate su finestre di 5 minuti"), `auth: "Authorization: Bearer eidx_live_…"`, voce `/api/v1/energy-index` e `widget: "https://energyindex.it/it/api/widget"`.
 - Modify: `app/llms.txt/route.ts`: riga sul widget e su `/api/v1/energy-index`.
 - Modify: `components/api/ApiKeyRequestForm.tsx`: il testo "entro 2 giorni lavorativi" resta solo per i piani manuali (fatto nel Task 9, ricontrolla).
+- Modify: `app/[locale]/api/page.tsx`: il pannello accanto al form (sezione `#chiave`) dice ancora "Risposta entro 2 giorni lavorativi" / "ti contattiamo". Per Developer ora la chiave è immediata dopo la conferma email: riscrivi il pannello distinguendo Developer (self-service, link di attribuzione verificato ogni settimana) dai piani a pagamento (su richiesta).
 
 **Step 1:** Applica le modifiche.
 

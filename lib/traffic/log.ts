@@ -7,6 +7,7 @@
  * la richiesta originale non ne risente: il log si perde e basta.
  */
 
+import { isEidxKey } from "../api-keys/keys";
 import { classifyAgent, type AgentKind } from "./classify";
 
 export interface TrafficRecord {
@@ -57,17 +58,31 @@ export function clientCountry(headers: Headers): string | null {
   }
 }
 
-/** Primi 14 caratteri della chiave (es. "eidx_live_ab12"): identifica senza esporre. */
-export function apiKeyPrefix(headers: Headers, searchParams: URLSearchParams): string | null {
+/** Chiave API completa: header Bearer, poi ?key= (sconsigliato: spezza la cache CDN). */
+export function extractApiKey(headers: Headers, searchParams: URLSearchParams): string | null {
   const bearer = headers.get("authorization")?.match(/^Bearer\s+(\S+)/i)?.[1];
-  const key = bearer ?? searchParams.get("key");
-  return key ? key.slice(0, 14) : null;
+  return bearer ?? searchParams.get("key");
 }
 
-/** Toglie dalla querystring la chiave API, che non deve finire nei log. */
+/**
+ * Primi 14 caratteri della chiave (es. "eidx_live_ab12"): identifica senza
+ * esporre. Un Bearer di un altro servizio non e' una nostra chiave: non si
+ * salva, come nel middleware che lo tratta da richiesta anonima.
+ */
+export function apiKeyPrefix(headers: Headers, searchParams: URLSearchParams): string | null {
+  const key = extractApiKey(headers, searchParams);
+  return key && isEidxKey(key) ? key.slice(0, 14) : null;
+}
+
+/**
+ * Toglie dalla querystring la chiave API e il token di verifica (t), che non
+ * devono finire nei log. Il middleware sposta gia' t in un cookie prima del
+ * log: questa e' una seconda difesa.
+ */
 export function redactQuery(searchParams: URLSearchParams): string | null {
   const copy = new URLSearchParams(searchParams);
   if (copy.has("key")) copy.set("key", "REDACTED");
+  copy.delete("t");
   const s = copy.toString();
   return s ? s.slice(0, 500) : null;
 }
@@ -85,10 +100,20 @@ export async function hashIp(ip: string | null, salt: string, now = new Date()):
   return Array.from(new Uint8Array(digest).slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export interface RecordOverrides {
+  /**
+   * Prefisso da salvare al posto di quello letto dalla richiesta. null per
+   * una chiave respinta (401): chi conosce solo il prefisso di una chiave
+   * altrui non deve consumarne la quota, la richiesta conta per il suo IP.
+   */
+  apiKeyPrefix?: string | null;
+}
+
 export async function buildRecord(
   kind: "api" | "bot",
   request: { method: string; headers: Headers; nextUrl: { pathname: string; searchParams: URLSearchParams } },
   salt: string,
+  overrides: RecordOverrides = {},
 ): Promise<TrafficRecord> {
   const { headers, nextUrl } = request;
   const ua = headers.get("user-agent");
@@ -105,7 +130,8 @@ export async function buildRecord(
     agent_kind: agentKind,
     country: clientCountry(headers),
     ip_hash: await hashIp(clientIp(headers), salt),
-    api_key_prefix: apiKeyPrefix(headers, nextUrl.searchParams),
+    api_key_prefix:
+      overrides.apiKeyPrefix !== undefined ? overrides.apiKeyPrefix : apiKeyPrefix(headers, nextUrl.searchParams),
   };
 }
 

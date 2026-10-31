@@ -1,18 +1,24 @@
 import Link from "next/link";
-import { Activity, Bot, Database, Inbox, LayoutDashboard, LogOut } from "lucide-react";
+import { Activity, Bot, Database, Inbox, KeyRound, LayoutDashboard, LogOut } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
 import {
   assetFreshness,
   cronStatus,
   etlStatus,
   fillDays,
+  KEY_USAGE_DAYS,
+  keylessApiDomains,
+  listApiKeys,
   listLeads,
   newApiConsumers,
   sumLast,
   trafficDaily,
   trafficTop,
+  widgetDomains,
   type AssetFreshness,
+  type DomainRow,
 } from "@/lib/admin/queries";
+import { keyStatusBadge, linkBadge, type Badge } from "@/lib/admin/integrations";
 import { AGENT_KIND_LABELS } from "@/lib/traffic/classify";
 import { adminLogout } from "@/app/actions/admin-auth";
 import {
@@ -27,6 +33,7 @@ import {
   fmtInt,
   pctDelta,
 } from "@/components/admin/charts";
+import { ApiKeyActions } from "@/components/admin/ApiKeyActions";
 import { LeadStatusForm } from "@/components/admin/LeadStatusForm";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +44,7 @@ const TABS = [
   { id: "api", label: "API", icon: Activity },
   { id: "bot", label: "Bot e AI", icon: Bot },
   { id: "lead", label: "Lead", icon: Inbox },
+  { id: "integrazioni", label: "Integrazioni", icon: KeyRound },
   { id: "dati", label: "Salute dati", icon: Database },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
@@ -105,6 +113,7 @@ export default async function AdminPage({
       {tab === "api" && <ApiTab days={days} />}
       {tab === "bot" && <BotTab days={days} />}
       {tab === "lead" && <LeadTab />}
+      {tab === "integrazioni" && <IntegrationsTab days={days} />}
       {tab === "dati" && <DataTab />}
     </div>
   );
@@ -316,6 +325,162 @@ async function LeadTab() {
   );
 }
 
+// ============================================================ INTEGRAZIONI
+
+function StatusPill({ badge }: { badge: Badge }) {
+  return (
+    <span className={cn("inline-block w-fit whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold", TONE[badge.tone])}>
+      {TONE_ICON[badge.tone]} {badge.label}
+    </span>
+  );
+}
+
+/** Solo URL http(s) diventano link: il valore viene da un form pubblico. */
+const safeHref = (u: string) => (/^https?:\/\//i.test(u) ? u : undefined);
+
+async function IntegrationsTab({ days }: { days: number }) {
+  const [keys, widget, keyless] = await Promise.all([listApiKeys(), widgetDomains(days), keylessApiDomains(days)]);
+
+  return (
+    <div className="space-y-4">
+      <Panel
+        title="Chiavi API"
+        subtitle={`Chiavi self-service legate a un dominio · chiamate degli ultimi ${KEY_USAGE_DAYS} giorni`}
+      >
+        {keys.data === null ? (
+          <ErrorNote message={keys.error} />
+        ) : keys.data.keys.length === 0 ? (
+          <Empty>Ancora nessuna chiave. Si richiedono dal form di /it/api.</Empty>
+        ) : (
+          <div className="space-y-3">
+            {keys.data.usageError && <ErrorNote message={`Conteggio chiamate non disponibile. ${keys.data.usageError}`} />}
+            <div className="-mx-5 overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="p-3">Chiave</th>
+                    <th className="p-3">Chi</th>
+                    <th className="p-3">Dominio e attribuzione</th>
+                    <th className="p-3">Stato</th>
+                    <th className="p-3 text-right">Chiamate</th>
+                    <th className="w-48 p-3">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {keys.data.keys.map((k) => {
+                    const href = safeHref(k.attribution_url);
+                    return (
+                      <tr key={k.id} className="border-t align-top">
+                        <td className="p-3">
+                          <div className="font-mono text-xs font-semibold">{k.prefix ? `${k.prefix}…` : "—"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {k.plan} · creata {fmtDateTime(k.created_at)}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-semibold">{k.nome}</div>
+                          <a href={`mailto:${k.email}`} className="text-xs text-violet-700 underline dark:text-violet-400">
+                            {k.email}
+                          </a>
+                        </td>
+                        <td className="max-w-[260px] p-3">
+                          <div className="font-mono text-xs font-semibold">{k.domain}</div>
+                          {href ? (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                              className="block truncate text-xs text-violet-700 underline dark:text-violet-400"
+                              title={k.attribution_url}
+                            >
+                              {k.attribution_url}
+                            </a>
+                          ) : (
+                            <span className="block truncate text-xs text-muted-foreground">{k.attribution_url}</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusPill badge={keyStatusBadge(k.status)} />
+                            <StatusPill badge={linkBadge(k.link_ok, k.link_checked_at)} />
+                            <div className="text-[11px] text-muted-foreground">
+                              {k.link_checked_at ? `verificato ${fmtAgo(k.link_checked_at)}` : "verifica settimanale"}
+                              {k.link_failures > 0 && ` · ${k.link_failures} fallite di fila`}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 text-right tabular-nums">{k.calls_30d === null ? "—" : fmtInt(k.calls_30d)}</td>
+                        <td className="p-3">
+                          <ApiKeyActions
+                            id={k.id}
+                            domain={k.domain}
+                            canRecheck={k.status === "active" || k.status === "downgraded"}
+                            canRevoke={k.status !== "revoked"}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Panel>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Domini del widget" subtitle={`Siti che caricano widget.js · ultimi ${days} giorni`}>
+          <DomainTable result={widget} empty="Nessun sito ha ancora caricato il widget." />
+        </Panel>
+        <Panel
+          title="Siti che chiamano senza chiave"
+          subtitle={`Chiamate dal browser senza chiave e non dal widget: candidati a una chiave · ultimi ${days} giorni`}
+        >
+          <DomainTable result={keyless} empty="Nessun sito chiama le API senza chiave." />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function DomainTable({
+  result,
+  empty,
+}: {
+  result: { data: DomainRow[]; error: null } | { data: null; error: string };
+  empty: string;
+}) {
+  if (result.data === null) return <ErrorNote message={result.error} />;
+  if (result.data.length === 0) return <Empty>{empty}</Empty>;
+  return (
+    <div className="-mx-5 overflow-x-auto">
+      <table className="w-full min-w-[520px] text-sm">
+        <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="px-5 py-2">Sito</th>
+            <th className="px-2 py-2 text-right">Chiamate</th>
+            <th className="px-2 py-2 text-right">Visitatori</th>
+            <th className="px-5 py-2 text-right">Dal / ultima</th>
+          </tr>
+        </thead>
+        <tbody>
+          {result.data.map((d) => (
+            <tr key={d.origin_host} className="border-t">
+              <td className="max-w-[220px] truncate px-5 py-2 font-mono text-xs" title={d.origin_host}>
+                {d.origin_host}
+              </td>
+              <td className="px-2 py-2 text-right tabular-nums">{fmtInt(d.requests)}</td>
+              <td className="px-2 py-2 text-right tabular-nums">{fmtInt(d.uniques)}</td>
+              <td className="whitespace-nowrap px-5 py-2 text-right text-xs text-muted-foreground">
+                {fmtDateTime(d.first_seen)} · {fmtAgo(d.last_seen)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ============================================================ SALUTE DATI
 
 function freshness(a: AssetFreshness): { tone: "good" | "warn" | "bad"; label: string } {
@@ -331,8 +496,9 @@ const TONE = {
   good: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   warn: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
   bad: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  neutral: "bg-muted text-muted-foreground",
 };
-const TONE_ICON = { good: "●", warn: "▲", bad: "■" };
+const TONE_ICON = { good: "●", warn: "▲", bad: "■", neutral: "○" };
 
 async function DataTab() {
   const [fresh, etl, cron] = await Promise.all([assetFreshness(), etlStatus(), cronStatus()]);
