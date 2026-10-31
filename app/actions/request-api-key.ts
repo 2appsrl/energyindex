@@ -84,8 +84,9 @@ async function requestDeveloperKey(d: ApiKeyRequestData): Promise<ApiKeyRequestR
   if (!check.ok) return { ok: false, error: check.error };
 
   const res = await startDeveloperRequest(dev, check.domain);
-  // Lead solo per richieste vere: non per quelle respinte da limite o duplicato.
-  if (res.ok || res.retry) {
+  // Lead solo per richieste vere: non per quelle respinte da limite o
+  // duplicato, ne' durante un'ondata che ha fatto scattare il tetto globale.
+  if (res.ok || (res.retry && !res.capped)) {
     await saveLead({
       source: "api_key",
       nome: d.nome,

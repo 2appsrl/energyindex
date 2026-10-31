@@ -60,6 +60,13 @@ describe("requestApiKey", () => {
     expect(saveLead).toHaveBeenCalledTimes(2);
   });
 
+  it("tetto globale raggiunto: fallback manuale ma nessun lead", async () => {
+    startDeveloperRequest.mockResolvedValueOnce({ ok: false, error: "Servizio", retry: true, capped: true });
+    const r = await requestApiKey(dev);
+    expect(r).toMatchObject({ ok: false, fallbackMailto: expect.stringContaining("mailto:") });
+    expect(saveLead).not.toHaveBeenCalled();
+  });
+
   it("niente lead per limite o duplicato", async () => {
     startDeveloperRequest.mockResolvedValueOnce({ ok: false, error: "Troppe richieste per questo indirizzo" });
     const r = await requestApiKey(dev);

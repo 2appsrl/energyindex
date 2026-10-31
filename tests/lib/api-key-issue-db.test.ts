@@ -48,7 +48,7 @@ describe("startDeveloperRequest", () => {
     const { db, queries } = fakeSupabase([{ count: 30, error: null }]);
     createServiceClient.mockReturnValue(db);
     const r = await startDeveloperRequest(req, "esempio.it");
-    expect(r).toMatchObject({ ok: false, retry: true });
+    expect(r).toMatchObject({ ok: false, retry: true, capped: true });
     expect(queries).toHaveLength(1);
     expect(sendMock).not.toHaveBeenCalled();
   });
@@ -56,7 +56,9 @@ describe("startDeveloperRequest", () => {
   it("errore nel conteggio globale → servizio non disponibile", async () => {
     const { db } = fakeSupabase([{ count: null, error: { message: "relation does not exist" } }]);
     createServiceClient.mockReturnValue(db);
-    expect(await startDeveloperRequest(req, "esempio.it")).toMatchObject({ ok: false, retry: true });
+    const r = await startDeveloperRequest(req, "esempio.it");
+    expect(r).toMatchObject({ ok: false, retry: true });
+    expect(r).not.toHaveProperty("capped");
   });
 
   it("3 richieste per la stessa email nelle 24 ore → errore senza retry", async () => {

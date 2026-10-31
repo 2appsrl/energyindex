@@ -112,8 +112,12 @@ async function send(to: string, subject: string, text: string): Promise<boolean>
 
 export type StartResult =
   | { ok: true }
-  /** retry: errore del servizio (DB, email), non della richiesta: ha senso il fallback manuale. */
-  | { ok: false; error: string; retry?: boolean };
+  /**
+   * retry: errore del servizio (DB, email), non della richiesta: ha senso il
+   * fallback manuale. capped: tetto orario globale raggiunto (probabile
+   * ondata di bot), il lead non va salvato.
+   */
+  | { ok: false; error: string; retry?: boolean; capped?: true };
 
 /** Crea la richiesta pending e manda il link di verifica (valido 24 ore). */
 export async function startDeveloperRequest(d: DeveloperRequest, domain: string): Promise<StartResult> {
@@ -129,10 +133,13 @@ export async function startDeveloperRequest(d: DeveloperRequest, domain: string)
     .from("api_keys")
     .select("id", { count: "exact", head: true })
     .gte("created_at", new Date(now.getTime() - 3600_000).toISOString());
-  if (hourlyErr || (hourly ?? 0) >= MAX_REQUESTS_PER_HOUR) {
-    if (hourlyErr) console.error("[startDeveloperRequest] conteggio globale:", hourlyErr.message);
-    else console.warn("[startDeveloperRequest] tetto orario raggiunto");
+  if (hourlyErr) {
+    console.error("[startDeveloperRequest] conteggio globale:", hourlyErr.message);
     return { ok: false, error: UNAVAILABLE, retry: true };
+  }
+  if ((hourly ?? 0) >= MAX_REQUESTS_PER_HOUR) {
+    console.warn("[startDeveloperRequest] tetto orario raggiunto");
+    return { ok: false, error: UNAVAILABLE, retry: true, capped: true };
   }
 
   // Limite anti-abuso: poche richieste al giorno per indirizzo.

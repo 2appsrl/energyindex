@@ -69,10 +69,15 @@ export function apiKeyPrefix(headers: Headers, searchParams: URLSearchParams): s
   return key ? key.slice(0, 14) : null;
 }
 
-/** Toglie dalla querystring la chiave API, che non deve finire nei log. */
+/**
+ * Toglie dalla querystring la chiave API e il token di verifica (t), che non
+ * devono finire nei log. Il middleware sposta gia' t in un cookie prima del
+ * log: questa e' una seconda difesa.
+ */
 export function redactQuery(searchParams: URLSearchParams): string | null {
   const copy = new URLSearchParams(searchParams);
   if (copy.has("key")) copy.set("key", "REDACTED");
+  copy.delete("t");
   const s = copy.toString();
   return s ? s.slice(0, 500) : null;
 }
