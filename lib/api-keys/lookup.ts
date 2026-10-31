@@ -30,6 +30,15 @@ export function createLookup({ url, serviceKey, fetchFn = fetch, now = Date.now,
 
   function logOutage(e: unknown, status: number) {
     const detail = e instanceof Error ? e.message : String(e);
+    // PostgREST risponde 404 (PGRST205) per una tabella che non esiste: il
+    // DB c'e', manca la migrazione.
+    if (status === 404) {
+      console.error(
+        "[api-keys] tabella api_keys/api_throttle mancante, fail-open per 15 s",
+        `${detail}: applica la migrazione 20261031000001_api_keys_throttle.sql`,
+      );
+      return;
+    }
     const hint =
       status === 401 || status === 403
         ? `${detail}: sembra un errore di configurazione (service key mancante o errata)`

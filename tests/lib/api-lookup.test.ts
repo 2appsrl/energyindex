@@ -104,6 +104,18 @@ describe("createLookup", () => {
       expect(err).toHaveBeenCalledTimes(1);
       expect(err.mock.calls[0].join(" ")).toMatch(/configurazione.*service key/i);
     });
+
+    it("404 (tabella mancante, PGRST205): il messaggio indica la migrazione da applicare", async () => {
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const fetchFn = async () => jsonResponse({ code: "PGRST205", message: "Could not find the table 'public.api_keys'" }, 404);
+      const lk = createLookup({ ...env, fetchFn, now: () => now });
+      expect((await lk.key("h1")).failed).toBe(true);
+      expect(err).toHaveBeenCalledTimes(1);
+      const line = err.mock.calls[0].join(" ");
+      expect(line).toMatch(/tabella.*mancante/i);
+      expect(line).toContain("20261031000001");
+      expect(line).not.toMatch(/non raggiungibile/);
+    });
   });
 
   it("throttled con DB giu': insieme vuoto (fail-open)", async () => {
