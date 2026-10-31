@@ -1160,6 +1160,10 @@ describe("validateDeveloperRequest", () => {
     expect(validateDeveloperRequest({ ...ok, dominio: "localhost" }).ok).toBe(false);
     expect(validateDeveloperRequest({ ...ok, attributionUrl: "ftp://esempio.it" }).ok).toBe(false);
   });
+  it("rifiuta pagine su loopback anche se il dominio e' valido", () => {
+    expect(validateDeveloperRequest({ ...ok, attributionUrl: "http://127.0.0.1/x" }).ok).toBe(false);
+    expect(validateDeveloperRequest({ ...ok, attributionUrl: "http://localhost:3000/x" }).ok).toBe(false);
+  });
 });
 ```
 
@@ -1171,7 +1175,7 @@ Run. Expected: FAIL.
 import "server-only";
 import { Resend } from "resend";
 import { createServiceClient } from "@/lib/supabase/service";
-import { generateApiKey, keyDisplayPrefix, normalizeDomain, originAllowed, sha256Hex } from "./keys";
+import { generateApiKey, hostMatchesDomain, keyDisplayPrefix, normalizeDomain, sha256Hex } from "./keys";
 import { hasEnergyIndexLink } from "./link-check";
 
 export interface DeveloperRequest {
@@ -1193,7 +1197,9 @@ export function validateDeveloperRequest(d: DeveloperRequest): { ok: true; domai
     return { ok: false, error: "Indirizzo della pagina non valido" };
   }
   if (page.protocol !== "https:" && page.protocol !== "http:") return { ok: false, error: "La pagina deve essere http o https" };
-  if (!originAllowed(page.host, domain) || page.hostname === "localhost") {
+  // hostMatchesDomain, non originAllowed: niente eccezione localhost/127.0.0.1,
+  // altrimenti il link checker scaricherebbe indirizzi di loopback (SSRF).
+  if (!hostMatchesDomain(page.host, domain)) {
     return { ok: false, error: `La pagina deve stare su ${domain}` };
   }
   return { ok: true, domain };
