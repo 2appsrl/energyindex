@@ -569,7 +569,7 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     title: "Energy Index delle offerte",
     summary: "Mediana, quartili e range delle offerte luce e gas del mercato libero.",
     description:
-      "I quattro indici proprietari Energy Index (Fisse Luce, Variabili Luce, Fisse Gas, Variabili Gas) calcolati sulle offerte pubblicate sul Portale Offerte ARERA. Aggregati di mercato: nessun dato di singolo fornitore.",
+      "I quattro indici proprietari Energy Index (Fisse Luce, Variabili Luce, Fisse Gas, Variabili Gas) calcolati sulle offerte pubblicate sul Portale Offerte ARERA. Aggregati di mercato: nessun dato di singolo fornitore. Per gli indici a prezzo fisso (basis \"prezzo\") le statistiche sono il prezzo della materia prima. Per gli indici variabili (basis \"spread\") sono lo spread applicato sopra il riferimento all'ingrosso indicato in reference (PUN per la luce, PSV per il gas), nella stessa unita': una mediana di 0,055 €/kWh significa \"PUN + 0,055 €/kWh\".",
     category: "indici",
     tier: "open",
     status: "live",
@@ -580,8 +580,8 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     response: {
       updated_at: "2026-10-30",
       indices: [
-        { slug: "mercato-libero-luce-fissa", name: "Energy Index · Luce — Prezzo Fisso", commodity: "luce", price_type: "fisso", unit: "€/kWh", date: "2026-10-30", median: 0.129, p25: 0.115, p75: 0.141, min: 0.0989, max: 0.1995, offers: 212, page: "https://energyindex.it/it/mercato-libero" },
-        { slug: "mercato-libero-luce-variabile", name: "Energy Index · Luce — Prezzo Variabile", commodity: "luce", price_type: "variabile", unit: "€/kWh", date: "2026-10-30", median: 0.1376, p25: 0.1288, p75: 0.1502, min: 0.1201, max: 0.1788, offers: 248, spread_vs_reference_pct: 17.6, page: "https://energyindex.it/it/mercato-libero" },
+        { slug: "mercato-libero-luce-fissa", name: "Energy Index · Luce — Prezzo Fisso", commodity: "luce", price_type: "fisso", basis: "prezzo", unit: "€/kWh", date: "2026-10-30", median: 0.3495, p25: 0.2659, p75: 0.53, min: 0.145, max: 2, offers: 230, page: "https://energyindex.it/it/mercato-libero" },
+        { slug: "mercato-libero-luce-variabile", name: "Energy Index · Luce — Prezzo Variabile", commodity: "luce", price_type: "variabile", basis: "spread", reference: "PUN", unit: "€/kWh", date: "2026-10-30", median: 0.055, p25: 0.0375, p75: 0.1, min: 0.008, max: 1, offers: 262, page: "https://energyindex.it/it/mercato-libero" },
       ],
       source: "ARERA — Portale Offerte",
       attribution: ENERGY_INDEX_ATTRIBUTION,
@@ -590,11 +590,13 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     fields: [
       { name: "updated_at", type: "string (YYYY-MM-DD) | null", description: "Data dello snapshot piu' recente tra gli indici restituiti." },
       { name: "indices[].slug", type: "string", description: "Identificativo stabile dell'indice." },
-      { name: "indices[].median / p25 / p75", type: "number", description: "Mediana e quartili del prezzo materia prima delle offerte attive; p25 e p75 possono essere null." },
-      { name: "indices[].min / max", type: "number", description: "Estremi del range di mercato." },
+      { name: "indices[].basis", type: "string", description: "\"prezzo\" per i fissi: le statistiche sono il prezzo della materia prima. \"spread\" per i variabili: le statistiche sono lo spread sopra reference, nella stessa unita' (0,055 €/kWh = PUN + 0,055 €/kWh)." },
+      { name: "indices[].reference", type: "string?", description: "Solo variabili: riferimento all'ingrosso a cui si somma lo spread, \"PUN\" (luce) o \"PSV\" (gas)." },
+      { name: "indices[].median / p25 / p75", type: "number", description: "Mediana e quartili delle offerte attive (prezzo o spread secondo basis), arrotondati a 4 decimali; p25 e p75 possono essere null." },
+      { name: "indices[].min / max", type: "number", description: "Estremi del range di mercato (prezzo o spread secondo basis), arrotondati a 4 decimali." },
       { name: "indices[].offers", type: "integer", description: "Numero di offerte considerate." },
       { name: "indices[].date", type: "string (YYYY-MM-DD)", description: "Giorno dello snapshot dell'indice." },
-      { name: "indices[].spread_vs_reference_pct", type: "number?", description: "Solo variabili: spread sopra PUN o PSV, in %." },
+      { name: "indices[].spread_vs_reference_pct", type: "number?", description: "Solo variabili: spread sopra PUN o PSV in percentuale, arrotondato a 2 decimali. Assente se non calcolato." },
       { name: "attribution", type: "string", description: "Riga di attribuzione da riportare accanto ai dati riusati." },
     ],
     formats: ["json"],

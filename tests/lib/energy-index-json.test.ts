@@ -36,6 +36,29 @@ describe("buildEnergyIndexJson", () => {
     expect(j.indices.map((i) => i.slug)).toEqual(["mercato-libero-gas-variabile"]);
   });
 
+  it("fisso: basis prezzo e nessun reference", () => {
+    const j = buildEnergyIndexJson(latestPerSlug(rows));
+    const luce = j.indices.find((i) => i.slug === "mercato-libero-luce-fissa")!;
+    expect(luce.basis).toBe("prezzo");
+    expect(luce.reference).toBeUndefined();
+  });
+
+  it("variabile: basis spread sopra il riferimento all'ingrosso", () => {
+    const j = buildEnergyIndexJson(latestPerSlug(rows));
+    expect(j.indices.find((i) => i.slug === "mercato-libero-gas-variabile")).toMatchObject({ basis: "spread", reference: "PSV" });
+    const luceVar = buildEnergyIndexJson([
+      { aggregate_slug: "mercato-libero-luce-variabile", computed_at: "2026-10-30", median: "0.055", p25: "0.0375", p75: "0.1", min: "0.008", max: "1", sample_size: 262, spread_vs_reference_pct: null, unit: "€/kWh" },
+    ]).indices[0];
+    expect(luceVar).toMatchObject({ basis: "spread", reference: "PUN", median: 0.055 });
+  });
+
+  it("arrotonda le statistiche a 4 decimali e lo spread % a 2", () => {
+    const j = buildEnergyIndexJson([
+      { aggregate_slug: "mercato-libero-gas-variabile", computed_at: "2026-10-30", median: "0.123456", p25: "0.26585000000000003", p75: "0.30001", min: "0.00004", max: "1.99996", sample_size: 10, spread_vs_reference_pct: "18.437", unit: "€/Smc" },
+    ]);
+    expect(j.indices[0]).toMatchObject({ median: 0.1235, p25: 0.2659, p75: 0.3, min: 0, max: 2, spread_vs_reference_pct: 18.44 });
+  });
+
   it("attribuzione Energy Index con fonte ARERA, data = snapshot piu' recente", () => {
     const j = buildEnergyIndexJson(latestPerSlug(rows));
     expect(j.attribution).toContain("Energy Index");

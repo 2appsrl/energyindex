@@ -3,6 +3,10 @@
  * indici proprietari (energy_index_aggregates), calcolati sulle offerte
  * del Portale Offerte ARERA. Sono elaborazioni Energy Index, quindi
  * riusabili con attribuzione (a differenza dei dati GME).
+ *
+ * Per gli indici a prezzo fisso le statistiche sono il prezzo; per quelli
+ * variabili sono lo spread (alpha) sopra il riferimento all'ingrosso
+ * (PUN per la luce, PSV per il gas), nella stessa unita'.
  */
 
 import { AGGREGATE_SLUGS } from "@/lib/arera-aggregates";
@@ -25,6 +29,10 @@ export interface EnergyIndexItem {
   name: string;
   commodity: "luce" | "gas";
   price_type: "fisso" | "variabile";
+  /** "prezzo" per i fissi; "spread" per i variabili (statistiche = alpha sopra `reference`). */
+  basis: "prezzo" | "spread";
+  /** Solo variabili: riferimento all'ingrosso a cui si somma lo spread. */
+  reference?: "PUN" | "PSV";
   unit: string;
   date: string;
   median: number;
@@ -48,7 +56,17 @@ export interface EnergyIndexJson {
 export const ENERGY_INDEX_ATTRIBUTION =
   "Fonte: Energy Index (https://energyindex.it) — elaborazione su dati Portale Offerte ARERA";
 
-const num = (v: number | string | null): number | null => (v === null ? null : Number(v));
+const round = (v: number | string, decimals: number): number => {
+  const f = 10 ** decimals;
+  return Math.round(Number(v) * f) / f;
+};
+const stat = (v: number | string): number => round(v, 4);
+const statOrNull = (v: number | string | null): number | null => (v === null ? null : stat(v));
+
+function referenceOf(slug: string): "PUN" | "PSV" | undefined {
+  const ref = slug.toUpperCase();
+  return ref === "PUN" || ref === "PSV" ? ref : undefined;
+}
 
 export function latestPerSlug(rows: AggregateRow[]): AggregateRow[] {
   const best = new Map<string, AggregateRow>();
@@ -71,18 +89,23 @@ export function buildEnergyIndexJson(rows: AggregateRow[], commodity?: "luce" | 
       name: `Energy Index · ${def.displayName}`,
       commodity: c,
       price_type: def.priceType,
+      basis: def.priceType === "variabile" ? "spread" : "prezzo",
       unit: r.unit,
       date: r.computed_at,
-      median: Number(r.median),
-      p25: num(r.p25),
-      p75: num(r.p75),
-      min: Number(r.min),
-      max: Number(r.max),
+      median: stat(r.median),
+      p25: statOrNull(r.p25),
+      p75: statOrNull(r.p75),
+      min: stat(r.min),
+      max: stat(r.max),
       offers: r.sample_size,
       page: "https://energyindex.it/it/mercato-libero",
     };
-    if (def.priceType === "variabile" && r.spread_vs_reference_pct !== null) {
-      item.spread_vs_reference_pct = Number(r.spread_vs_reference_pct);
+    if (def.priceType === "variabile") {
+      const ref = referenceOf(def.referenceAssetSlug);
+      if (ref) item.reference = ref;
+      if (r.spread_vs_reference_pct !== null) {
+        item.spread_vs_reference_pct = round(r.spread_vs_reference_pct, 2);
+      }
     }
     indices.push(item);
   }
