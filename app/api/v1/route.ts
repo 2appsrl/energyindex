@@ -31,13 +31,14 @@ export async function GET() {
       license:
         "Energy Index elaborations: free, including commercial use, with attribution. Source data (GME, ICE Endex, EIA, EEX) remain subject to the source's terms: commercial use of GME data requires GME's written authorization.",
       license_url: "https://energyindex.it/it/api/docs#licenza",
-      cache: "15 minuti (Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=3600)",
+      cache:
+        "15 minutes for PUN, PSV and /today; 6 hours for /energy-index. With stale-while-revalidate, the first request after expiry may still get the previous value while the cache refreshes.",
       widget: "https://energyindex.it/it/api/widget",
       cors: "* (Access-Control-Allow-Origin)",
       auth:
-        "Facoltativa sugli endpoint attivi (piano Open). Chiave: header Authorization: Bearer eidx_live_… (?key= accettato ma sconsigliato). Dal browser la chiave vale solo dal dominio registrato (Origin), le chiamate server senza Origin sono ammesse. Errori: 401 invalid_key, 403 origin_not_allowed.",
+        "Optional on live (Open) endpoints. Key: header Authorization: Bearer eidx_live_… (?key= accepted but discouraged). From a browser a key works only from its registered domain (Origin); server calls without Origin are allowed. Errors: 401 invalid_key, 403 origin_not_allowed.",
       rate_limit:
-        "60/min per IP; con chiave il limite del piano (header X-RateLimit-Limit); quote calcolate su finestre di 5 minuti, oltre soglia 429 rate_limited con Retry-After: 900.",
+        "60/min per IP; with a key, the plan's limit (header X-RateLimit-Limit). Enforced over 5-minute windows: above 5x the per-minute limit, 429 rate_limited with Retry-After: 900 for 15 minutes.",
       key_request: "https://energyindex.it/it/api#chiave",
       endpoints: [
         {

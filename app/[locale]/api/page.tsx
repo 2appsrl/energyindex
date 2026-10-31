@@ -77,7 +77,7 @@ const FAQ = [
   {
     question: "Come devo citare Energy Index?",
     answer:
-      "Accanto al dato basta la dicitura 'Fonte: Energy Index' con un link a https://energyindex.it, con qualsiasi rel. Ogni risposta include il testo pronto nel campo attribution. Con una chiave Developer verifichiamo ogni lunedi' il link nella pagina dichiarata: dopo 2 verifiche fallite di seguito la chiave torna ai limiti del piano Open, finche' il link non ricompare. Dal piano API in su l'attribuzione a Energy Index e' facoltativa.",
+      "Accanto al dato basta la dicitura 'Fonte: Energy Index' con un link a https://energyindex.it, con qualsiasi rel. Ogni risposta include il testo pronto nel campo attribution. Con una chiave Developer verifichiamo ogni lunedi' il link nella pagina dichiarata: dopo 2 verifiche fallite di seguito la chiave torna ai limiti del piano Open, fino alla prima verifica in cui il link ricompare. Dal piano API in su l'attribuzione a Energy Index e' facoltativa.",
   },
   {
     question: "Posso usare le API dentro un agente AI o un chatbot?",

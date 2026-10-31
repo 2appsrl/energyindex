@@ -182,7 +182,7 @@ export default function ApiDocsPage() {
             <Table
               head={["HTTP", "error", "Quando"]}
               rows={[
-                ["401", "invalid_key", "Chiave sconosciuta o revocata, oppure non ancora attivata dal link ricevuto via email (il messaggio lo indica)."],
+                ["401", "invalid_key", "Chiave sconosciuta o revocata."],
                 ["403", "origin_not_allowed", "Chiamata dal browser con un Origin diverso dal dominio della chiave."],
               ].map(([a, b, c]) => [<Code key="h">{a}</Code>, <Code key="e">{b}</Code>, c])}
             />
@@ -246,8 +246,9 @@ export default function ApiDocsPage() {
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
                 Le chiamate si contano su finestre di 5 minuti, comprese quelle servite dalla cache e quelle respinte.
-                Chi supera 5 volte il limite al minuto in una finestra riceve per 15 minuti{" "}
-                <Code>429 rate_limited</Code> con <Code>Retry-After: 900</Code>.
+                Chi in 5 minuti fa piu&apos; di 5 volte il limite al minuto (300 richieste senza chiave, 600 con
+                Developer) riceve <Code>429 rate_limited</Code> con <Code>Retry-After: 900</Code> per 15 minuti; se
+                continua a chiamare durante il blocco, il blocco si rinnova.
               </li>
               <li>
                 Il conteggio e&apos; asincrono e il blocco scatta entro qualche minuto: il limite e&apos; morbido,
@@ -277,41 +278,48 @@ export default function ApiDocsPage() {
           </DocSection>
 
           <DocSection id="errori" title="Errori">
-            <p>Gli errori usano i codici HTTP standard e un corpo JSON sempre uguale:</p>
+            <p>
+              Gli errori dell&apos;API usano i codici HTTP standard e un corpo JSON con <Code>error</Code> (codice
+              leggibile) e <Code>message</Code>. Alcuni errori aggiungono <Code>param</Code> (il parametro non
+              valido), <Code>attribution</Code> o <Code>required_tier</Code>.
+            </p>
             <CodeBlock
               json
               code={JSON.stringify(
                 {
-                  error: "tier_required",
-                  message: "Questo endpoint richiede il piano API o superiore.",
-                  required_tier: "api",
-                  docs: `${API_DOCS_URL}#limiti`,
+                  error: "invalid_key",
+                  message: "Chiave API non valida o revocata.",
+                  attribution: "Energy Index — https://energyindex.it",
                 },
                 null,
                 2,
               )}
-              title="403 Forbidden"
+              title="401 Unauthorized"
             />
             <Table
               head={["HTTP", "error", "Significato"]}
               rows={[
                 ["400", "invalid_parameter", "Parametro mancante o non valido. Il campo param indica quale."],
-                ["401", "invalid_key", "Chiave sconosciuta, revocata o non ancora attivata."],
+                ["401", "invalid_key", "Chiave sconosciuta o revocata."],
                 ["403", "origin_not_allowed", "Chiamata dal browser da un dominio diverso da quello della chiave."],
                 ["403", "tier_required", "Endpoint dei piani superiori, quando saranno attivi: l'endpoint non e' incluso nel tuo piano."],
-                ["404", "not_found", "Endpoint o risorsa inesistente."],
                 ["429", "rate_limited", "Limite di richieste superato: attendi i secondi indicati in Retry-After."],
-                ["500", "internal_error", "Errore nostro. Riprova; se persiste, scrivici indicando URL e ora della richiesta."],
                 ["503", "no_data", "La fonte non ha ancora pubblicato il dato (es. PUN richiesto prima dell'esito del MGP)."],
               ].map(([a, b, c]) => [<Code key="h">{a}</Code>, <Code key="e">{b}</Code>, c])}
             />
+            <p>
+              Un path inesistente o un errore imprevisto del server possono rispondere 404 o 500 senza corpo JSON.
+              Controlla sempre il codice HTTP prima di leggere la risposta; se un 500 persiste, scrivici indicando URL
+              e ora della richiesta.
+            </p>
           </DocSection>
 
           <DocSection id="cache" title="Cache e CORS">
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
-                Le risposte sono servite da CDN con <Code>Cache-Control: public, max-age=900, stale-while-revalidate=3600</Code>:
-                un nuovo valore compare al massimo 15 minuti dopo la pubblicazione della fonte.
+                Le risposte sono servite da CDN: 15 minuti per PUN, PSV e <Code>/today</Code>, 6 ore per{" "}
+                <Code>/energy-index</Code>. Con <Code>stale-while-revalidate</Code>{" "}la prima richiesta dopo la scadenza
+                puo&apos; ricevere ancora il valore precedente, mentre la cache si aggiorna.
               </li>
               <li>
                 Gli endpoint hanno <Code>Access-Control-Allow-Origin: *</Code> e rispondono a <Code>OPTIONS</Code>:
@@ -354,7 +362,7 @@ export default function ApiDocsPage() {
             />
             <p>
               Ogni chiamata ha l&apos;header <Code>X-EIDX-Signature</Code>: HMAC-SHA256 del corpo grezzo con il{" "}
-              <Code>signing_secret</Code> dell&apos;alert. Verificalo prima di fidarti del contenuto:
+              <Code>signing_secret</Code>{" "}dell&apos;alert. Verificalo prima di fidarti del contenuto:
             </p>
             <CodeBlock
               title="verifica.js"
@@ -391,7 +399,7 @@ export default function ApiDocsPage() {
                 disattiva e non mostra i dati.
               </li>
               <li>
-                Nelle varianti <Code>pun</Code> e <Code>psv</Code> la riga e&apos; &quot;Fonte: Gestore dei Mercati
+                Nelle varianti <Code>pun</Code> e <Code>psv</Code>{" "}la riga e&apos; &quot;Fonte: Gestore dei Mercati
                 Energetici S.p.A. — via Energy Index&quot; e non va rimossa. Le condizioni del GME restano valide anche
                 nel widget (vedi <a href="#licenza" className="underline">Attribuzione e licenza</a>).
               </li>
@@ -444,9 +452,9 @@ export default function ApiDocsPage() {
               </li>
               <li>Quando il link torna, la prima verifica successiva riattiva la chiave in automatico.</li>
               <li>
-                Se la pagina mostra il link solo via JavaScript, la verifica non lo vede nell&apos;HTML. In quel caso
-                conta anche il widget: se negli ultimi 7 giorni e&apos; stato caricato dal tuo dominio da almeno 2
-                visitatori distinti, la verifica e&apos; superata.
+                In ogni caso conta anche il widget: se negli ultimi 7 giorni e&apos; stato caricato dal tuo dominio da
+                almeno 2 visitatori diversi (contati per indirizzo IP e giorno), il link si considera presente. Vale anche per le pagine che mostrano il
+                link solo via JavaScript, che la verifica non vede nell&apos;HTML.
               </li>
             </ul>
             <ul className="list-disc space-y-1.5 pl-5">
@@ -479,7 +487,7 @@ export default function ApiDocsPage() {
                   <Code>hour</Code> e <Code>granularity</Code>. <Code>/psv/today</Code>: <Code>date</Code> ora indica
                   il giorno gas di consegna (prima era la data UTC, un giorno indietro); nuovi campi{" "}
                   <Code>gas_day</Code>, <Code>session_date</Code> e <Code>product</Code>. Sui dati GME,{" "}
-                  <Code>attribution</Code> cita la fonte e <Code>source_terms_url</Code> rimanda alle condizioni
+                  <Code>attribution</Code> cita la fonte e <Code>source_terms_url</Code>{" "}rimanda alle condizioni
                   d&apos;uso. Licenza riscritta per distinguere le elaborazioni Energy Index dai dati delle fonti.
                 </p>
               </li>
