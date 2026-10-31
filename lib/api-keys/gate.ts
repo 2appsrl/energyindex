@@ -37,6 +37,9 @@ export const RATE_PER_MINUTE: Record<string, number> = {
   enterprise: 100000,
 };
 
+/** Header che il JavaScript di un altro sito puo' leggere dalle risposte CORS. */
+export const API_EXPOSE_HEADERS = "X-RateLimit-Limit, X-EIDX-Key-Status, X-EIDX-Notice, Retry-After";
+
 const ATTR = "Energy Index — https://energyindex.it";
 const THROTTLE_SECONDS = 900;
 
@@ -46,7 +49,10 @@ function deny(status: 401 | 403 | 429, error: string, message: string, headers: 
 
 export function decideAccess(i: GateInput): GateResult {
   if (i.hasKey && !i.lookupFailed) {
-    if (!i.key || i.key.status === "revoked" || i.key.status === "pending") {
+    if (i.key?.status === "pending") {
+      return deny(401, "invalid_key", "Chiave non ancora attivata: conferma il link ricevuto via email.");
+    }
+    if (!i.key || i.key.status === "revoked") {
       return deny(401, "invalid_key", "Chiave API non valida o revocata.");
     }
     if (i.originHost && !originAllowed(i.originHost, i.key.domain)) {

@@ -20,6 +20,31 @@ export function generateApiKey(): string {
   return KEY_PREFIX + out;
 }
 
+/**
+ * Solo i token con il nostro prefisso sono chiavi Energy Index. Un Bearer di
+ * un altro servizio (client HTTP condivisi) vale come richiesta anonima e non
+ * deve prendere 401.
+ */
+export function isEidxKey(token: string): boolean {
+  return token.startsWith(KEY_PREFIX);
+}
+
+/**
+ * Host[:porta] dell'header Origin. Un Origin opaco ("null" da iframe sandbox
+ * o file://) o malformato resta com'e': non combacia con nessun dominio, cosi'
+ * il vincolo della chiave non si aggira togliendo l'Origin leggibile.
+ */
+export function originHostFromHeader(origin: string | null): string | null {
+  if (origin === null) return null;
+  try {
+    const host = new URL(origin).host;
+    if (host) return host;
+  } catch {
+    // valore grezzo, sotto
+  }
+  return origin;
+}
+
 export async function sha256Hex(input: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");

@@ -60,6 +60,12 @@ describe("decideAccess", () => {
     const r = decideAccess({ ...base, hasKey: true, key: { ...active, status: "pending" } });
     expect(r.ok === false && r.status).toBe(401);
     expect(r.ok === false && r.body.error).toBe("invalid_key");
+    expect(r.ok === false && r.body.message).toBe("Chiave non ancora attivata: conferma il link ricevuto via email.");
+  });
+
+  it("chiave attiva con Origin opaco (\"null\", iframe sandbox o file://): 403", () => {
+    const r = decideAccess({ ...base, hasKey: true, key: active, originHost: "null" });
+    expect(r.ok === false && r.status).toBe(403);
   });
 
   it("chiave declassata da un altro sito: 403", () => {

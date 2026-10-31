@@ -5,8 +5,8 @@ import { defaultLocale, locales } from "./lib/i18n/config";
 import { classifyAgent, isLoggableBot } from "./lib/traffic/classify";
 import { buildRecord, clientIp, extractApiKey, hashIp, hashSalt, writeRecord } from "./lib/traffic/log";
 import { sharedLookup } from "./lib/api-keys/lookup";
-import { decideAccess } from "./lib/api-keys/gate";
-import { sha256Hex } from "./lib/api-keys/keys";
+import { API_EXPOSE_HEADERS, decideAccess } from "./lib/api-keys/gate";
+import { isEidxKey, originHostFromHeader, sha256Hex } from "./lib/api-keys/keys";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -93,52 +93,62 @@ async function withAdminSession(request: NextRequest, response: NextResponse): P
   return response;
 }
 
+/** Ultimo console.error del gate: al massimo uno al minuto per isolate. */
+let lastGateErrorAt = 0;
+
 /**
  * Chiave, Origin e quote per /api/v1. Gira prima della cache CDN, quindi
  * vale anche per le risposte servite dalla cache. Senza env (dev senza
- * service key) lascia passare tutto.
+ * service key) lascia passare tutto, e su qualunque eccezione pure:
+ * un errore del gate non deve rompere le API pubbliche.
  */
 async function gateApi(request: NextRequest): Promise<NextResponse> {
-  const lookup = sharedLookup();
-  if (!lookup) return NextResponse.next();
-
-  const key = extractApiKey(request.headers, request.nextUrl.searchParams);
-  const originHeader = request.headers.get("origin");
-  let originHost: string | null = null;
   try {
-    originHost = originHeader ? new URL(originHeader).host : null;
-  } catch {
-    originHost = null;
-  }
+    const lookup = sharedLookup();
+    if (!lookup) return NextResponse.next();
 
-  const [found, throttled, ipHash] = await Promise.all([
-    key ? lookup.key(await sha256Hex(key)) : Promise.resolve({ key: null, failed: false }),
-    lookup.throttled(),
-    hashIp(clientIp(request.headers), hashSalt()),
-  ]);
+    // Un Bearer che non e' una nostra chiave (client HTTP condivisi) vale
+    // come richiesta anonima: niente 401 a chi non ha mai usato una chiave.
+    const token = extractApiKey(request.headers, request.nextUrl.searchParams);
+    const key = token && isEidxKey(token) ? token : null;
+    const originHost = originHostFromHeader(request.headers.get("origin"));
 
-  const decision = decideAccess({
-    hasKey: Boolean(key),
-    key: found.key,
-    lookupFailed: found.failed,
-    originHost,
-    throttledKey: found.key ? throttled.has(`key:${found.key.prefix}`) : false,
-    throttledIp: ipHash ? throttled.has(`ip:${ipHash}`) : false,
-  });
+    const [found, throttled, ipHash] = await Promise.all([
+      key ? sha256Hex(key).then((h) => lookup.key(h)) : Promise.resolve({ key: null, failed: false }),
+      lookup.throttled(),
+      hashIp(clientIp(request.headers), hashSalt()),
+    ]);
 
-  if (!decision.ok) {
-    return NextResponse.json(decision.body, {
-      status: decision.status,
-      headers: {
-        ...decision.headers,
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store",
-      },
+    const decision = decideAccess({
+      hasKey: Boolean(key),
+      key: found.key,
+      lookupFailed: found.failed,
+      originHost,
+      throttledKey: found.key ? throttled.has(`key:${found.key.prefix}`) : false,
+      throttledIp: ipHash ? throttled.has(`ip:${ipHash}`) : false,
     });
+
+    if (!decision.ok) {
+      return NextResponse.json(decision.body, {
+        status: decision.status,
+        headers: {
+          ...decision.headers,
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": API_EXPOSE_HEADERS,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    const res = NextResponse.next();
+    for (const [k, v] of Object.entries(decision.headers)) res.headers.set(k, v);
+    return res;
+  } catch (e) {
+    if (Date.now() - lastGateErrorAt > 60_000) {
+      lastGateErrorAt = Date.now();
+      console.error("[api-keys] errore nel gate, richiesta lasciata passare", e instanceof Error ? e.message : e);
+    }
+    return NextResponse.next();
   }
-  const res = NextResponse.next();
-  for (const [k, v] of Object.entries(decision.headers)) res.headers.set(k, v);
-  return res;
 }
 
 export default async function middleware(request: NextRequest, event: NextFetchEvent) {

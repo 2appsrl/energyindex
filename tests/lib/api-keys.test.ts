@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect } from "vitest";
-import { generateApiKey, sha256Hex, keyDisplayPrefix, normalizeDomain, originAllowed, hostMatchesDomain, KEY_PREFIX } from "@/lib/api-keys/keys";
+import { generateApiKey, sha256Hex, keyDisplayPrefix, normalizeDomain, originAllowed, hostMatchesDomain, isEidxKey, originHostFromHeader, KEY_PREFIX } from "@/lib/api-keys/keys";
 
 describe("generateApiKey", () => {
   it("formato eidx_live_ + 32 caratteri base62", () => {
@@ -75,5 +75,33 @@ describe("hostMatchesDomain", () => {
   });
   it("rifiuta i suffissi falsi", () => {
     expect(hostMatchesDomain("fintoesempio.it", "esempio.it")).toBe(false);
+  });
+});
+
+describe("isEidxKey", () => {
+  it("riconosce solo le chiavi Energy Index", () => {
+    expect(isEidxKey(generateApiKey())).toBe(true);
+    expect(isEidxKey("eidx_live_FAKEFAKE")).toBe(true);
+  });
+  it("token Bearer di altri servizi: non sono chiavi (anonimo, niente 401)", () => {
+    expect(isEidxKey("ghp_abcdef")).toBe(false);
+    expect(isEidxKey("eyJhbGciOiJIUzI1NiJ9.x.y")).toBe(false);
+    expect(isEidxKey("EIDX_LIVE_abc")).toBe(false);
+    expect(isEidxKey("")).toBe(false);
+  });
+});
+
+describe("originHostFromHeader", () => {
+  it("senza header: null", () => {
+    expect(originHostFromHeader(null)).toBeNull();
+  });
+  it("Origin valido: host[:porta]", () => {
+    expect(originHostFromHeader("https://www.esempio.it")).toBe("www.esempio.it");
+    expect(originHostFromHeader("http://localhost:3000")).toBe("localhost:3000");
+  });
+  it("Origin opaco o malformato: resta il valore grezzo, cosi' il vincolo di dominio non salta", () => {
+    expect(originHostFromHeader("null")).toBe("null");
+    expect(originHostFromHeader("file://")).toBe("file://");
+    expect(originHostFromHeader("non un url")).toBe("non un url");
   });
 });
