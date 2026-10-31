@@ -1679,7 +1679,7 @@ async function mount(root: HTMLElement) {
     const res = await fetch(`${BASE}${def.endpoint}${sep}src=widget`);
     const model = res.ok ? readModel(variant, await res.json()) : null;
     if (!model) throw new Error("no data");
-    paint(`<p class="t">${esc(model.title)}</p>${model.rows.map((r) => `<div class="r"><span>${esc(r.label)}</span><span class="v">${esc(r.value)}</span></div>`).join("")}`);
+    paint(`<p class="t">${esc(model.title)}</p>${model.rows.map((r) => `<div class="r"><span>${esc(r.label)}</span><span class="v">${esc(r.value)}</span></div>`).join("")}${model.date ? `<p class="e">Dato del ${esc(model.date)}</p>` : ""}`);
   } catch {
     paint(`<p class="e">Dato momentaneamente non disponibile.</p>`);
   }
