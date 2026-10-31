@@ -87,8 +87,8 @@ export default function WidgetPage() {
       <section className="max-w-3xl space-y-3 rounded-2xl border bg-amber-500/5 p-6">
         <h2 className="text-xl font-black">PUN e PSV: condizioni del GME</h2>
         <p className="text-sm text-muted-foreground">
-          PUN e PSV sono dati del Gestore dei Mercati Energetici. Lo snippet di queste varianti include la riga
-          &quot;Dati: Gestore dei Mercati Energetici S.p.A.&quot;, che non va rimossa. Per gli usi commerciali le
+          PUN e PSV sono dati del Gestore dei Mercati Energetici. Lo snippet di queste varianti cita la fonte
+          con la riga &quot;Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index&quot;, che non va rimossa. Per gli usi commerciali le
           condizioni del GME richiedono la sua autorizzazione scritta: i dettagli sono nella{" "}
           <Link href="/it/api/docs#licenza" className="font-semibold underline">
             sezione licenza della documentazione

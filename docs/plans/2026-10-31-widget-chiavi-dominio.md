@@ -25,7 +25,7 @@ Il middleware esistente (`middleware.ts`, ramo `/api/v1`) legge chiave e lista "
 - **Tabelle admin.** `traffic_log` e `leads` sono definite in `supabase/migrations/20260927000001_admin_traffic_leads.sql`. `traffic_log.api_key_prefix` contiene i primi 14 caratteri della chiave (`lib/traffic/log.ts: apiKeyPrefix`), quindi `eidx_live_` più 4 caratteri.
 - **Pattern del log.** Il middleware non usa supabase-js: fa fetch a PostgREST con la service role (`lib/traffic/log.ts: writeRecord`). Va seguito lo stesso schema, perché il middleware gira su edge.
 - **Email.** Resend, come in `app/actions/request-api-key.ts` (`RESEND_API_KEY`, `RESEND_SENDER_EMAIL`, fallback mailto).
-- **Licenza GME.** Le varianti `pun` e `psv` del widget devono riportare la riga "Dati: Gestore dei Mercati Energetici S.p.A." nell'HTML statico (vedi la memoria `gme-licenza-dati`).
+- **Licenza GME.** Le varianti `pun` e `psv` del widget devono riportare nell'HTML statico la riga "Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index" (dicitura richiesta dalle condizioni GME, uguale al campo `attribution` delle API; mai "Dati: ...") (vedi la memoria `gme-licenza-dati`).
 - **Commit.** Ogni commit termina con `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Tutte le stringhe visibili all'utente sono in italiano.
 - **Test.** `npx vitest run` (353 test verdi prima di iniziare), `npx tsc --noEmit -p .`, `npx eslint <file>`.
 
@@ -1797,10 +1797,12 @@ import { WIDGET_VARIANTS, type WidgetVariant } from "./core";
 /** Snippet da incollare. I link stanno nell'HTML statico: Google li vede anche se lo script non gira. */
 export function buildSnippet(variant: WidgetVariant, theme: "light" | "dark"): string {
   const def = WIDGET_VARIANTS[variant];
-  const gme = def.gme ? `\n  <p class="eidx-src">Dati: Gestore dei Mercati Energetici S.p.A.</p>` : "";
+  const source = def.gme
+    ? `Fonte: Gestore dei Mercati Energetici S.p.A. — via <a href="https://energyindex.it">Energy Index</a>`
+    : `Fonte: <a href="https://energyindex.it">Energy Index</a>`;
   return `<div class="eidx-widget" data-eidx="${variant}" data-theme="${theme}">
   <a href="${def.page}?ref=widget">${def.label}</a>
-  <p class="eidx-src">Fonte: <a href="https://energyindex.it">Energy Index</a></p>${gme}
+  <p class="eidx-src">${source}</p>
 </div>
 <script src="https://energyindex.it/widget.js" async></script>`;
 }

@@ -21,33 +21,59 @@ const withoutScript = (snippet: string) => snippet.replace(/\n<script[\s\S]*$/, 
  * Configuratore del widget: variante, tema, anteprima dal vivo e snippet da
  * copiare. widget.js monta ogni .eidx-widget una sola volta (flag
  * data-eidx-ready) e solo dopo "load": a ogni cambio il contenitore
- * dell'anteprima si rimonta con una key nuova e si inietta di nuovo lo
- * script (idempotente sulle radici gia' montate), cosi' la radice nuova
+ * dell'anteprima si rimonta con una key nuova e si inietta un nuovo elemento
+ * <script> (il browser lo riesegue anche se il file arriva dalla cache HTTP;
+ * lo script e' idempotente sulle radici gia' montate), cosi' la radice nuova
  * viene disegnata.
  */
+type CopyState = "idle" | "copied" | "manual";
+
+const COPY_LABEL: Record<CopyState, string> = {
+  idle: "Copia codice",
+  copied: "Copiato",
+  manual: "Seleziona e copia (Ctrl/Cmd+C)",
+};
+
+const COPY_ANNOUNCE: Record<CopyState, string> = {
+  idle: "",
+  copied: "Codice copiato",
+  manual: "Codice selezionato: premi Ctrl+C o Cmd+C per copiarlo",
+};
+
 export function WidgetConfigurator() {
   const [variant, setVariant] = useState<WidgetVariant>("indice-luce");
   const [theme, setTheme] = useState<WidgetTheme>("light");
-  const [copied, setCopied] = useState(false);
-  const loads = useRef(0);
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const preRef = useRef<HTMLPreElement>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const snippet = buildSnippet(variant, theme);
 
   useEffect(() => {
     const s = document.createElement("script");
-    s.src = `/widget.js?v=${++loads.current}`;
+    s.src = "/widget.js";
     s.async = true;
     document.body.appendChild(s);
     return () => s.remove();
   }, [variant, theme]);
 
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  function showCopyState(state: CopyState, ms: number) {
+    clearTimeout(resetTimer.current);
+    setCopyState(state);
+    resetTimer.current = setTimeout(() => setCopyState("idle"), ms);
+  }
+
   async function copy() {
     try {
+      if (!navigator.clipboard) throw new Error("clipboard non disponibile");
       await navigator.clipboard.writeText(snippet);
-      setCopied(true);
+      showCopyState("copied", 1600);
       trackEvent("widget_snippet_copy", { variant });
-      setTimeout(() => setCopied(false), 1600);
     } catch {
-      // clipboard non disponibile (iframe, permessi): nessun feedback
+      // Niente clipboard (http, iframe, permessi): seleziona il codice per la copia manuale.
+      if (preRef.current) window.getSelection()?.selectAllChildren(preRef.current);
+      showCopyState("manual", 6000);
     }
   }
 
@@ -129,11 +155,14 @@ export function WidgetConfigurator() {
             onClick={copy}
             className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold text-stone-100 transition-colors hover:bg-white/20"
           >
-            {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-            {copied ? "Copiato" : "Copia codice"}
+            {copyState === "copied" ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+            {COPY_LABEL[copyState]}
           </button>
+          <span aria-live="polite" className="sr-only">
+            {COPY_ANNOUNCE[copyState]}
+          </span>
         </div>
-        <pre className="overflow-auto p-4 font-mono text-[12.5px] leading-relaxed text-stone-100">
+        <pre ref={preRef} className="overflow-auto p-4 font-mono text-[12.5px] leading-relaxed text-stone-100">
           <code>{snippet}</code>
         </pre>
       </div>

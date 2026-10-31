@@ -29,11 +29,23 @@ describe("buildSnippet", () => {
     expect(buildSnippet("pun", "light")).toMatch(/>Energy Index<\/a>/);
   });
 
-  it("varianti GME: riga di fonte GME obbligatoria", () => {
-    expect(buildSnippet("pun", "dark")).toContain("Dati: Gestore dei Mercati Energetici S.p.A.");
-    expect(buildSnippet("psv", "light")).toContain("Dati: Gestore dei Mercati Energetici S.p.A.");
-    expect(buildSnippet("indice-gas", "dark")).not.toContain("Gestore dei Mercati");
-    expect(buildSnippet("indice-luce", "light")).not.toContain("Gestore dei Mercati");
+  it("varianti GME: una sola riga 'Fonte: GME — via Energy Index', come il campo attribution", () => {
+    const line =
+      '<p class="eidx-src">Fonte: Gestore dei Mercati Energetici S.p.A. — via <a href="https://energyindex.it">Energy Index</a></p>';
+    for (const v of ["pun", "psv"] as const) {
+      const s = buildSnippet(v, "dark");
+      expect(s).toContain(line);
+      expect(s).not.toContain("Dati:");
+      expect(s.match(/class="eidx-src"/g)).toHaveLength(1);
+    }
+  });
+
+  it("indici Energy Index: fonte Energy Index, senza GME", () => {
+    for (const v of ["indice-luce", "indice-gas"] as const) {
+      const s = buildSnippet(v, "light");
+      expect(s).toContain('<p class="eidx-src">Fonte: <a href="https://energyindex.it">Energy Index</a></p>');
+      expect(s).not.toContain("Gestore dei Mercati");
+    }
   });
 
   it("?ref=widget solo sul link della pagina indice", () => {

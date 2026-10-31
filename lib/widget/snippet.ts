@@ -14,10 +14,14 @@ export const WIDGET_SCRIPT_URL = "https://energyindex.it/widget.js";
  */
 export function buildSnippet(variant: WidgetVariant, theme: WidgetTheme): string {
   const def = WIDGET_VARIANTS[variant];
-  const gme = def.gme ? `\n  <p class="eidx-src">Dati: Gestore dei Mercati Energetici S.p.A.</p>` : "";
+  // Le condizioni GME chiedono "Fonte: Gestore dei Mercati Energetici S.p.A.":
+  // stessa dicitura del campo attribution delle API PUN/PSV.
+  const source = def.gme
+    ? `Fonte: Gestore dei Mercati Energetici S.p.A. — via <a href="https://energyindex.it">Energy Index</a>`
+    : `Fonte: <a href="https://energyindex.it">Energy Index</a>`;
   return `<div class="eidx-widget" data-eidx="${variant}" data-theme="${theme}">
   <a href="${def.page}?ref=widget">${def.label}</a>
-  <p class="eidx-src">Fonte: <a href="https://energyindex.it">Energy Index</a></p>${gme}
+  <p class="eidx-src">${source}</p>
 </div>
 <script src="${WIDGET_SCRIPT_URL}" async></script>`;
 }
