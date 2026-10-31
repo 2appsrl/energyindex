@@ -1,5 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
+import type { KeyStatus } from "@/lib/api-keys/link-check";
+import { mergeKeyUsage, type KeyUsage } from "./integrations";
 import type { LeadSource, LeadStatus } from "./leads";
 
 /**
@@ -81,18 +83,22 @@ export type Dimension = "path" | "origin_host" | "referer_host" | "agent" | "age
 
 const NO_CLIENT = "SUPABASE_SERVICE_ROLE_KEY non configurata sul server.";
 
-function explain(message: string): string {
+const ADMIN_MIGRATION = "20260927000001_admin_traffic_leads.sql";
+const KEYS_MIGRATION = "20261031000001_api_keys_throttle.sql";
+const INTEGRATIONS_MIGRATION = "20261031000002_admin_integrations.sql";
+
+function explain(message: string, migration = ADMIN_MIGRATION): string {
   if (/does not exist|Could not find the (function|table)|schema cache/i.test(message)) {
-    return "Tabelle o funzioni mancanti: applica la migrazione 20260927000001_admin_traffic_leads.sql.";
+    return `Tabelle o funzioni mancanti: applica la migrazione ${migration}.`;
   }
   return message;
 }
 
-async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<Result<T>> {
+async function rpc<T>(fn: string, args: Record<string, unknown>, migration?: string): Promise<Result<T>> {
   const supabase = createServiceClient();
   if (!supabase) return { data: null, error: NO_CLIENT };
   const { data, error } = await supabase.rpc(fn, args);
-  if (error) return { data: null, error: explain(error.message) };
+  if (error) return { data: null, error: explain(error.message, migration) };
   return { data: data as T, error: null };
 }
 
@@ -157,6 +163,78 @@ export async function etlStatus(): Promise<Result<EtlStatus[]>> {
 
 export async function cronStatus(): Promise<Result<CronStatus[]>> {
   return rpc<CronStatus[]>("admin_cron_status", {});
+}
+
+// ============================================================ INTEGRAZIONI
+
+export interface ApiKeyRow {
+  id: string;
+  prefix: string | null;
+  email: string;
+  nome: string;
+  domain: string;
+  attribution_url: string;
+  plan: string;
+  status: KeyStatus;
+  link_ok: boolean | null;
+  link_checked_at: string | null;
+  link_failures: number;
+  created_at: string;
+  activated_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApiKeyWithUsage extends ApiKeyRow {
+  /** Chiamate negli ultimi KEY_USAGE_DAYS giorni; null se il conteggio non e' disponibile. */
+  calls_30d: number | null;
+}
+
+export interface DomainRow {
+  origin_host: string;
+  requests: number;
+  uniques: number;
+  first_seen: string;
+  last_seen: string;
+}
+
+export const KEY_USAGE_DAYS = 30;
+
+/**
+ * Chiavi API, piu' recenti prima, con le chiamate degli ultimi 30 giorni.
+ * Se manca solo la RPC del conteggio la lista si vede lo stesso (usageError).
+ */
+export async function listApiKeys(): Promise<Result<{ keys: ApiKeyWithUsage[]; usageError: string | null }>> {
+  const supabase = createServiceClient();
+  if (!supabase) return { data: null, error: NO_CLIENT };
+  const { data, error } = await supabase
+    .from("api_keys")
+    .select(
+      "id, prefix, email, nome, domain, attribution_url, plan, status, link_ok, link_checked_at, link_failures, created_at, activated_at, revoked_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) return { data: null, error: explain(error.message, KEYS_MIGRATION) };
+  const usage = await rpc<KeyUsage[]>("admin_api_key_usage", { p_days: KEY_USAGE_DAYS }, INTEGRATIONS_MIGRATION);
+  return {
+    data: { keys: mergeKeyUsage(data as ApiKeyRow[], usage.data), usageError: usage.error },
+    error: null,
+  };
+}
+
+async function domainRows(fn: string, days: number): Promise<Result<DomainRow[]>> {
+  const r = await rpc<DomainRow[]>(fn, { p_days: days }, INTEGRATIONS_MIGRATION);
+  if (r.error !== null) return r;
+  return { data: r.data.map((x) => ({ ...x, requests: num(x.requests), uniques: num(x.uniques) })), error: null };
+}
+
+/** Domini da cui viene caricato il widget (chiamate con ?src=widget). */
+export function widgetDomains(days: number): Promise<Result<DomainRow[]>> {
+  return domainRows("admin_widget_domains", days);
+}
+
+/** Siti che chiamano le API dal browser senza chiave e non dal widget: lead. */
+export function keylessApiDomains(days: number): Promise<Result<DomainRow[]>> {
+  return domainRows("admin_keyless_api_domains", days);
 }
 
 /** Riempie i giorni senza dati con zero, dal piu' vecchio a oggi (Europe/Rome). */
