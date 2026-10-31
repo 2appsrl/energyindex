@@ -145,6 +145,7 @@ const key = (over: Record<string, unknown> = {}) => ({
   attribution_url: "https://esempio.it/prezzi",
   status: "active",
   link_failures: 0,
+  plan: "developer",
   ...over,
 });
 
@@ -178,6 +179,15 @@ describe("recheckApiKeyLink", () => {
     expect((await recheckApiKeyLink(ID)).ok).toBe(false);
     expect(fetchHasLink).not.toHaveBeenCalled();
     expect(queries).toHaveLength(1);
+  });
+
+  it.each(["api", "pro", "trading", "enterprise"])("piano %s: attribuzione facoltativa, niente verifica ne' update", async (plan) => {
+    const { db, queries } = fakeSupabase([{ data: key({ plan, status: "downgraded", link_failures: 2 }), error: null }]);
+    createServiceClient.mockReturnValue(db);
+    expect(await recheckApiKeyLink(ID)).toEqual({ ok: true, message: "Attribuzione facoltativa per questo piano: nessuna verifica." });
+    expect(fetchHasLink).not.toHaveBeenCalled();
+    expect(queries).toHaveLength(1);
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("link trovato: chiave declassata torna attiva, update protetto dallo stato letto", async () => {

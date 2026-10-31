@@ -1,6 +1,8 @@
 /**
- * Verifica settimanale dell'attribuzione: per ogni chiave attiva o
+ * Verifica settimanale dell'attribuzione: per ogni chiave Developer attiva o
  * declassata scarica la pagina dichiarata e cerca un link a energyindex.it.
+ * Dal piano API in su l'attribuzione e' facoltativa: quelle chiavi non si
+ * verificano.
  * Due fallimenti consecutivi → declassata ai limiti Open + email.
  * Eccezione: se il widget e' stato chiamato da quel dominio (o da un suo
  * sottodominio) negli ultimi 7 giorni da almeno 2 visitatori distinti, il
@@ -46,6 +48,7 @@ async function main(): Promise<number> {
   const { data, error } = await db
     .from("api_keys")
     .select("id, email, nome, domain, attribution_url, status, link_failures")
+    .eq("plan", "developer")
     .in("status", ["active", "downgraded"])
     .order("created_at", { ascending: true });
   if (error) {

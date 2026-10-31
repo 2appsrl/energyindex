@@ -47,8 +47,8 @@ export async function revokeApiKey(id: string): Promise<AdminKeyResult> {
 }
 
 /**
- * Ricontrolla subito l'attribuzione di una chiave, con la stessa regola della
- * verifica settimanale: link nella pagina dichiarata oppure widget caricato
+ * Ricontrolla subito l'attribuzione di una chiave Developer (dal piano API in
+ * su il link e' facoltativo), con la stessa regola della verifica settimanale: link nella pagina dichiarata oppure widget caricato
  * dal dominio. A differenza della verifica settimanale puo' solo riattivare:
  * un link assente aggiorna link_ok e link_checked_at ma non conta come
  * fallimento e non declassa. Una riattivazione manuale non manda email.
@@ -63,7 +63,7 @@ export async function recheckApiKeyLink(id: string): Promise<AdminKeyResult> {
 
   const { data: key, error: readErr } = await db
     .from("api_keys")
-    .select("id, domain, attribution_url, status, link_failures")
+    .select("id, domain, attribution_url, status, link_failures, plan")
     .eq("id", id)
     .maybeSingle();
   if (readErr) return { ok: false, error: `Lettura della chiave non riuscita: ${readErr.message}` };
@@ -71,6 +71,10 @@ export async function recheckApiKeyLink(id: string): Promise<AdminKeyResult> {
   const status = key.status as KeyStatus;
   if (status === "revoked" || status === "pending") {
     return { ok: false, error: "Chiave revocata o non ancora confermata: niente da verificare." };
+  }
+  // Dal piano API in su il link e' facoltativo: la verifica vale solo per Developer.
+  if (key.plan !== "developer") {
+    return { ok: true, message: "Attribuzione facoltativa per questo piano: nessuna verifica." };
   }
 
   let ok = await fetchHasLink(String(key.attribution_url), undefined, RECHECK_BUDGET_MS);
