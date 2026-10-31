@@ -3,7 +3,15 @@ import createMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { defaultLocale, locales } from "./lib/i18n/config";
 import { classifyAgent, isLoggableBot } from "./lib/traffic/classify";
-import { buildRecord, clientIp, extractApiKey, hashIp, hashSalt, writeRecord } from "./lib/traffic/log";
+import {
+  buildRecord,
+  clientIp,
+  extractApiKey,
+  hashIp,
+  hashSalt,
+  writeRecord,
+  type RecordOverrides,
+} from "./lib/traffic/log";
 import { sharedLookup } from "./lib/api-keys/lookup";
 import { API_EXPOSE_HEADERS, decideAccess } from "./lib/api-keys/gate";
 import { isEidxKey, originHostFromHeader, sha256Hex } from "./lib/api-keys/keys";
@@ -72,8 +80,8 @@ const SECTION_PREFIXES = [
 const CRAWLER_FILES = new Set(["/llms.txt", "/robots.txt", "/sitemap.xml"]);
 
 /** Registra la richiesta in traffic_log senza far aspettare la risposta. */
-function logTraffic(kind: "api" | "bot", request: NextRequest, event: NextFetchEvent) {
-  event.waitUntil(buildRecord(kind, request, hashSalt()).then(writeRecord).catch(() => {}));
+function logTraffic(kind: "api" | "bot", request: NextRequest, event: NextFetchEvent, overrides?: RecordOverrides) {
+  event.waitUntil(buildRecord(kind, request, hashSalt(), overrides).then(writeRecord).catch(() => {}));
 }
 
 /**
@@ -107,11 +115,22 @@ let lastGateErrorAt = 0;
  * vale anche per le risposte servite dalla cache. Senza env (dev senza
  * service key) lascia passare tutto, e su qualunque eccezione pure:
  * un errore del gate non deve rompere le API pubbliche.
+ *
+ * Throttle: API_THROTTLE_ENFORCE=1 (env Netlify, serve un nuovo deploy)
+ * attiva i 429. Con qualunque altro valore il throttle e' in sola
+ * osservazione: la decisione si calcola, chi e' oltre quota passa con
+ * l'header X-EIDX-Throttle: observe. Chiave e Origin (401/403) valgono
+ * sempre. Vedi docs/go-live-widget-chiavi.md.
+ *
+ * invalidKey: la richiesta e' stata respinta con 401. Nel log va senza
+ * prefisso, altrimenti una chiave inventata con il prefisso di una vera
+ * ne consumerebbe la quota.
  */
-async function gateApi(request: NextRequest): Promise<NextResponse> {
+async function gateApi(request: NextRequest): Promise<{ res: NextResponse; invalidKey: boolean }> {
+  const pass = () => ({ res: NextResponse.next(), invalidKey: false });
   try {
     const lookup = sharedLookup();
-    if (!lookup) return NextResponse.next();
+    if (!lookup) return pass();
 
     // Un Bearer che non e' una nostra chiave (client HTTP condivisi) vale
     // come richiesta anonima: niente 401 a chi non ha mai usato una chiave.
@@ -132,10 +151,11 @@ async function gateApi(request: NextRequest): Promise<NextResponse> {
       originHost,
       throttledKey: found.key ? throttled.has(`key:${found.key.prefix}`) : false,
       throttledIp: ipHash ? throttled.has(`ip:${ipHash}`) : false,
+      enforceThrottle: process.env.API_THROTTLE_ENFORCE === "1",
     });
 
     if (!decision.ok) {
-      return NextResponse.json(decision.body, {
+      const res = NextResponse.json(decision.body, {
         status: decision.status,
         headers: {
           ...decision.headers,
@@ -144,16 +164,17 @@ async function gateApi(request: NextRequest): Promise<NextResponse> {
           "Cache-Control": "no-store",
         },
       });
+      return { res, invalidKey: decision.status === 401 };
     }
     const res = NextResponse.next();
     for (const [k, v] of Object.entries(decision.headers)) res.headers.set(k, v);
-    return res;
+    return { res, invalidKey: false };
   } catch (e) {
     if (Date.now() - lastGateErrorAt > 60_000) {
       lastGateErrorAt = Date.now();
       console.error("[api-keys] errore nel gate, richiesta lasciata passare", e instanceof Error ? e.message : e);
     }
-    return NextResponse.next();
+    return pass();
   }
 }
 
@@ -163,12 +184,14 @@ export default async function middleware(request: NextRequest, event: NextFetchE
   // API pubbliche: si registra ogni chiamata (anche quelle che poi la CDN
   // serve dalla cache, perche' il middleware gira prima), poi si applicano
   // chiave, Origin e quote. Niente redirect di host, niente i18n.
-  // Il log viene prima del gate: anche le richieste respinte (401/403/429)
-  // finiscono in traffic_log e contano per il throttle per IP.
+  // Il log parte prima di restituire la risposta, anche per le richieste
+  // respinte (401/403/429): finiscono in traffic_log e contano per il
+  // throttle per IP. Dopo un 401 senza prefisso della chiave (vedi gateApi).
   if (path === "/api/v1" || path.startsWith("/api/v1/")) {
     if (request.method === "OPTIONS") return NextResponse.next();
-    logTraffic("api", request, event);
-    return gateApi(request);
+    const { res, invalidKey } = await gateApi(request);
+    logTraffic("api", request, event, invalidKey ? { apiKeyPrefix: null } : undefined);
+    return res;
   }
 
   // Link di verifica della chiave: il token passa dall'URL a un cookie

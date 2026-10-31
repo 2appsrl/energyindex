@@ -5,7 +5,15 @@ import { describe, it, expect } from "vitest";
 import { decideAccess, type KeyRecord } from "@/lib/api-keys/gate";
 
 const active: KeyRecord = { prefix: "eidx_live_ab12", status: "active", domain: "esempio.it", plan: "developer" };
-const base = { hasKey: false, key: null, lookupFailed: false, originHost: null, throttledKey: false, throttledIp: false };
+const base = {
+  hasKey: false,
+  key: null,
+  lookupFailed: false,
+  originHost: null,
+  throttledKey: false,
+  throttledIp: false,
+  enforceThrottle: true,
+};
 
 describe("decideAccess", () => {
   it("anonimo: passa con il limite Open", () => {
@@ -80,5 +88,37 @@ describe("decideAccess", () => {
 
   it("una chiave attiva non paga il throttle per IP condiviso", () => {
     expect(decideAccess({ ...base, hasKey: true, key: active, throttledIp: true }).ok).toBe(true);
+  });
+
+  describe("throttle in sola osservazione (enforceThrottle false)", () => {
+    const observe = { ...base, enforceThrottle: false };
+
+    it("oltre quota per chiave o per IP: nessun 429, passa con l'header di osservazione", () => {
+      const r1 = decideAccess({ ...observe, hasKey: true, key: active, throttledKey: true });
+      expect(r1.ok).toBe(true);
+      expect(r1.headers["X-EIDX-Throttle"]).toBe("observe");
+      expect(r1.headers["X-RateLimit-Limit"]).toBe("120");
+      expect(r1.headers["Retry-After"]).toBeUndefined();
+      const r2 = decideAccess({ ...observe, throttledIp: true });
+      expect(r2.ok).toBe(true);
+      expect(r2.headers["X-EIDX-Throttle"]).toBe("observe");
+    });
+
+    it("sotto quota: nessun header di osservazione", () => {
+      expect(decideAccess(observe).headers["X-EIDX-Throttle"]).toBeUndefined();
+    });
+
+    it("chiave e Origin restano applicati: 401 e 403 anche in osservazione", () => {
+      const r1 = decideAccess({ ...observe, hasKey: true, throttledIp: true });
+      expect(r1.ok === false && r1.status).toBe(401);
+      const r2 = decideAccess({ ...observe, hasKey: true, key: active, originHost: "altro.it", throttledKey: true });
+      expect(r2.ok === false && r2.status).toBe(403);
+    });
+
+    it("con enforceThrottle true l'header di osservazione non compare", () => {
+      const r = decideAccess({ ...base, throttledIp: true });
+      expect(r.ok === false && r.status).toBe(429);
+      expect(r.headers["X-EIDX-Throttle"]).toBeUndefined();
+    });
   });
 });

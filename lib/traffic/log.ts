@@ -100,10 +100,20 @@ export async function hashIp(ip: string | null, salt: string, now = new Date()):
   return Array.from(new Uint8Array(digest).slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export interface RecordOverrides {
+  /**
+   * Prefisso da salvare al posto di quello letto dalla richiesta. null per
+   * una chiave respinta (401): chi conosce solo il prefisso di una chiave
+   * altrui non deve consumarne la quota, la richiesta conta per il suo IP.
+   */
+  apiKeyPrefix?: string | null;
+}
+
 export async function buildRecord(
   kind: "api" | "bot",
   request: { method: string; headers: Headers; nextUrl: { pathname: string; searchParams: URLSearchParams } },
   salt: string,
+  overrides: RecordOverrides = {},
 ): Promise<TrafficRecord> {
   const { headers, nextUrl } = request;
   const ua = headers.get("user-agent");
@@ -120,7 +130,8 @@ export async function buildRecord(
     agent_kind: agentKind,
     country: clientCountry(headers),
     ip_hash: await hashIp(clientIp(headers), salt),
-    api_key_prefix: apiKeyPrefix(headers, nextUrl.searchParams),
+    api_key_prefix:
+      overrides.apiKeyPrefix !== undefined ? overrides.apiKeyPrefix : apiKeyPrefix(headers, nextUrl.searchParams),
   };
 }
 

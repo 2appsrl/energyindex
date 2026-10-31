@@ -21,6 +21,12 @@ export interface GateInput {
   originHost: string | null;
   throttledKey: boolean;
   throttledIp: boolean;
+  /**
+   * false = throttle in sola osservazione: chi e' oltre quota passa lo
+   * stesso, con X-EIDX-Throttle: observe. Non tocca i controlli su chiave
+   * e Origin (401/403).
+   */
+  enforceThrottle: boolean;
 }
 
 export type GateResult =
@@ -67,6 +73,9 @@ export function decideAccess(i: GateInput): GateResult {
   if (i.key?.status === "downgraded") headers["X-EIDX-Notice"] = "attribution-missing";
 
   const throttled = activeKey ? i.throttledKey : i.throttledIp;
+  if (throttled && !i.enforceThrottle) {
+    return { ok: true, headers: { ...headers, "X-EIDX-Throttle": "observe" } };
+  }
   if (throttled) {
     return deny(429, "rate_limited", "Limite di richieste superato. Riprova tra qualche minuto.", {
       ...headers,

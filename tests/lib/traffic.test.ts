@@ -99,4 +99,15 @@ describe("traffic log record", () => {
     });
     expect(r.ip_hash).toMatch(/^[0-9a-f]{16}$/);
   });
+
+  it("override del prefisso: null toglie la chiave dal record (chiave non valida)", async () => {
+    const request = {
+      method: "GET",
+      headers: new Headers({ authorization: "Bearer eidx_live_abcd1234" }),
+      nextUrl: { pathname: "/api/v1/pun/today", searchParams: new URLSearchParams() },
+    };
+    expect((await buildRecord("api", request, "salt")).api_key_prefix).toBe("eidx_live_abcd");
+    expect((await buildRecord("api", request, "salt", { apiKeyPrefix: null })).api_key_prefix).toBeNull();
+    expect((await buildRecord("api", request, "salt", {})).api_key_prefix).toBe("eidx_live_abcd");
+  });
 });
