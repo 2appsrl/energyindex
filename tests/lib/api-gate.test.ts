@@ -56,6 +56,22 @@ describe("decideAccess", () => {
     expect(r2.ok === false && r2.status).toBe(429);
   });
 
+  it("chiave pending (email non verificata): 401", () => {
+    const r = decideAccess({ ...base, hasKey: true, key: { ...active, status: "pending" } });
+    expect(r.ok === false && r.status).toBe(401);
+    expect(r.ok === false && r.body.error).toBe("invalid_key");
+  });
+
+  it("chiave declassata da un altro sito: 403", () => {
+    const r = decideAccess({ ...base, hasKey: true, key: { ...active, status: "downgraded" }, originHost: "altro.it" });
+    expect(r.ok === false && r.status).toBe(403);
+  });
+
+  it("DB irraggiungibile ma IP in throttle: 429 (fail-open non toglie il limite)", () => {
+    const r = decideAccess({ ...base, hasKey: true, lookupFailed: true, throttledIp: true });
+    expect(r.ok === false && r.status).toBe(429);
+  });
+
   it("una chiave attiva non paga il throttle per IP condiviso", () => {
     expect(decideAccess({ ...base, hasKey: true, key: active, throttledIp: true }).ok).toBe(true);
   });

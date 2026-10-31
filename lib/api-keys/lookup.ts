@@ -28,13 +28,29 @@ export function createLookup({ url, serviceKey, fetchFn = fetch, now = Date.now,
   let downUntil = 0;
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 
+  function logOutage(e: unknown, status: number) {
+    const detail = e instanceof Error ? e.message : String(e);
+    const hint =
+      status === 401 || status === 403
+        ? `${detail}: sembra un errore di configurazione (service key mancante o errata)`
+        : detail;
+    console.error("[api-keys] postgrest non raggiungibile, fail-open per 15 s", hint);
+  }
+
   async function get<T>(path: string): Promise<T> {
     if (downUntil > now()) throw new Error("postgrest down");
+    let status = 0;
     try {
       const res = await fetchFn(`${url}/rest/v1/${path}`, { headers, signal: AbortSignal.timeout(1500) });
-      if (!res.ok) throw new Error(`postgrest ${res.status}`);
+      if (!res.ok) {
+        status = res.status;
+        throw new Error(`postgrest ${res.status}`);
+      }
       return (await res.json()) as T;
     } catch (e) {
+      // Un solo log per guasto: solo quando il circuito passa da chiuso ad
+      // aperto, non per ogni richiesta che arriva mentre e' aperto.
+      if (downUntil <= now()) logOutage(e, status);
       downUntil = now() + OUTAGE_MS;
       throw e;
     }

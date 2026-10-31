@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLookup } from "@/lib/api-keys/lookup";
 
 const env = { url: "https://db.test", serviceKey: "svc" };
@@ -76,6 +76,34 @@ describe("createLookup", () => {
     const s = await lk.throttled();
     expect(s.has("ip:abc")).toBe(true);
     expect(s.has("key:eidx_live_ab12")).toBe(true);
+  });
+
+  describe("log del guasto", () => {
+    afterEach(() => { vi.restoreAllMocks(); });
+
+    it("un solo console.error per finestra di guasto, di nuovo alla successiva", async () => {
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const fetchFn = vi.fn(async () => jsonResponse({ message: "boom" }, 500));
+      const lk = createLookup({ ...env, fetchFn, now: () => now });
+      await Promise.all([lk.key("h1"), lk.throttled()]);
+      await lk.key("h2");
+      now += 10_000;
+      await lk.throttled();
+      expect(err).toHaveBeenCalledTimes(1);
+      expect(err.mock.calls[0][0]).toBe("[api-keys] postgrest non raggiungibile, fail-open per 15 s");
+      expect(String(err.mock.calls[0][1])).toContain("500");
+      now += 16_000;
+      await lk.key("h3");
+      expect(err).toHaveBeenCalledTimes(2);
+    });
+
+    it("401/403: il messaggio indica un errore di configurazione della service key", async () => {
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const lk = createLookup({ ...env, fetchFn: async () => jsonResponse({ message: "no" }, 401), now: () => now });
+      await lk.key("h1");
+      expect(err).toHaveBeenCalledTimes(1);
+      expect(err.mock.calls[0].join(" ")).toMatch(/configurazione.*service key/i);
+    });
   });
 
   it("throttled con DB giu': insieme vuoto (fail-open)", async () => {
