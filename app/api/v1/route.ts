@@ -1,4 +1,14 @@
 import { NextResponse } from "next/server";
+import { API_EXPOSE_HEADERS } from "@/lib/api-keys/gate";
+
+const headers = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Cache-Control": "public, max-age=3600, s-maxage=3600",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Expose-Headers": API_EXPOSE_HEADERS,
+} as const;
 
 /**
  * GET /api/v1
@@ -97,13 +107,10 @@ export async function GET() {
       },
       contact: "pro@energyindex.pro",
     },
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600",
-        "Access-Control-Allow-Origin": "*",
-      },
-    },
+    { status: 200, headers },
   );
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers });
 }

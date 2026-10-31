@@ -11,6 +11,7 @@ import { cache } from "react";
 import { createServerClient } from "@/lib/supabase/server";
 import { ASSETS, buildLatestPriceJson, dailyAverageFor, type LatestPriceJson } from "@/lib/api/price-json";
 import { romeDateOf, romeDayBoundsUtc } from "@/supabase/functions/_shared/rome-time";
+import { API_EXPOSE_HEADERS } from "@/lib/api-keys/gate";
 
 export type { LatestPriceJson } from "@/lib/api/price-json";
 
@@ -64,7 +65,8 @@ export const apiHeaders = {
   "Cache-Control": "public, max-age=900, s-maxage=900, stale-while-revalidate=3600",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Expose-Headers": API_EXPOSE_HEADERS,
 } as const;
 
 /** Lista degli asset disponibili per l'endpoint /api/v1/today. */
