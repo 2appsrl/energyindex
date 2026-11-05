@@ -13,6 +13,8 @@ const PLANS: { id: ApiKeyPlan; name: string; price: string; accent: string }[] =
   { id: "enterprise", name: "Enterprise", price: "Su misura", accent: "peer-checked:ring-stone-500 peer-checked:bg-stone-500/10" },
 ];
 
+const MIN_PROJECT_CHARS = 10;
+
 const inputClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500";
 
@@ -27,33 +29,51 @@ export function ApiKeyRequestForm() {
   const [sitoWeb, setSitoWeb] = useState("");
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
-    { type: "success"; mode: "verify" | "manual" } | { type: "error"; message: string; mailto?: string } | null
+    | { type: "success"; mode: "verify" | "manual" }
+    | { type: "error"; message: string; mailto?: string; reload?: boolean }
+    | null
   >(null);
 
   const isDeveloper = piano === "developer";
-  const isValid =
-    nome.trim().length >= 2 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
-    progetto.trim().length >= 10 &&
-    (!isDeveloper || (dominio.trim().length >= 4 && /^https?:\/\/\S+$/i.test(attributionUrl.trim())));
+  const projectMissing = MIN_PROJECT_CHARS - progetto.trim().length;
+  const missing = [
+    nome.trim().length < 2 && "nome e cognome",
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && "un'email valida",
+    isDeveloper && dominio.trim().length < 4 && "il dominio del sito",
+    isDeveloper && !/^https?:\/\/\S+$/i.test(attributionUrl.trim()) && "la pagina dei dati, con https://",
+    projectMissing > 0 &&
+      `cosa vuoi costruire: ancora ${projectMissing} ${projectMissing === 1 ? "carattere" : "caratteri"}`,
+  ].filter(Boolean);
+  const isValid = missing.length === 0;
+  const hasStarted = [nome, email, azienda, dominio, attributionUrl, progetto].some((v) => v.trim() !== "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid || pending) return;
     startTransition(async () => {
       trackEvent("api_key_request", { piano });
-      const res = await requestApiKey({
-        nome: nome.trim(),
-        email: email.trim(),
-        azienda: azienda.trim() || undefined,
-        piano,
-        progetto: progetto.trim(),
-        ...(isDeveloper ? { dominio: dominio.trim(), attributionUrl: attributionUrl.trim() } : {}),
-        ...(sitoWeb ? { hp: sitoWeb } : {}),
-      });
-      setResult(
-        res.ok ? { type: "success", mode: res.mode } : { type: "error", message: res.error, mailto: res.fallbackMailto },
-      );
+      try {
+        const res = await requestApiKey({
+          nome: nome.trim(),
+          email: email.trim(),
+          azienda: azienda.trim() || undefined,
+          piano,
+          progetto: progetto.trim(),
+          ...(isDeveloper ? { dominio: dominio.trim(), attributionUrl: attributionUrl.trim() } : {}),
+          ...(sitoWeb ? { hp: sitoWeb } : {}),
+        });
+        setResult(
+          res.ok ? { type: "success", mode: res.mode } : { type: "error", message: res.error, mailto: res.fallbackMailto },
+        );
+      } catch {
+        // Una pagina aperta prima di un deploy non trova piu' l'azione del server:
+        // senza questo catch l'errore porta alla pagina bianca di Next.
+        setResult({
+          type: "error",
+          message: "Invio non riuscito: la pagina potrebbe essere stata aggiornata nel frattempo. Ricaricala e riprova.",
+          reload: true,
+        });
+      }
     });
   }
 
@@ -211,6 +231,15 @@ export function ApiKeyRequestForm() {
               Invia la richiesta dal tuo client email →
             </a>
           )}
+          {result.reload && (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-1 block font-semibold text-violet-600 underline dark:text-violet-400"
+            >
+              Ricarica la pagina
+            </button>
+          )}
         </div>
       )}
 
@@ -222,6 +251,11 @@ export function ApiKeyRequestForm() {
         {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
         Richiedi la chiave
       </button>
+      {hasStarted && !isValid && (
+        <p aria-live="polite" className="text-xs text-muted-foreground">
+          Per richiedere la chiave manca: {missing.join(", ")}.
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         Usiamo i tuoi dati solo per emettere la chiave e per comunicazioni sull&apos;API (modifiche, deprecazioni, manutenzioni).
       </p>
