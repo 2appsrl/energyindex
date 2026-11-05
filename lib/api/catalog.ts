@@ -78,11 +78,11 @@ export const TIERS: readonly ApiTier[] = [
     quota: "10.000 richieste/mese",
     rateLimit: "120 richieste/minuto",
     attribution: "Obbligatoria, con link",
-    history: "Fino a 2 anni",
+    history: "Storico completo",
     features: [
       "Tutto del piano Open",
-      "Storico giornaliero fino a 2 anni",
-      "PUN per le 6 zone di mercato",
+      "Storico giornaliero completo",
+      "PUN per le 6 zone di mercato, giornaliero e orario",
       "Export CSV per Excel e Google Sheets",
       "Forecast del giorno dopo (valore puntuale)",
     ],
@@ -92,7 +92,7 @@ export const TIERS: readonly ApiTier[] = [
     id: "api",
     name: "API",
     priceMonthlyEur: 99,
-    tagline: "Tutti i dati, orari e previsioni. Per prodotti in produzione.",
+    tagline: "Previsioni, statistiche e alert. Per prodotti in produzione.",
     auth: "API key",
     quota: "100.000 richieste/mese",
     rateLimit: "600 richieste/minuto",
@@ -100,7 +100,6 @@ export const TIERS: readonly ApiTier[] = [
     history: "Storico completo",
     features: [
       "Tutto del piano Developer",
-      "PUN orario per zona, storico completo",
       "Forecast PUN/PSV/TTF a 7–180 giorni con bande",
       "Statistiche mercato libero e spread vs PUN/PSV",
       "Alert via webhook su soglie di prezzo",
@@ -154,10 +153,10 @@ export const TIERS: readonly ApiTier[] = [
     quota: "Su misura",
     rateLimit: "Su misura",
     attribution: "Non richiesta (white-label)",
-    history: "Storico completo + export bulk",
+    history: "Storico completo",
     features: [
       "Tutto del piano Trading",
-      "Export bulk e report white-label",
+      "Export bulk dei dati Energy Index e report white-label",
       "SLA 99,9% e supporto 24h",
       "Account manager dedicato",
     ],
@@ -248,6 +247,13 @@ export interface ApiEndpoint {
   formats: ("json" | "csv")[];
   cache: string;
 }
+
+/**
+ * Formula pubblica sui dati GME: mai "licenza", perche' non ne concediamo.
+ * Vale perche' PUN e PSV stanno tutti nei piani gratuiti (test in api-gme-gratis).
+ */
+export const GME_FREE_NOTICE =
+  "PUN e PSV non sono in vendita: li mostriamo gratis a scopo informativo. Il loro riuso resta soggetto alle condizioni del GME.";
 
 const ATTR = "Energy Index — https://energyindex.it (gratis, attribuzione richiesta)";
 const GME_ATTR = "Fonte: Gestore dei Mercati Energetici S.p.A. — via Energy Index (https://energyindex.it)";
@@ -474,8 +480,7 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     ],
     tierLimits: {
       open: "Ultimi 30 giorni, solo JSON",
-      developer: "Fino a 2 anni, JSON e CSV",
-      api: "Storico completo",
+      developer: "Storico completo, JSON e CSV",
     },
     formats: ["json", "csv"],
     cache: "1 ora",
@@ -527,7 +532,7 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     description:
       "Prezzi orari del MGP per il PUN nazionale o per una singola zona. E' la base per spostare i consumi nelle ore piu' economiche, calcolare profili F1/F2/F3 o ricostruire il costo di un profilo di carico reale.",
     category: "prezzi",
-    tier: "api",
+    tier: "developer",
     status: "coming",
     params: [
       { name: "zone", in: "query", type: "string", required: false, description: "Zona di mercato.", enum: ["nazionale", "nord", "cnor", "csud", "sud", "sici", "sard"], default: "nazionale" },
@@ -964,16 +969,16 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     tier: "enterprise",
     status: "coming",
     params: [
-      { name: "dataset", in: "path", type: "string", required: true, description: "Dataset.", enum: ["pun-hourly", "prices-daily", "forecast-history", "mercato-libero"], example: "pun-hourly" },
+      { name: "dataset", in: "path", type: "string", required: true, description: "Dataset.", enum: ["forecast-history", "mercato-libero"], example: "forecast-history" },
       { name: "format", in: "query", type: "string", required: false, description: "Formato.", enum: ["csv.gz", "parquet"], default: "parquet" },
     ],
-    exampleCall: "/bulk/pun-hourly?format=parquet",
+    exampleCall: "/bulk/forecast-history?format=parquet",
     response: {
-      dataset: "pun-hourly",
+      dataset: "forecast-history",
       format: "parquet",
       rows: 1843200,
       generated_at: "2026-09-27T02:00:00Z",
-      download_url: "https://energyindex.it/api/v1/bulk/files/pun-hourly-20260927.parquet?sig=…",
+      download_url: "https://energyindex.it/api/v1/bulk/files/forecast-history-20260927.parquet?sig=…",
       expires_at: "2026-09-27T03:00:00Z",
     },
     fields: [

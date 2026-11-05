@@ -15,6 +15,7 @@ import {
   type ApiEndpoint,
   type SnippetLang,
   type TierId,
+  GME_FREE_NOTICE,
 } from "@/lib/api/catalog";
 import { MethodBadge, StatusBadge, TierBadge, TIER_STYLE } from "@/components/api/badges";
 import { CodeBlock, CodeTabs } from "@/components/api/code";
@@ -257,13 +258,18 @@ export default function ApiDocsPage() {
               <li>
                 Attivazioni, revoche e declassamenti delle chiavi sono riconosciuti entro circa un minuto.
               </li>
+              <li>
+                Sui percorsi con dati GME (<Code>/pun</Code>, <Code>/psv</Code>, <Code>/today</Code> e le serie di PUN
+                e PSV) nessun piano a pagamento ha piu&apos; di 120 richieste al minuto, come il Developer gratuito. I
+                limiti e le quote dei piani a pagamento valgono per gli altri servizi.
+              </li>
             </ul>
             <p>Header di risposta:</p>
             <CodeBlock code={`X-RateLimit-Limit: 120\nX-EIDX-Key-Status: active`} title="header di risposta" />
             <Table
               head={["Header", "Contenuto"]}
               rows={[
-                ["X-RateLimit-Limit", "Limite al minuto applicato alla richiesta: quello del piano con una chiave attiva, 60 altrimenti."],
+                ["X-RateLimit-Limit", "Limite al minuto applicato alla richiesta: quello del piano con una chiave attiva (massimo 120 sui dati GME), 60 altrimenti."],
                 ["X-EIDX-Key-Status", "Solo con chiave: active, oppure downgraded se la chiave e' stata declassata."],
                 ["X-EIDX-Notice", "attribution-missing quando la chiave e' declassata perche' manca il link di attribuzione (vedi Licenza)."],
                 ["Retry-After", "Solo sulle risposte 429: secondi da attendere."],
@@ -407,6 +413,7 @@ export default function ApiDocsPage() {
           </DocSection>
 
           <DocSection id="licenza" title="Attribuzione e licenza">
+            <p>{GME_FREE_NOTICE} I piani a pagamento riguardano servizi aggiuntivi: forecast, statistiche, alert e volumi.</p>
             <p>
               Le API restituiscono due tipi di dati, con regole diverse. Ogni risposta contiene il testo di
               attribuzione pronto nel campo <Code>attribution</Code>.
@@ -469,6 +476,13 @@ export default function ApiDocsPage() {
 
           <DocSection id="changelog" title="Changelog">
             <ol className="space-y-3 border-l-2 pl-5">
+              <li>
+                <span className="font-mono text-xs text-muted-foreground">2026-11-05</span>
+                <p>
+                  PUN e PSV non sono in vendita: PUN orario e per zona e storico completo passano ai piani gratuiti,
+                  l&apos;export bulk esclude i dati GME e sui loro percorsi nessun piano supera 120 richieste al minuto.
+                </p>
+              </li>
               <li>
                 <span className="font-mono text-xs text-muted-foreground">2026-10-31</span>
                 <p>

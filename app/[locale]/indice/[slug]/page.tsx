@@ -26,7 +26,7 @@ const URL_TO_ASSET_SLUG: Record<string, string> = {
 
 const SLUG_DESCRIPTIONS: Record<string, string> = {
   pun: "Prezzo Unico Nazionale del mercato elettrico italiano. Asta MGP del giorno prima, esiti pubblicati intorno alle 12:30.",
-  psv: "Punto di Scambio Virtuale, riferimento all'ingrosso del gas naturale italiano. Asta MGP-GAS, esiti pubblicati intorno alle 17:00.",
+  psv: "Punto di Scambio Virtuale, riferimento all'ingrosso del gas naturale italiano. Prezzo di riferimento MGP-GAS del GME, esiti pubblicati intorno alle 17:00.",
   brent: "Prezzo benchmark del petrolio crude oil europeo (North Sea), riferimento globale. Driver storico di gas e elettrico.",
   co2: "Quota di emissione CO2 nell'EU Emissions Trading System. Costo che si scarica sui produttori termoelettrici e indirettamente sulla bolletta.",
   temperatura: "Temperatura media nazionale italiana, media pesata di 9 stazioni meteo per popolazione. Driver dei consumi di gas (riscaldamento) e elettrico (raffrescamento).",
@@ -65,7 +65,7 @@ const DATASET_DEF: Record<
   psv: {
     name: "PSV — Punto di Scambio Virtuale gas (Italia)",
     description:
-      "Serie storica del prezzo PSV per il gas naturale italiano, asta MGP-GAS. Dati giornalieri dal 2021.",
+      "Serie storica del prezzo PSV per il gas naturale italiano: prezzo di riferimento MGP-GAS del GME. Dati giornalieri dal 2021.",
     keywords: [
       "PSV",
       "Punto di Scambio Virtuale",

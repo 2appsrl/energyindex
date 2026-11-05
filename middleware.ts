@@ -13,7 +13,7 @@ import {
   type RecordOverrides,
 } from "./lib/traffic/log";
 import { sharedLookup } from "./lib/api-keys/lookup";
-import { API_EXPOSE_HEADERS, decideAccess } from "./lib/api-keys/gate";
+import { API_EXPOSE_HEADERS, decideAccess, isGmeDataPath } from "./lib/api-keys/gate";
 import { isEidxKey, originHostFromHeader, sha256Hex } from "./lib/api-keys/keys";
 import {
   VERIFY_COOKIE,
@@ -150,6 +150,8 @@ async function gateApi(request: NextRequest): Promise<{ res: NextResponse; inval
       lookupFailed: found.failed,
       originHost,
       throttledKey: found.key ? throttled.has(`key:${found.key.prefix}`) : false,
+      throttledGmeKey: found.key ? throttled.has(`gmekey:${found.key.prefix}`) : false,
+      gmeData: isGmeDataPath(request.nextUrl.pathname),
       throttledIp: ipHash ? throttled.has(`ip:${ipHash}`) : false,
       enforceThrottle: process.env.API_THROTTLE_ENFORCE === "1",
     });

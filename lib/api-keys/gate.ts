@@ -20,6 +20,10 @@ export interface GateInput {
   lookupFailed: boolean;
   originHost: string | null;
   throttledKey: boolean;
+  /** La chiave ha superato il limite sui soli percorsi con dati GME. */
+  throttledGmeKey?: boolean;
+  /** Richiesta su un percorso con dati GME (vedi isGmeDataPath). */
+  gmeData?: boolean;
   throttledIp: boolean;
   /**
    * false = throttle in sola osservazione: chi e' oltre quota passa lo
@@ -42,6 +46,18 @@ export const RATE_PER_MINUTE: Record<string, number> = {
   trading: 3000,
   enterprise: 100000,
 };
+
+/**
+ * PUN e PSV non sono in vendita: su questi percorsi nessun piano a pagamento
+ * ha piu' richieste del Developer gratuito. Il pattern e' lo stesso della
+ * migrazione 20261105000003, un test li tiene allineati.
+ */
+export const GME_PATH_PATTERN = "^/api/v1/(pun|psv|today|prices/(pun|psv))(/|$)";
+const GME_PATH_RE = new RegExp(GME_PATH_PATTERN);
+
+export function isGmeDataPath(path: string): boolean {
+  return GME_PATH_RE.test(path);
+}
 
 /** Header che il JavaScript di un altro sito puo' leggere dalle risposte CORS. */
 export const API_EXPOSE_HEADERS = "X-RateLimit-Limit, X-EIDX-Key-Status, X-EIDX-Notice, Retry-After";
@@ -68,11 +84,13 @@ export function decideAccess(i: GateInput): GateResult {
 
   const activeKey = i.key && i.key.status === "active" && !i.lookupFailed ? i.key : null;
   const tier = activeKey ? activeKey.plan : "open";
-  const headers: Record<string, string> = { "X-RateLimit-Limit": String(RATE_PER_MINUTE[tier] ?? 60) };
+  const planRate = RATE_PER_MINUTE[tier] ?? 60;
+  const rate = i.gmeData ? Math.min(planRate, RATE_PER_MINUTE.developer) : planRate;
+  const headers: Record<string, string> = { "X-RateLimit-Limit": String(rate) };
   if (i.key && !i.lookupFailed) headers["X-EIDX-Key-Status"] = i.key.status;
   if (i.key?.status === "downgraded") headers["X-EIDX-Notice"] = "attribution-missing";
 
-  const throttled = activeKey ? i.throttledKey : i.throttledIp;
+  const throttled = activeKey ? i.throttledKey || Boolean(i.gmeData && i.throttledGmeKey) : i.throttledIp;
   if (throttled && !i.enforceThrottle) {
     return { ok: true, headers: { ...headers, "X-EIDX-Throttle": "observe" } };
   }

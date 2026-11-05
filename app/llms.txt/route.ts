@@ -139,6 +139,7 @@ CORS aperto, cache 15 min. Chiave facoltativa (header Authorization: Bearer eidx
 
 ## Licenze
 
+- PUN e PSV non sono in vendita: mostrati gratis a scopo informativo, i piani a pagamento riguardano servizi aggiuntivi
 - Dati PUN/PSV: proprieta' del GME, soggetti alle sue condizioni d'uso (https://www.mercatoelettrico.org/en-us/Home/TermsOfUse); Energy Index non concede licenze su di essi. Citazione: "Fonte: Gestore dei Mercati Energetici S.p.A."
 - Dati ARERA: open data
 - Forecast EnergyIndex: free per uso individuale, attribuzione richiesta per uso commerciale (vedi /it/forecast/metodologia#licenza)

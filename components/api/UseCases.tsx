@@ -274,7 +274,7 @@ export function UseCases({ pun, psv }: { pun: number | null; psv: number | null 
       title: "Consumi spostati nelle ore meno care",
       who: "Domotica, colonnine EV, pompe di calore",
       description: "Home Assistant o il tuo gestionale leggono il PUN orario e accendono i carichi nelle ore piu' economiche.",
-      tier: "api",
+      tier: "developer",
       endpoints: ["GET /pun/hourly?zone=nord"],
       visual: <HourlyVisual />,
     },

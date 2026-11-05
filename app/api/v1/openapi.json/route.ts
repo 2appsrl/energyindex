@@ -114,7 +114,7 @@ function buildSpec() {
       description:
         "Prezzi all'ingrosso dell'energia in Italia (PUN, PSV, prezzi zonali), indici di contesto (TTF, Brent, CO2), Energy Index delle offerte ARERA e forecast EIDX Research. Endpoint Open gratuiti senza chiave, con attribuzione obbligatoria.",
       contact: { name: "Energy Index", email: API_CONTACT_EMAIL, url: "https://energyindex.it/it/api" },
-      license: { name: "Elaborazioni Energy Index gratuite con attribuzione; dati delle fonti (GME, ICE Endex, EIA, EEX) soggetti alle loro condizioni", url: `${API_DOCS_URL}#licenza` },
+      license: { name: "PUN e PSV non in vendita, gratis a scopo informativo; elaborazioni Energy Index gratuite con attribuzione; dati delle fonti (GME, ICE Endex, EIA, EEX) soggetti alle loro condizioni", url: `${API_DOCS_URL}#licenza` },
     },
     externalDocs: { description: "Documentazione completa", url: API_DOCS_URL },
     servers: [{ url: API_BASE_URL }],

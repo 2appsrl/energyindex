@@ -29,7 +29,7 @@ export async function GET() {
       attribution_required: true,
       attribution_text: "Fonte: Energy Index (https://energyindex.it)",
       license:
-        "Energy Index elaborations: free, including commercial use, with attribution. Source data (GME, ICE Endex, EIA, EEX) remain subject to the source's terms: commercial use of GME data requires GME's written authorization.",
+        "PUN and PSV are not for sale: shown free of charge for information. Paid plans cover additional services. Energy Index elaborations: free, including commercial use, with attribution. Source data (GME, ICE Endex, EIA, EEX) remain subject to the source's terms: commercial use of GME data requires GME's written authorization.",
       license_url: "https://energyindex.it/it/api/docs#licenza",
       cache:
         "15 minutes for PUN, PSV and /today; 6 hours for /energy-index. With stale-while-revalidate, the first request after expiry may still get the previous value while the cache refreshes.",
@@ -38,7 +38,7 @@ export async function GET() {
       auth:
         "Optional on live (Open) endpoints. Key: header Authorization: Bearer eidx_live_… (?key= accepted but discouraged). From a browser a key works only from its registered domain (Origin); server calls without Origin are allowed. Errors: 401 invalid_key, 403 origin_not_allowed.",
       rate_limit:
-        "60/min per IP; with a key, the plan's limit (header X-RateLimit-Limit). Enforced over 5-minute windows: above 5x the per-minute limit, 429 rate_limited with Retry-After: 900 for 15 minutes.",
+        "60/min per IP; with a key, the plan's limit (header X-RateLimit-Limit), at most 120/min on GME data paths whatever the plan. Enforced over 5-minute windows: above 5x the per-minute limit, 429 rate_limited with Retry-After: 900 for 15 minutes.",
       key_request: "https://energyindex.it/it/api#chiave",
       endpoints: [
         {

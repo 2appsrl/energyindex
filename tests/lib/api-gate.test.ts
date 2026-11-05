@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect } from "vitest";
-import { decideAccess, type KeyRecord } from "@/lib/api-keys/gate";
+import { decideAccess, isGmeDataPath, type KeyRecord } from "@/lib/api-keys/gate";
 
 const active: KeyRecord = { prefix: "eidx_live_ab12", status: "active", domain: "esempio.it", plan: "developer" };
 const base = {
@@ -120,5 +120,47 @@ describe("decideAccess", () => {
       expect(r.ok === false && r.status).toBe(429);
       expect(r.headers["X-EIDX-Throttle"]).toBeUndefined();
     });
+  });
+});
+
+describe("dati GME: nessun piano a pagamento concede piu' richieste", () => {
+  const paid: KeyRecord = { prefix: "eidx_live_paid", status: "active", domain: "esempio.it", plan: "pro" };
+
+  it.each([
+    ["/api/v1/pun/today", true],
+    ["/api/v1/psv/today", true],
+    ["/api/v1/pun/hourly", true],
+    ["/api/v1/pun/zones", true],
+    ["/api/v1/today", true],
+    ["/api/v1/prices/pun/series", true],
+    ["/api/v1/prices/psv/series", true],
+    ["/api/v1/prices/ttf/series", false],
+    ["/api/v1/energy-index", false],
+    ["/api/v1/forecast/pun", false],
+    ["/api/v1/punto", false],
+    ["/api/v1", false],
+  ])("%s e' dato GME: %s", (path, expected) => {
+    expect(isGmeDataPath(path)).toBe(expected);
+  });
+
+  it("su un dato GME il piano Pro ha lo stesso limite del Developer", () => {
+    const r = decideAccess({ ...base, hasKey: true, key: paid, gmeData: true });
+    expect(r.headers["X-RateLimit-Limit"]).toBe("120");
+  });
+
+  it("sugli altri servizi il piano Pro mantiene il suo limite", () => {
+    const r = decideAccess({ ...base, hasKey: true, key: paid, gmeData: false });
+    expect(r.headers["X-RateLimit-Limit"]).toBe("1200");
+  });
+
+  it("il Developer e l'anonimo non cambiano sui dati GME", () => {
+    expect(decideAccess({ ...base, hasKey: true, key: active, gmeData: true }).headers["X-RateLimit-Limit"]).toBe("120");
+    expect(decideAccess({ ...base, gmeData: true }).headers["X-RateLimit-Limit"]).toBe("60");
+  });
+
+  it("oltre la quota GME la chiave a pagamento e' bloccata solo sui dati GME", () => {
+    const over = { ...base, hasKey: true, key: paid, throttledGmeKey: true };
+    expect(decideAccess({ ...over, gmeData: true }).ok).toBe(false);
+    expect(decideAccess({ ...over, gmeData: false }).ok).toBe(true);
   });
 });

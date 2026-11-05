@@ -30,6 +30,7 @@ import {
   formatTierPrice,
   tierById,
   type TierId,
+  GME_FREE_NOTICE,
 } from "@/lib/api/catalog";
 import { MethodBadge, StatusBadge, TierBadge, TIER_STYLE } from "@/components/api/badges";
 import { CodeBlock, CodeTabs } from "@/components/api/code";
@@ -62,7 +63,7 @@ const FAQ = [
   {
     question: "Le API di Energy Index sono gratuite?",
     answer:
-      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave. Le elaborazioni Energy Index si possono riusare anche a fini commerciali citando Energy Index con un link; i dati delle fonti, come PUN e PSV del GME, restano soggetti alle condizioni della fonte, che per gli usi commerciali richiedono l'autorizzazione del GME. Il piano Developer e' gratuito: la chiave arriva subito dopo la conferma via email e alza il limite a 120 richieste al minuto; storico, zone e CSV arriveranno con i prossimi endpoint. Il piano API costa 99 € al mese.",
+      "Si'. Gli endpoint Open (PUN, PSV e snapshot di tutti gli indici) funzionano senza registrazione e senza chiave. PUN e PSV non sono in vendita: orario, zone e storico compresi, stanno tutti nei piani gratuiti. Le elaborazioni Energy Index si possono riusare anche a fini commerciali citando Energy Index con un link; i dati delle fonti, come PUN e PSV del GME, restano soggetti alle condizioni della fonte, che per gli usi commerciali richiedono l'autorizzazione del GME. Il piano Developer e' gratuito: la chiave arriva subito dopo la conferma via email e alza il limite a 120 richieste al minuto; storico, zone e CSV arriveranno con i prossimi endpoint. Il piano API costa 99 € al mese.",
   },
   {
     question: "Da dove vengono i dati?",
@@ -103,19 +104,19 @@ const MATRIX: { label: string; min?: TierId; values?: Partial<Record<TierId, str
   { label: "Stima spesa bolletta e widget", min: "open" },
   {
     label: "Storico giornaliero",
-    values: { open: "30 giorni", developer: "2 anni", api: "Completo", pro: "Completo", trading: "Completo", enterprise: "Completo + bulk" },
+    values: { open: "30 giorni", developer: "Completo", api: "Completo", pro: "Completo", trading: "Completo", enterprise: "Completo" },
   },
   { label: "PUN per zona (giornaliero)", min: "developer" },
+  { label: "PUN orario per zona", min: "developer" },
   { label: "Export CSV", min: "developer" },
   { label: "Forecast del giorno dopo", min: "developer" },
-  { label: "PUN orario per zona", min: "api" },
   { label: "Forecast 7–180 giorni con bande", min: "api" },
   { label: "Statistiche mercato libero e spread", min: "api" },
   { label: "Alert via webhook", min: "api" },
   { label: "Forecast 12 mesi a scenari", min: "pro" },
   { label: "Margin Simulator via API", min: "pro" },
   { label: "Trading Vitals, correlazioni, backtest", min: "trading" },
-  { label: "Export bulk, white-label, SLA", min: "enterprise" },
+  { label: "Export bulk dei dati Energy Index, white-label, SLA", min: "enterprise" },
   {
     label: "Richieste al mese",
     values: { open: "Uso ragionevole", developer: "10.000", api: "100.000", pro: "500.000", trading: "2 milioni", enterprise: "Su misura" },
@@ -334,7 +335,7 @@ export default async function ApiLandingPage() {
         <SectionHeader
           eyebrow="Piani"
           title="Gratis per iniziare, 99 € quando vai in produzione"
-          subtitle="I dati ufficiali grezzi restano gratuiti. Si paga per storico completo, dati orari, forecast, alert e volumi."
+          subtitle={`${GME_FREE_NOTICE} Si paga per forecast, statistiche, alert e volumi sugli altri servizi.`}
         />
 
         <div className="grid gap-5 lg:grid-cols-3">
