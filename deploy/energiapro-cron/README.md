@@ -1,10 +1,31 @@
-# Cron ETL offerte su energiapro.biz
+# Cron ETL offerte
 
-Il Portale Offerte ARERA risponde **403 a tutti gli IP dei runner GitHub**
-(datacenter), quindi i due ETL del portale devono girare da un IP italiano.
-Questo pacchetto fa girare gli ETL dal server di energiapro.biz: tre bundle
-single-file (niente repo, niente `npm install`), un wrapper con log e lock,
-e due righe di crontab.
+Il Portale Offerte ARERA non e' raggiungibile dai runner GitHub (datacenter),
+quindi i suoi ETL devono girare da un'altra macchina. Questo pacchetto contiene
+tre bundle single-file (niente repo, niente `npm install`), un wrapper con log e
+due modi di pianificarli.
+
+**Nota:** energiapro.biz gira su Vercel, quindi non offre un server con SSH. Oggi
+il job gira sul Mac del titolare (vedi "macOS"); le istruzioni "server" sotto
+valgono per qualunque macchina Linux sempre accesa, previa prova che il portale
+risponda dal suo IP.
+
+## macOS (launchd)
+
+`daily.sh` parte ogni ora e al login: fa i job una sola volta al giorno dopo le
+06:30 e riprova all'ora dopo se falliscono (Mac spento, senza rete). La cartella
+va fuori da Desktop/Documents, che macOS vieta ai job in background.
+
+```bash
+bash deploy/energiapro-cron/build.sh
+D="$HOME/Library/Application Support/EnergyIndexCron"
+mkdir -p "$D" && cp -R deploy/energiapro-cron/{dist,run-etl.sh,daily.sh} "$D/"
+cp deploy/energiapro-cron/.env.example "$D/.env" && chmod 600 "$D/.env"   # poi compila SUPABASE_* e NODE_BIN
+sed "s|__DIR__|$D|g" deploy/energiapro-cron/it.energyindex.etl-daily.plist.example > ~/Library/LaunchAgents/it.energyindex.etl-daily.plist
+launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/it.energyindex.etl-daily.plist
+```
+
+Log in `$D/logs/`. Per fermarlo: `launchctl bootout "gui/$(id -u)/it.energyindex.etl-daily"`.
 
 ## Cosa serve sul server
 

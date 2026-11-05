@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wrapper cron per gli ETL EnergyIndex sul server energiapro.biz.
+# Wrapper per gli ETL EnergyIndex da una macchina con IP non bloccato dal portale.
 # Uso: run-etl.sh <portale-mlibero|brand-offers|arera-placet>
 #  - carica le credenziali da .env (stessa cartella)
 #  - lock per-job (niente run sovrapposti)
@@ -23,10 +23,12 @@ set -a
 source "$DIR/.env"
 set +a
 
-# ARERA PLACET: il backfill di default parte da una data storica; per il
-# cron giornaliero vogliamo solo oggi.
+# ARERA PLACET: il backfill di default parte da una data storica. Rifacciamo
+# gli ultimi giorni (idempotente), cosi' una macchina spenta non lascia buchi.
 if [ "$JOB" = "arera-placet" ]; then
-  export BACKFILL_START="$(date -u +%Y-%m-%d)"
+  DAYS="${ARERA_LOOKBACK_DAYS:-7}"
+  # date -v e' BSD/macOS, date -d e' GNU/Linux.
+  export BACKFILL_START="$(date -u -v-"${DAYS}"d +%Y-%m-%d 2>/dev/null || date -u -d "${DAYS} days ago" +%Y-%m-%d)"
   export BACKFILL_END="$(date -u +%Y-%m-%d)"
 fi
 
@@ -37,13 +39,15 @@ LOCK="/tmp/energyindex-etl-${JOB}.lock"
 # Node >= 20 richiesto (fetch globale). NODE_BIN sovrascrivibile da .env.
 NODE_BIN="${NODE_BIN:-node}"
 
+RC=0
 {
   echo "===== $(date -u '+%Y-%m-%dT%H:%M:%SZ') start $JOB ====="
   if command -v flock >/dev/null 2>&1; then
-    flock -n "$LOCK" "$NODE_BIN" "$ENTRY" || echo "EXIT CODE: $? (o lock occupato)"
+    flock -n "$LOCK" "$NODE_BIN" "$ENTRY" || RC=$?
   else
-    "$NODE_BIN" "$ENTRY" || echo "EXIT CODE: $?"
+    "$NODE_BIN" "$ENTRY" || RC=$?
   fi
+  [ "$RC" -eq 0 ] || echo "EXIT CODE: $RC"
   echo "===== $(date -u '+%Y-%m-%dT%H:%M:%SZ') end $JOB ====="
 } >> "$LOG" 2>&1
 
@@ -51,3 +55,5 @@ NODE_BIN="${NODE_BIN:-node}"
 if [ "$(wc -c < "$LOG")" -gt 2000000 ]; then
   tail -c 500000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 fi
+
+exit "$RC"

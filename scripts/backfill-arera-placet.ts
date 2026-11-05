@@ -20,7 +20,7 @@ import {
 
 const ARERA_BASE = "https://www.ilportaleofferte.it";
 const USER_AGENT =
-  "EnergyIndex/0.1 (commerciale@deagroup.biz; +https://energyindex.it)";
+  "EnergyIndex/0.1 (+https://energyindex.it)";
 
 const START_DATE = process.env.BACKFILL_START ?? (() => {
   const d = new Date();

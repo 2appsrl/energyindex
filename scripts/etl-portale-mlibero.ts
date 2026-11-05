@@ -43,7 +43,7 @@ function supabaseClient(): SupabaseClient {
 
 // Stesso UA "onesto" dell'ETL ARERA PLACET: il WAF del portale accetta i bot
 // dichiarati ma blocca gli UA browser contraffatti dai datacenter (GitHub).
-const USER_AGENT = "EnergyIndex/0.1 (commerciale@deagroup.biz; +https://energyindex.it)";
+const USER_AGENT = "EnergyIndex/0.1 (+https://energyindex.it)";
 
 async function fetchXml(url: string): Promise<string | null> {
   const res = await fetch(url, {
