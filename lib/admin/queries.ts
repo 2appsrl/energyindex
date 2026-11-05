@@ -1,6 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { KeyStatus } from "@/lib/api-keys/link-check";
+import type { IdentifiedCall } from "./api-consumers";
 import { mergeKeyUsage, type KeyUsage } from "./integrations";
 import type { LeadSource, LeadStatus } from "./leads";
 import { MAIL_SYNC_SOURCE, type InboundEmail } from "@/lib/mail/types";
@@ -127,6 +128,36 @@ export async function trafficTop(
   });
   if (r.error !== null) return r;
   return { data: r.data.map((x) => ({ ...x, requests: num(x.requests), uniques: num(x.uniques) })), error: null };
+}
+
+const IDENTIFIED_PAGE = 1000;
+const IDENTIFIED_MAX = 10000;
+
+/**
+ * Chiamate API con un sito o una chiave riconoscibili. I client anonimi hanno
+ * nel consumer l'impronta "#abc" e restano fuori: un solo programma che
+ * interroga di continuo non deve spingere via i siti. PostgREST restituisce al
+ * massimo 1000 righe per volta, quindi si legge a pagine.
+ */
+export async function identifiedApiCalls(days: number): Promise<Result<{ rows: IdentifiedCall[]; truncated: boolean }>> {
+  const supabase = createServiceClient();
+  if (!supabase) return { data: null, error: NO_CLIENT };
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const rows: IdentifiedCall[] = [];
+  while (rows.length < IDENTIFIED_MAX) {
+    const { data, error } = await supabase
+      .from("traffic_log")
+      .select("ts, path, query, origin_host, referer_host, api_key_prefix, ip_hash")
+      .eq("kind", "api")
+      .gte("ts", since)
+      .not("consumer", "like", "%#%")
+      .order("ts", { ascending: false })
+      .range(rows.length, rows.length + IDENTIFIED_PAGE - 1);
+    if (error) return { data: null, error: explain(error.message) };
+    rows.push(...((data ?? []) as IdentifiedCall[]));
+    if ((data ?? []).length < IDENTIFIED_PAGE) return { data: { rows, truncated: false }, error: null };
+  }
+  return { data: { rows, truncated: true }, error: null };
 }
 
 export async function newApiConsumers(days = 7): Promise<Result<NewConsumer[]>> {

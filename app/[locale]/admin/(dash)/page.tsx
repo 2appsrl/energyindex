@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Bot, Database, Inbox, KeyRound, LayoutDashboard, LogOut, Mail } from "lucide-react";
+import { Activity, Bot, Database, Globe, Inbox, KeyRound, LayoutDashboard, LogOut, Mail } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
 import {
   assetFreshness,
@@ -35,6 +35,7 @@ import {
   fmtInt,
   pctDelta,
 } from "@/components/admin/charts";
+import { ApiConsumersTab } from "@/components/admin/ApiConsumersTab";
 import { ApiKeyActions } from "@/components/admin/ApiKeyActions";
 import { LeadStatusForm } from "@/components/admin/LeadStatusForm";
 import { MailCard } from "@/components/admin/MailCard";
@@ -54,6 +55,7 @@ export const dynamic = "force-dynamic";
 const TABS = [
   { id: "panoramica", label: "Panoramica", icon: LayoutDashboard },
   { id: "api", label: "API", icon: Activity },
+  { id: "chi-usa-api", label: "Chi usa le API", icon: Globe },
   { id: "bot", label: "Bot e AI", icon: Bot },
   { id: "mail", label: "Mail", icon: Mail },
   { id: "lead", label: "Lead", icon: Inbox },
@@ -124,6 +126,7 @@ export default async function AdminPage({
 
       {tab === "panoramica" && <Overview days={days} />}
       {tab === "api" && <ApiTab days={days} />}
+      {tab === "chi-usa-api" && <ApiConsumersTab days={days} />}
       {tab === "bot" && <BotTab days={days} />}
       {tab === "mail" && <MailTab filter={parseMailFilter(sp.categoria)} showArchived={sp.archivio === "1"} />}
       {tab === "lead" && <LeadTab />}
