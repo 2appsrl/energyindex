@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
+import { isAdminEmail } from "@/lib/admin/auth";
+import { createAuthClient } from "@/lib/supabase/auth";
 
 export const metadata: Metadata = {
-  title: "Accesso admin",
+  title: "Area partner",
   robots: { index: false, follow: false },
 };
 
@@ -13,6 +16,11 @@ export default async function AdminLoginPage({
   searchParams: Promise<{ errore?: string }>;
 }) {
   const { errore } = await searchParams;
+  // Chi ha gia' una sessione valida non deve richiedere un altro link.
+  const supabase = await createAuthClient();
+  const { data } = await supabase.auth.getUser();
+  if (isAdminEmail(data.user?.email)) redirect("/it/admin");
+
   return (
     <div className="container mx-auto flex min-h-[70dvh] items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm space-y-6 rounded-3xl border bg-card p-8 shadow-sm">
@@ -20,7 +28,7 @@ export default async function AdminLoginPage({
           <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-violet-600 text-white">
             <LockKeyhole className="size-6" />
           </span>
-          <h1 className="text-2xl font-black">Area admin</h1>
+          <h1 className="text-2xl font-black">Area partner</h1>
           <p className="text-sm text-muted-foreground">Ricevi un link di accesso via email. Niente password.</p>
         </div>
         {errore && (

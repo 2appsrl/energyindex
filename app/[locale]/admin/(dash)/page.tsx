@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Bot, Database, Inbox, KeyRound, LayoutDashboard, LogOut } from "lucide-react";
+import { Activity, Bot, Database, Inbox, KeyRound, LayoutDashboard, LogOut, Mail } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
 import {
   assetFreshness,
@@ -8,7 +8,9 @@ import {
   fillDays,
   KEY_USAGE_DAYS,
   keylessApiDomains,
+  lastMailSync,
   listApiKeys,
+  listInboundEmails,
   listLeads,
   newApiConsumers,
   sumLast,
@@ -35,6 +37,16 @@ import {
 } from "@/components/admin/charts";
 import { ApiKeyActions } from "@/components/admin/ApiKeyActions";
 import { LeadStatusForm } from "@/components/admin/LeadStatusForm";
+import { MailCard } from "@/components/admin/MailCard";
+import {
+  MAIL_CATEGORIES,
+  MAIL_CATEGORY_LABELS,
+  countByFilter,
+  filterEmails,
+  parseMailFilter,
+  visibleEmails,
+  type MailFilter,
+} from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +55,7 @@ const TABS = [
   { id: "panoramica", label: "Panoramica", icon: LayoutDashboard },
   { id: "api", label: "API", icon: Activity },
   { id: "bot", label: "Bot e AI", icon: Bot },
+  { id: "mail", label: "Mail", icon: Mail },
   { id: "lead", label: "Lead", icon: Inbox },
   { id: "integrazioni", label: "Integrazioni", icon: KeyRound },
   { id: "dati", label: "Salute dati", icon: Database },
@@ -54,7 +67,7 @@ const RANGES = [7, 30, 90] as const;
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; giorni?: string }>;
+  searchParams: Promise<{ tab?: string; giorni?: string; categoria?: string; archivio?: string }>;
 }) {
   const user = await requireAdmin();
   const sp = await searchParams;
@@ -66,7 +79,7 @@ export default async function AdminPage({
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">Admin</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">Area partner</p>
           <h1 className="text-3xl font-black tracking-tight">Cosa succede su Energy Index</h1>
         </div>
         <div className="flex items-center gap-3 text-sm">
@@ -94,7 +107,7 @@ export default async function AdminPage({
             </Link>
           ))}
         </div>
-        {tab !== "lead" && tab !== "dati" && (
+        {tab !== "lead" && tab !== "dati" && tab !== "mail" && (
           <div className="flex gap-1 rounded-lg bg-muted p-1 text-xs font-bold">
             {RANGES.map((r) => (
               <Link
@@ -112,6 +125,7 @@ export default async function AdminPage({
       {tab === "panoramica" && <Overview days={days} />}
       {tab === "api" && <ApiTab days={days} />}
       {tab === "bot" && <BotTab days={days} />}
+      {tab === "mail" && <MailTab filter={parseMailFilter(sp.categoria)} showArchived={sp.archivio === "1"} />}
       {tab === "lead" && <LeadTab />}
       {tab === "integrazioni" && <IntegrationsTab days={days} />}
       {tab === "dati" && <DataTab />}
@@ -321,6 +335,72 @@ async function LeadTab() {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// ============================================================ MAIL
+
+async function MailTab({ filter, showArchived }: { filter: MailFilter; showArchived: boolean }) {
+  const [emails, sync] = await Promise.all([listInboundEmails(), lastMailSync()]);
+  if (emails.data === null) return <ErrorNote message={emails.error} />;
+
+  const inView = visibleEmails(emails.data, showArchived);
+  const counts = countByFilter(inView);
+  const shown = filterEmails(inView, filter);
+  const mailHref = (f: MailFilter, archived = showArchived) =>
+    `/it/admin?tab=mail&categoria=${f}${archived ? "&archivio=1" : ""}`;
+  const filters: { id: MailFilter; label: string }[] = [
+    { id: "tutte", label: "Tutte" },
+    ...MAIL_CATEGORIES.map((c) => ({ id: c as MailFilter, label: MAIL_CATEGORY_LABELS[c] })),
+    { id: "da_analizzare", label: "Da analizzare" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <p>
+          Posta di pro@energyindex.pro in sola lettura: niente viene inviato da qui.{" "}
+          {sync.data ? `Ultima lettura: ${fmtAgo(sync.data.finished_at)}.` : "Casella non ancora letta."}
+        </p>
+        <Link href={mailHref(filter, !showArchived)} className="font-semibold underline">
+          {showArchived ? "Torna alle mail attive" : "Vedi le archiviate"}
+        </Link>
+      </div>
+      {sync.data?.status === "error" && <ErrorNote message={`Ultima lettura non riuscita: ${sync.data.error_message ?? "errore sconosciuto"}`} />}
+
+      <div className="flex flex-wrap gap-1">
+        {filters
+          .filter((f) => f.id === "tutte" || f.id === filter || counts[f.id] > 0)
+          .map((f) => (
+            <Link
+              key={f.id}
+              href={mailHref(f.id)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-bold",
+                f.id === filter ? "bg-violet-600 text-white" : "bg-muted text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {f.label} · {counts[f.id]}
+            </Link>
+          ))}
+      </div>
+
+      {shown.length === 0 ? (
+        <Panel title="Mail">
+          <Empty>
+            {emails.data.length === 0 && !sync.data
+              ? "La casella non è ancora collegata: mancano i secret MAIL_IMAP_USER, MAIL_IMAP_PASSWORD e ANTHROPIC_API_KEY su GitHub."
+              : "Nessuna mail in questa vista."}
+          </Empty>
+        </Panel>
+      ) : (
+        <div className="space-y-3">
+          {shown.map((e) => (
+            <MailCard key={e.id} email={e} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

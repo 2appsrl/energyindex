@@ -97,6 +97,14 @@ export function SiteHeader() {
               </span>
             </Link>
           )}
+          {isProSection && (
+            <Link
+              href="/it/admin/login"
+              className="whitespace-nowrap rounded-md px-2 py-1 text-xs font-bold text-muted-foreground ring-1 ring-border hover:text-foreground transition-colors"
+            >
+              Area partner
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </div>

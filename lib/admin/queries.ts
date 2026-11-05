@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import type { KeyStatus } from "@/lib/api-keys/link-check";
 import { mergeKeyUsage, type KeyUsage } from "./integrations";
 import type { LeadSource, LeadStatus } from "./leads";
+import { MAIL_SYNC_SOURCE, type InboundEmail } from "@/lib/mail/types";
 
 /**
  * Letture per la dashboard /it/admin. Tutte passano dalla service role
@@ -142,6 +143,41 @@ export async function listLeads(status?: LeadStatus): Promise<Result<Lead[]>> {
   const { data, error } = await q;
   if (error) return { data: null, error: explain(error.message) };
   return { data: data as Lead[], error: null };
+}
+
+const MAIL_MIGRATION = "20261105000001_inbound_emails.sql";
+
+export async function listInboundEmails(): Promise<Result<InboundEmail[]>> {
+  const supabase = createServiceClient();
+  if (!supabase) return { data: null, error: NO_CLIENT };
+  const { data, error } = await supabase
+    .from("inbound_emails")
+    .select("*")
+    .order("received_at", { ascending: false })
+    .limit(300);
+  if (error) return { data: null, error: explain(error.message, MAIL_MIGRATION) };
+  return { data: data as InboundEmail[], error: null };
+}
+
+export interface MailSync {
+  finished_at: string | null;
+  status: string;
+  error_message: string | null;
+}
+
+/** Ultima sincronizzazione della casella; null se non e' mai partita. */
+export async function lastMailSync(): Promise<Result<MailSync | null>> {
+  const supabase = createServiceClient();
+  if (!supabase) return { data: null, error: NO_CLIENT };
+  const { data, error } = await supabase
+    .from("etl_runs")
+    .select("finished_at, status, error_message")
+    .eq("source", MAIL_SYNC_SOURCE)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { data: null, error: explain(error.message) };
+  return { data: data as MailSync | null, error: null };
 }
 
 export async function assetFreshness(): Promise<Result<AssetFreshness[]>> {
