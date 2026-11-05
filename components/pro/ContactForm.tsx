@@ -28,7 +28,7 @@ export function ContactForm() {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
     | { type: "success" }
-    | { type: "error"; message: string; mailtoFallback?: string }
+    | { type: "error"; message: string; mailtoFallback?: string; reload?: boolean }
     | null
   >(null);
 
@@ -48,23 +48,37 @@ export function ContactForm() {
         hasAzienda: azienda.trim().length > 0 ? "yes" : "no",
       });
 
-      const response = await sendContactEmail({
-        nome: nome.trim(),
-        email: email.trim(),
-        azienda: azienda.trim() || undefined,
-        oggetto,
-        messaggio: messaggio.trim(),
-      });
+      try {
+        const response = await sendContactEmail({
+          nome: nome.trim(),
+          email: email.trim(),
+          azienda: azienda.trim() || undefined,
+          oggetto,
+          messaggio: messaggio.trim(),
+        });
 
-      if (response.ok) {
-        setResult({ type: "success" });
-        // Reset il form così se l'utente clicca "Invia un altro" è già pulito
-        setMessaggio("");
-      } else {
+        if (response.ok) {
+          setResult({ type: "success" });
+          // Reset il form così se l'utente clicca "Invia un altro" è già pulito
+          setMessaggio("");
+        } else {
+          setResult({
+            type: "error",
+            message: response.error,
+            mailtoFallback: response.fallbackMailto,
+          });
+        }
+      } catch {
+        // Una pagina aperta prima di un deploy non trova piu' l'azione del server:
+        // senza questo catch l'errore porta alla pagina bianca di Next. Il link
+        // email si costruisce qui perche' il server non e' raggiungibile, e
+        // ricaricando il messaggio scritto andrebbe perso.
+        const body = `Nome: ${nome.trim()}\nEmail: ${email.trim()}\nAzienda: ${azienda.trim() || "(non indicata)"}\n\n${messaggio.trim()}`;
         setResult({
           type: "error",
-          message: response.error,
-          mailtoFallback: response.fallbackMailto,
+          message: "la pagina potrebbe essere stata aggiornata nel frattempo.",
+          mailtoFallback: `mailto:pro@energyindex.pro?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(body)}`,
+          reload: true,
         });
       }
     });
@@ -201,6 +215,15 @@ export function ContactForm() {
                 inviaci direttamente dal tuo client email
               </a>
               .
+            </p>
+          )}
+          {result.reload && (
+            <p className="text-xs">
+              Oppure{" "}
+              <button type="button" onClick={() => window.location.reload()} className="underline font-semibold">
+                Ricarica la pagina
+              </button>{" "}
+              e riprova: dovrai riscrivere il messaggio.
             </p>
           )}
         </div>
