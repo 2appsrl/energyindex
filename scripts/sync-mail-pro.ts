@@ -20,7 +20,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ImapFlow } from "imapflow";
 import { MAIL_ANALYSIS_MODEL, MailAnalysisError, analyzeEmail, type EmailToAnalyze } from "@/lib/mail/analyze";
 import { parseRawEmail, type ParsedEmail } from "@/lib/mail/parse";
-import { MAIL_SYNC_SOURCE } from "@/lib/mail/types";
+import { MAIL_SYNC_SOURCE, describeImapError } from "@/lib/mail/types";
 
 // Il server IMAP di register.it (MX mail.register.it) ha un certificato
 // *.securemail.pro: con questo nome la verifica TLS passa senza eccezioni.
@@ -124,6 +124,8 @@ async function analyzePending(db: SupabaseClient, anthropic: Anthropic): Promise
 function errorText(e: unknown): string {
   if (e instanceof MailAnalysisError) return e.message;
   if (e instanceof Anthropic.APIError) return `API Claude: errore ${e.status ?? "di rete"}`;
+  const imap = describeImapError(e);
+  if (imap) return imap;
   return e instanceof Error ? e.message.slice(0, 300) : "errore sconosciuto";
 }
 

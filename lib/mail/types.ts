@@ -87,7 +87,30 @@ export function countByFilter<T extends Pick<InboundEmail, "category">>(emails: 
   return counts;
 }
 
-const EMAIL_RE = /^[^\s@<>"',;:]+@[^\s@<>"',;:]+\.[^\s@<>"',;:]+$/;
+/**
+ * Errore IMAP leggibile. imapflow scrive sempre "Command failed": il motivo sta
+ * nei campi aggiuntivi. Gli indirizzi vengono tolti perche' il testo finisce
+ * nei log pubblici delle Actions.
+ */
+export function describeImapError(e: unknown): string | null {
+  if (!(e instanceof Error)) return null;
+  const { authenticationFailed, responseStatus, responseText, serverResponseCode } = e as Error & {
+    authenticationFailed?: boolean;
+    responseStatus?: string;
+    responseText?: string;
+    serverResponseCode?: string;
+  };
+  if (!authenticationFailed && !responseStatus && !responseText && !serverResponseCode) return null;
+  const details = [responseStatus, serverResponseCode, responseText]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/[^\s@]+@[^\s@]+/g, "[indirizzo]")
+    .slice(0, 200);
+  const prefix = authenticationFailed ? "Accesso alla casella rifiutato" : "Errore IMAP";
+  return details ? `${prefix}: ${details}` : prefix;
+}
+
+const EMAIL_RE =/^[^\s@<>"',;:]+@[^\s@<>"',;:]+\.[^\s@<>"',;:]+$/;
 
 /** Limite prudente: oltre questa lunghezza diversi client ignorano o tagliano il mailto. */
 const MAILTO_MAX_LENGTH = 1800;

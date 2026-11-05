@@ -1,7 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import { analyzeEmail, buildSystemPrompt, MailAnalysisError, type MailClient } from "@/lib/mail/analyze";
 import { MAX_BODY_CHARS, TRUNCATED_NOTICE, parseRawEmail } from "@/lib/mail/parse";
-import { buildReplyMailto, countByFilter, filterEmails, parseMailFilter, visibleEmails } from "@/lib/mail/types";
+import { buildReplyMailto, countByFilter, describeImapError, filterEmails, parseMailFilter, visibleEmails } from "@/lib/mail/types";
+
+describe("describeImapError", () => {
+  const imapError = (fields: object) => Object.assign(new Error("Command failed"), fields);
+
+  it("distingue l'accesso rifiutato e riporta il motivo del server", () => {
+    expect(
+      describeImapError(imapError({ authenticationFailed: true, responseStatus: "NO", serverResponseCode: "AUTHENTICATIONFAILED", responseText: "Authentication failed." })),
+    ).toBe("Accesso alla casella rifiutato: NO AUTHENTICATIONFAILED Authentication failed.");
+  });
+
+  it("non lascia indirizzi nei log pubblici", () => {
+    expect(describeImapError(imapError({ responseStatus: "NO", responseText: "Unknown user pro@energyindex.pro" }))).toBe("Errore IMAP: NO Unknown user [indirizzo]");
+  });
+
+  it("ignora gli errori che non vengono da IMAP", () => {
+    expect(describeImapError(new Error("altro"))).toBeNull();
+    expect(describeImapError("stringa")).toBeNull();
+  });
+});
 
 const raw = (headers: string, body: string) => `${headers}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}\r\n`;
 
