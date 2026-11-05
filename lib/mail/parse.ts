@@ -16,6 +16,13 @@ export interface ParsedEmail {
   attachment_names: string[];
 }
 
+/**
+ * Immagini incorporate nel testo (data:...;base64,...): mailparser le riporta
+ * dall'HTML. Sono illeggibili, riempirebbero il limite di lunghezza e
+ * costerebbero token a ogni analisi.
+ */
+const INLINE_DATA_URI = /data:[a-z]+\/[a-z0-9.+-]+(?:;[^\s;,]+)*;base64,[a-z0-9+/=_-]+/gi;
+
 function firstAddress(field: AddressObject | AddressObject[] | undefined) {
   const list = Array.isArray(field) ? field : field ? [field] : [];
   for (const group of list) {
@@ -34,7 +41,7 @@ export async function parseRawEmail(source: Buffer | string, fallbackDate?: Date
   const replyTo = firstAddress(mail.replyTo);
   const date = mail.date ?? fallbackDate ?? new Date();
 
-  let body = clean(mail.text);
+  let body = clean(mail.text?.replace(INLINE_DATA_URI, "[immagine]"));
   if (body && body.length > MAX_BODY_CHARS) body = body.slice(0, MAX_BODY_CHARS) + TRUNCATED_NOTICE;
 
   const subject = clean(mail.subject);

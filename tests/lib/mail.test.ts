@@ -64,6 +64,14 @@ describe("parseRawEmail", () => {
     expect(m.body_text!.endsWith(TRUNCATED_NOTICE)).toBe(true);
   });
 
+  it("sostituisce le immagini incorporate, anche con parametri nel data URI", async () => {
+    const png = "iVBORw0KGgo" + "A".repeat(40_000);
+    const m = await parseRawEmail(
+      raw("From: a@esempio.it\r\nMessage-ID: <i@e>", `Prima alt text: data:image/png;base64,${png} mezzo data:image/png;name=abc123;base64,${png} dopo`),
+    );
+    expect(m.body_text).toBe("Prima alt text: [immagine] mezzo [immagine] dopo");
+  });
+
   it("elenca gli allegati", async () => {
     const src = [
       "From: a@esempio.it",
@@ -178,6 +186,10 @@ describe("buildSystemPrompt", () => {
   it("contiene il vincolo sulla licenza GME", () => {
     expect(prompt).toContain("non ha alcun accordo o licenza con il GME");
     expect(prompt).toContain("Fonte: Gestore dei Mercati Energetici S.p.A.");
+  });
+
+  it("tiene interna l'assenza di accordi con il GME", () => {
+    expect(prompt).toContain("un'informazione interna: non scriverla nelle bozze");
   });
 
   it("legge prezzi ed endpoint dal catalogo e distingue quelli non attivi", () => {
