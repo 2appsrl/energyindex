@@ -2,12 +2,12 @@
  * @vitest-environment jsdom
  */
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { ApiConsumersTab } from "@/components/admin/ApiConsumersTab";
-import { identifiedApiCalls, trafficTop } from "@/lib/admin/queries";
+import { consumerSources, identifiedApiCalls, trafficTop } from "@/lib/admin/queries";
 
-vi.mock("@/lib/admin/queries", () => ({ identifiedApiCalls: vi.fn(), trafficTop: vi.fn() }));
+vi.mock("@/lib/admin/queries", () => ({ consumerSources: vi.fn(), identifiedApiCalls: vi.fn(), trafficTop: vi.fn() }));
 
 const call = (origin_host: string, path = "/api/v1/pun/today") => ({
   ts: "2026-11-05T15:00:00+00:00",
@@ -20,7 +20,41 @@ const call = (origin_host: string, path = "/api/v1/pun/today") => ({
 });
 
 describe("ApiConsumersTab", () => {
+  beforeEach(() => {
+    vi.mocked(consumerSources).mockResolvedValue({ data: [], error: null });
+  });
   afterEach(cleanup);
+
+  it("mostra se la fonte e' visibile, e cosa significa quando non si trova", async () => {
+    vi.mocked(identifiedApiCalls).mockResolvedValue({
+      data: { rows: [call("www.casadocimmobiliare.it"), call("marcopadulano.it"), call("nuovosito.it")], truncated: false },
+      error: null,
+    });
+    vi.mocked(trafficTop).mockResolvedValue({ data: [], error: null });
+    vi.mocked(consumerSources).mockResolvedValue({
+      data: [
+        { site: "casadocimmobiliare.it", status: "assente", checked_at: "2026-11-05T15:00:00Z" },
+        { site: "marcopadulano.it", status: "link", checked_at: "2026-11-05T15:00:00Z" },
+      ],
+      error: null,
+    });
+    render(await ApiConsumersTab({ days: 7 }));
+
+    expect(screen.getByText("Non trovata")).toBeInTheDocument();
+    expect(screen.getByText("Link presente")).toBeInTheDocument();
+    expect(screen.getByText("Da controllare")).toBeInTheDocument();
+    expect(screen.getByText(/caricano la fonte via JavaScript/)).toBeInTheDocument();
+  });
+
+  it("se la tabella dei controlli manca l'elenco dei siti resta visibile", async () => {
+    vi.mocked(identifiedApiCalls).mockResolvedValue({ data: { rows: [call("nuovosito.it")], truncated: false }, error: null });
+    vi.mocked(trafficTop).mockResolvedValue({ data: [], error: null });
+    vi.mocked(consumerSources).mockResolvedValue({ data: null, error: "tabella mancante" });
+    render(await ApiConsumersTab({ days: 7 }));
+
+    expect(screen.getByRole("link", { name: "nuovosito.it" })).toBeInTheDocument();
+    expect(screen.getByText("Da controllare")).toBeInTheDocument();
+  });
 
   it("mostra i siti che chiamano le API con link ed endpoint, e i programmi a parte", async () => {
     vi.mocked(identifiedApiCalls).mockResolvedValue({

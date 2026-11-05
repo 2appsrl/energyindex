@@ -9,7 +9,7 @@
  */
 
 import { dailyAveragesRome, type HourlyRow } from "@/lib/prices/daily-average";
-import { romeDateOf, romeHourOf } from "@/supabase/functions/_shared/rome-time";
+import { romeDateOf, romeDayBoundsUtc, romeHourOf } from "@/supabase/functions/_shared/rome-time";
 
 export interface DailyAverageJson {
   /** Giorno italiano (YYYY-MM-DD) a cui si riferisce la media. */
@@ -20,6 +20,17 @@ export interface DailyAverageJson {
   unit_native: string;
   /** Ore che compongono la media (24, oppure 23/25 nei giorni di cambio ora). */
   hours: number;
+}
+
+export interface LastHourJson {
+  date: string;
+  /** Ora di mercato GME (1..25). */
+  hour: number;
+  observed_at: string;
+  value: number;
+  unit: string;
+  value_native: number;
+  unit_native: string;
 }
 
 export interface LatestPriceJson {
@@ -38,11 +49,11 @@ export interface LatestPriceJson {
   value_native?: number;
   /** Unita' nativa. Null se gia' coincide con `unit`. */
   unit_native?: string;
-  /** PUN: `value` e' il prezzo di una singola ora. */
+  /** PUN: "daily" se `value` e' la media del giorno, "hourly" se manca e vale l'ultima ora. */
   granularity?: "hourly" | "daily";
-  /** PUN: ora di mercato GME (1..25) del campo `value`. */
-  hour?: number;
-  /** PUN: media aritmetica delle ore del giorno italiano (PUN Index GME). */
+  /** PUN: ultima ora pubblicata dal GME. */
+  last_hour?: LastHourJson;
+  /** PUN: media aritmetica delle ore del giorno italiano, con il numero di ore. */
   daily_average?: DailyAverageJson | null;
   /** PSV: giorno gas di consegna (06:00 → 06:00 del giorno dopo). */
   gas_day?: string;
@@ -209,17 +220,35 @@ export function buildLatestPriceJson(
 
   if (assetSlug === "pun") {
     json.granularity = "hourly";
-    json.hour = romeHourOf(observedAt);
-    json.daily_average = dailyAverage
-      ? {
-          date: dailyAverage.date,
-          value: round(dailyAverage.value / def.consumerDivider, 5),
-          unit: def.consumerUnit,
-          value_native: round(dailyAverage.value, 2),
-          unit_native: nativeUnit,
-          hours: dailyAverage.hours,
-        }
-      : null;
+    json.last_hour = {
+      date: json.date,
+      hour: romeHourOf(observedAt),
+      observed_at: observedAt,
+      value: json.value,
+      unit: def.consumerUnit,
+      value_native: round(nativeValue, 2),
+      unit_native: nativeUnit,
+    };
+    json.daily_average = null;
+    // `value` e' il PUN del giorno: chi legge l'API si aspetta questo, non
+    // l'ultima ora pubblicata. Senza media resta l'ora, e granularity lo dice.
+    if (dailyAverage) {
+      const value = round(dailyAverage.value / def.consumerDivider, 5);
+      const native = round(dailyAverage.value, 2);
+      json.granularity = "daily";
+      json.date = dailyAverage.date;
+      json.observed_at = romeDayBoundsUtc(dailyAverage.date).start;
+      json.value = value;
+      json.value_native = native;
+      json.daily_average = {
+        date: dailyAverage.date,
+        value,
+        unit: def.consumerUnit,
+        value_native: native,
+        unit_native: nativeUnit,
+        hours: dailyAverage.hours,
+      };
+    }
   }
 
   if (assetSlug === "psv") {

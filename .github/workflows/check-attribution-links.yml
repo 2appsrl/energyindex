@@ -26,3 +26,9 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RESEND_SENDER_EMAIL: ${{ secrets.RESEND_SENDER_EMAIL }}
         run: npx tsx scripts/check-attribution-links.ts
+      - name: Verifica fonte sui siti che usano le API
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/check-consumer-sources.ts

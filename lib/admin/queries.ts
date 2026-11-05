@@ -2,6 +2,7 @@ import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { KeyStatus } from "@/lib/api-keys/link-check";
 import type { IdentifiedCall } from "./api-consumers";
+import type { SourceCheck } from "@/lib/api-keys/source-check";
 import { mergeKeyUsage, type KeyUsage } from "./integrations";
 import type { LeadSource, LeadStatus } from "./leads";
 import { MAIL_SYNC_SOURCE, type InboundEmail } from "@/lib/mail/types";
@@ -128,6 +129,15 @@ export async function trafficTop(
   });
   if (r.error !== null) return r;
   return { data: r.data.map((x) => ({ ...x, requests: num(x.requests), uniques: num(x.uniques) })), error: null };
+}
+
+/** Esito dell'ultimo controllo settimanale della fonte, per sito. */
+export async function consumerSources(): Promise<Result<SourceCheck[]>> {
+  const supabase = createServiceClient();
+  if (!supabase) return { data: null, error: NO_CLIENT };
+  const { data, error } = await supabase.from("api_consumer_sources").select("site, status, checked_at");
+  if (error) return { data: null, error: explain(error.message, "20261105000004_api_consumer_sources.sql") };
+  return { data: (data ?? []) as SourceCheck[], error: null };
 }
 
 const IDENTIFIED_PAGE = 1000;

@@ -1,16 +1,32 @@
 import { ExternalLink } from "lucide-react";
 import { aggregateConsumers, type ConsumerKind } from "@/lib/admin/api-consumers";
-import { identifiedApiCalls, trafficTop } from "@/lib/admin/queries";
+import { consumerSources, identifiedApiCalls, trafficTop } from "@/lib/admin/queries";
+import type { SourceStatus } from "@/lib/api-keys/source-check";
+import { cn } from "@/lib/utils";
 import { Empty, ErrorNote, Panel, TopList, fmtAgo, fmtDateTime, fmtInt } from "@/components/admin/charts";
 
 const KIND_LABEL: Record<ConsumerKind, string> = { sito: "Sito", widget: "Widget", chiave: "Chiave" };
 
+const SOURCE_BADGE: Record<SourceStatus, { label: string; tone: string }> = {
+  link: { label: "Link presente", tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+  testo: { label: "Citata, senza link", tone: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+  assente: { label: "Non trovata", tone: "bg-rose-500/15 text-rose-700 dark:text-rose-400" },
+  errore: { label: "Sito non raggiungibile", tone: "bg-muted text-muted-foreground" },
+};
+const NOT_CHECKED = { label: "Da controllare", tone: "bg-muted text-muted-foreground" };
+
 /** Chi sta usando le API: prima i siti riconoscibili, poi i programmi senza nome. */
 export async function ApiConsumersTab({ days }: { days: number }) {
-  const [calls, top] = await Promise.all([identifiedApiCalls(days), trafficTop("api", "consumer", days, 40)]);
+  const [calls, top, sources] = await Promise.all([
+    identifiedApiCalls(days),
+    trafficTop("api", "consumer", days, 40),
+    consumerSources(),
+  ]);
   if (calls.data === null) return <ErrorNote message={calls.error} />;
 
   const consumers = aggregateConsumers(calls.data.rows);
+  // Se la tabella dei controlli manca, l'elenco dei siti resta comunque utile.
+  const sourceBySite = new Map((sources.data ?? []).map((s) => [s.site, s]));
   // Le impronte "Java #abc" sono giornaliere: lo stesso programma puo' comparire una volta al giorno.
   const anonymous = (top.data ?? []).filter((r) => r.label.includes("#")).slice(0, 15);
 
@@ -24,11 +40,12 @@ export async function ApiConsumersTab({ days }: { days: number }) {
           <Empty>Nessun sito riconoscibile in questo periodo.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
                   <th className="py-2 pr-3 font-medium">Chi</th>
                   <th className="py-2 pr-3 font-medium">Tipo</th>
+                  <th className="py-2 pr-3 font-medium">Fonte visibile</th>
                   <th className="py-2 pr-3 text-right font-medium">Chiamate</th>
                   <th className="py-2 pr-3 text-right font-medium">IP distinti</th>
                   <th className="py-2 pr-3 font-medium">Cosa legge</th>
@@ -55,6 +72,13 @@ export async function ApiConsumersTab({ days }: { days: number }) {
                       )}
                     </td>
                     <td className="py-2 pr-3 text-xs text-muted-foreground">{KIND_LABEL[c.kind]}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      {c.kind === "chiave" ? (
+                        <span className="text-muted-foreground">Vedi Integrazioni</span>
+                      ) : (
+                        <SourceCell check={sourceBySite.get(c.name)} />
+                      )}
+                    </td>
                     <td className="py-2 pr-3 text-right tabular-nums">{fmtInt(c.requests)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{fmtInt(c.visitors)}</td>
                     <td className="py-2 pr-3 font-mono text-xs">
@@ -68,6 +92,11 @@ export async function ApiConsumersTab({ days }: { days: number }) {
             </table>
           </div>
         )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Fonte visibile: ogni lunedi&apos; controlliamo l&apos;HTML della home di ogni sito. I siti che caricano la fonte
+          via JavaScript, o che usano i dati su un&apos;altra pagina, possono risultare &quot;Non trovata&quot;: prima di
+          scrivere a qualcuno controlla la pagina a mano.
+        </p>
         {calls.data.truncated && (
           <p className="mt-2 text-xs text-muted-foreground">Mostrate solo le 10.000 chiamate piu&apos; recenti: riduci il periodo.</p>
         )}
@@ -79,6 +108,16 @@ export async function ApiConsumersTab({ days }: { days: number }) {
       >
         <TopList rows={anonymous} mono showLastSeen empty="Nessun programma anonimo in questo periodo." />
       </Panel>
+    </div>
+  );
+}
+
+function SourceCell({ check }: { check?: { status: SourceStatus; checked_at: string } }) {
+  const badge = check ? SOURCE_BADGE[check.status] : NOT_CHECKED;
+  return (
+    <div className="flex flex-col items-start gap-0.5">
+      <span className={cn("rounded-full px-2 py-0.5 font-medium", badge.tone)}>{badge.label}</span>
+      {check && <span className="text-[11px] text-muted-foreground">{fmtDateTime(check.checked_at)}</span>}
     </div>
   );
 }

@@ -479,6 +479,15 @@ export default function ApiDocsPage() {
               <li>
                 <span className="font-mono text-xs text-muted-foreground">2026-11-05</span>
                 <p>
+                  <Code>/pun/today</Code>: <Code>value</Code> ora e&apos; la media del giorno, cioe&apos; il PUN del
+                  giorno, e <Code>date</Code> e <Code>observed_at</Code> si riferiscono a quel giorno. L&apos;ultima ora
+                  pubblicata, prima in <Code>value</Code> e <Code>hour</Code>, si sposta in <Code>last_hour</Code>.{" "}
+                  <Code>daily_average</Code> resta invariato.
+                </p>
+              </li>
+              <li>
+                <span className="font-mono text-xs text-muted-foreground">2026-11-05</span>
+                <p>
                   PUN e PSV non sono in vendita: PUN orario e per zona e storico completo passano ai piani gratuiti,
                   l&apos;export bulk esclude i dati GME e sui loro percorsi nessun piano supera 120 richieste al minuto.
                 </p>

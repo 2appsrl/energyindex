@@ -37,28 +37,55 @@ describe("buildLatestPriceJson — PSV", () => {
 });
 
 describe("buildLatestPriceJson — PUN", () => {
-  it("date e ora GME nel fuso Europe/Rome", () => {
-    const j = buildLatestPriceJson("pun", { observed_at: "2026-10-30T22:00:00+00:00", value: 250 }, "€/MWh")!;
-    expect(j.date).toBe("2026-10-30");
-    expect(j.hour).toBe(24);
-    expect(j.granularity).toBe("hourly");
+  const lastHour = { observed_at: "2026-11-05T22:00:00+00:00", value: 255.30866 };
+  const media = { date: "2026-11-05", value: 277.6412, hours: 24 };
+
+  it("value e' la media del giorno: e' il dato che chi legge l'API si aspetta", () => {
+    const j = buildLatestPriceJson("pun", lastHour, "€/MWh", media)!;
+    expect(j.value).toBe(0.27764);
+    expect(j.value_native).toBe(277.64);
+    expect(j.date).toBe("2026-11-05");
+    expect(j.granularity).toBe("daily");
   });
 
-  it("aggiunge la media del giorno quando passata", () => {
-    const j = buildLatestPriceJson(
-      "pun",
-      { observed_at: "2026-10-31T22:00:00+00:00", value: 250 },
-      "€/MWh",
-      { date: "2026-10-30", value: 274.0412, hours: 24 },
-    )!;
-    expect(j.daily_average).toEqual({
-      date: "2026-10-30",
-      value: 0.27404,
+  it("observed_at e' l'inizio del giorno italiano della media", () => {
+    const j = buildLatestPriceJson("pun", lastHour, "€/MWh", media)!;
+    expect(j.observed_at).toBe("2026-11-04T23:00:00.000Z");
+  });
+
+  it("l'ultima ora pubblicata si sposta in last_hour", () => {
+    const j = buildLatestPriceJson("pun", lastHour, "€/MWh", media)!;
+    expect(j.last_hour).toEqual({
+      date: "2026-11-05",
+      hour: 24,
+      observed_at: "2026-11-05T22:00:00+00:00",
+      value: 0.25531,
       unit: "€/kWh",
-      value_native: 274.04,
+      value_native: 255.31,
+      unit_native: "€/MWh",
+    });
+    expect(j).not.toHaveProperty("hour");
+  });
+
+  it("daily_average resta per chi lo usa gia'", () => {
+    const j = buildLatestPriceJson("pun", lastHour, "€/MWh", media)!;
+    expect(j.daily_average).toEqual({
+      date: "2026-11-05",
+      value: 0.27764,
+      unit: "€/kWh",
+      value_native: 277.64,
       unit_native: "€/MWh",
       hours: 24,
     });
+  });
+
+  it("senza media disponibile value resta l'ora e lo dichiara", () => {
+    const j = buildLatestPriceJson("pun", lastHour, "€/MWh", null)!;
+    expect(j.value_native).toBe(255.31);
+    expect(j.granularity).toBe("hourly");
+    expect(j.date).toBe("2026-11-05");
+    expect(j.daily_average).toBeNull();
+    expect(j.last_hour?.hour).toBe(24);
   });
 });
 
@@ -74,7 +101,7 @@ describe("buildLatestPriceJson — attribuzione e fonti", () => {
     const j = buildLatestPriceJson("brent", { observed_at: "2026-10-29T00:00:00+00:00", value: 71.4 }, "$/bbl")!;
     expect(j.date).toBe("2026-10-29");
     expect(j.gas_day).toBeUndefined();
-    expect(j.hour).toBeUndefined();
+    expect(j.last_hour).toBeUndefined();
     expect(j.source_terms_url).toBeUndefined();
   });
 

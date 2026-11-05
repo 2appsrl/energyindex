@@ -277,9 +277,9 @@ const LATEST_FIELDS: EndpointField[] = [
 
 const PUN_FIELDS: EndpointField[] = [
   ...LATEST_FIELDS.slice(0, 6),
-  { name: "granularity", type: "string", description: "\"hourly\": value e' il prezzo di una singola ora di mercato." },
-  { name: "hour", type: "integer", description: "Ora di mercato GME (1..25) a cui si riferisce value." },
-  { name: "daily_average", type: "object | null", description: "Media aritmetica delle ore del giorno italiano (PUN Index GME): date, value (€/kWh), value_native (€/MWh), hours. E' il valore da usare come \"PUN di oggi\"." },
+  { name: "granularity", type: "string", description: "\"daily\": value e' la media del giorno. \"hourly\" solo se la media non e' disponibile: value e' allora l'ultima ora." },
+  { name: "last_hour", type: "object", description: "Ultima ora pubblicata dal GME: date, hour (1..25), observed_at, value (€/kWh), value_native (€/MWh)." },
+  { name: "daily_average", type: "object | null", description: "La stessa media di value, con il numero di ore: date, value, value_native, hours (23, 24 o 25). Null se non disponibile." },
   ...LATEST_FIELDS.slice(6),
 ];
 
@@ -310,7 +310,7 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     response: {
       date: "2026-09-26",
       values: {
-        PUN: { date: "2026-09-27", value: 0.11873, unit: "€/kWh", value_native: 118.73, unit_native: "€/MWh", hour: 24, daily_average: { date: "2026-09-26", value: 0.12204, value_native: 122.04, hours: 24 }, asset: "PUN", source: "GME" },
+        PUN: { date: "2026-09-26", value: 0.12204, unit: "€/kWh", value_native: 122.04, unit_native: "€/MWh", granularity: "daily", asset: "PUN", source: "GME" },
         PSV: { date: "2026-09-27", value: 0.03902, unit: "€/kWh", value_native: 39.02, unit_native: "€/MWh", gas_day: "2026-09-27", session_date: "2026-09-26", product: "MGP-2026-09-27", asset: "PSV", source: "GME" },
         TTF: { date: "2026-09-26", value: 0.03511, unit: "€/kWh", value_native: 35.11, unit_native: "€/MWh", asset: "TTF", source: "ICE Endex" },
         Brent: { date: "2026-09-26", value: 71.42, unit: "$/bbl", asset: "Brent", source: "EIA" },
@@ -336,21 +336,21 @@ export const ENDPOINTS: readonly ApiEndpoint[] = [
     title: "PUN di oggi",
     summary: "PUN medio del giorno e ultimo prezzo orario, in €/kWh e €/MWh.",
     description:
-      "daily_average e' la media delle ore del giorno italiano, cioe' il PUN giornaliero (PUN Index GME): e' il valore da mostrare come \"PUN di oggi\". value e' invece l'ultima ora pubblicata dal GME dopo la chiusura del Mercato del Giorno Prima, quindi di norma un'ora di domani (vedi date e hour). Tutti i prezzi sono in €/kWh, comodi per ragionare in bolletta, e nell'unita' nativa €/MWh.",
+      "value e' la media aritmetica delle ore del giorno italiano: e' il PUN del giorno. Prima che il GME pubblichi il giorno corrente, date indica l'ultimo giorno disponibile. L'ultima ora pubblicata e' in last_hour. Valori in €/kWh, comodi per ragionare in bolletta, e nell'unita' nativa €/MWh.",
     category: "prezzi",
     tier: "open",
     status: "live",
     params: [],
     exampleCall: "/pun/today",
     response: {
-      date: "2026-09-27",
-      observed_at: "2026-09-27T21:00:00+00:00",
-      value: 0.11873,
+      date: "2026-09-26",
+      observed_at: "2026-09-25T22:00:00.000Z",
+      value: 0.12204,
       unit: "€/kWh",
-      value_native: 118.73,
+      value_native: 122.04,
       unit_native: "€/MWh",
-      granularity: "hourly",
-      hour: 24,
+      granularity: "daily",
+      last_hour: { date: "2026-09-26", hour: 24, observed_at: "2026-09-26T21:00:00+00:00", value: 0.11873, unit: "€/kWh", value_native: 118.73, unit_native: "€/MWh" },
       daily_average: { date: "2026-09-26", value: 0.12204, unit: "€/kWh", value_native: 122.04, unit_native: "€/MWh", hours: 24 },
       asset: "PUN",
       asset_name: "Prezzo Unico Nazionale energia elettrica Italia",

@@ -6,7 +6,7 @@ import { fetchLatestPrice, apiHeaders } from "@/lib/api/latest-price";
  *
  * Endpoint pubblico JSON con l'ultimo prezzo di riferimento MGP-GAS del GME
  * (prodotto giornaliero, €/kWh + €/MWh nativo). Schema di /api/v1/pun/today
- * con, al posto di hour/daily_average: `date` = `gas_day` (giorno gas di
+ * con, al posto di last_hour/daily_average: `date` = `gas_day` (giorno gas di
  * consegna), `session_date` (sessione di negoziazione) e `product`
  * ("MGP-YYYY-MM-DD").
  */

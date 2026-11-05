@@ -94,25 +94,24 @@ async function readCapped(res: Response, maxBytes: number): Promise<string> {
 }
 
 /**
- * Scarica la pagina di attribuzione e cerca il link. I redirect si seguono a
- * mano (massimo 3) per validare ogni salto prima di richiederlo. Un unico
- * timeout (budgetMs) copre tutti i salti e la lettura del corpo. Non lancia:
- * qualsiasi errore vale "link non trovato".
+ * Scarica una pagina pubblica. I redirect si seguono a mano (massimo 3) per
+ * validare ogni salto prima di richiederlo. Un unico timeout (budgetMs) copre
+ * tutti i salti e la lettura del corpo. Non lancia: qualsiasi errore vale null.
  */
-export async function fetchHasLink(
+export async function fetchPageHtml(
   url: string,
   fetchImpl: typeof fetch = fetch,
   budgetMs: number = TIMEOUT_MS,
-): Promise<boolean> {
+): Promise<string | null> {
   const signal = AbortSignal.timeout(budgetMs);
   let current: URL;
   try {
     current = new URL(url.trim());
   } catch {
-    return false;
+    return null;
   }
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    if (!isCheckableUrl(current)) return false;
+    if (!isCheckableUrl(current)) return null;
     try {
       const res = await fetchImpl(current.toString(), {
         headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml" },
@@ -122,18 +121,28 @@ export async function fetchHasLink(
       if (res.status >= 300 && res.status < 400) {
         res.body?.cancel().catch(() => {});
         const location = res.headers.get("location");
-        if (!location) return false;
+        if (!location) return null;
         current = new URL(location, current);
         continue;
       }
       if (!res.ok) {
         res.body?.cancel().catch(() => {});
-        return false;
+        return null;
       }
-      return hasEnergyIndexLink(await readCapped(res, MAX_BODY_BYTES));
+      return await readCapped(res, MAX_BODY_BYTES);
     } catch {
-      return false;
+      return null;
     }
   }
-  return false;
+  return null;
+}
+
+/** Scarica la pagina di attribuzione e cerca il link: un errore vale "non trovato". */
+export async function fetchHasLink(
+  url: string,
+  fetchImpl: typeof fetch = fetch,
+  budgetMs: number = TIMEOUT_MS,
+): Promise<boolean> {
+  const html = await fetchPageHtml(url, fetchImpl, budgetMs);
+  return html !== null && hasEnergyIndexLink(html);
 }
