@@ -22,9 +22,10 @@ import { MAIL_ANALYSIS_MODEL, MailAnalysisError, analyzeEmail, type EmailToAnaly
 import { parseRawEmail, type ParsedEmail } from "@/lib/mail/parse";
 import { MAIL_SYNC_SOURCE, describeImapError } from "@/lib/mail/types";
 
-// Il server IMAP di register.it (MX mail.register.it) ha un certificato
-// *.securemail.pro: con questo nome la verifica TLS passa senza eccezioni.
-const DEFAULT_IMAP_HOST = "mail.securemail.pro";
+// Server IMAP indicato da register.it per questa casella (autodiscover del
+// dominio). L'MX mail.register.it e mail.securemail.pro rispondono anche loro
+// sulla 993, ma qui rifiutano le credenziali.
+const DEFAULT_IMAP_HOST = "pop.securemail.pro";
 const MAX_NEW_PER_RUN = 50;
 /** Tetto di costo: quel che resta si analizza alla sincronizzazione successiva. */
 const MAX_ANALYSES_PER_RUN = 20;
